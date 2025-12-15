@@ -173,33 +173,12 @@ app.post("/webhook", async (req, res) => {
       io.emit('leadUpdated', lead);
     }
 
-    let completedLead = await Lead.findOne({ phone: sanitizedPhone, completed: true });
 
-    if (!completedLead) {
-      const sheetLead = await findLeadByPhone(from);
-      if (sheetLead) {
-        completedLead = await Lead.findOneAndUpdate(
-          { phone: sanitizedPhone },
-          sheetLead,
-          { upsert: true, new: true }
-        );
-        console.log(`Lead for ${sanitizedPhone} found in Sheet and restored in MongoDB.`);
-      }
-    }
-
-    if (completedLead) {
-      const reply = await runFlow(from, text);
-      if (reply) {
-        await sendWhatsAppMessage(from, reply, process.env.PHONE_NUMBER_ID);
-      }
-    } else {
-      const onboardingReply = await handleOnboarding(from, text);
-      if (onboardingReply) {
-        await sendWhatsAppMessage(from, onboardingReply.text, process.env.PHONE_NUMBER_ID);
-        if (onboardingReply.done) {
-          await saveLead(onboardingReply.leadData);
-        }
-      }
+    // Unified Flow Handler (Handles Leads, Flows, Excel, and AI)
+    // IMPORTANT: 'sanitizedPhone' matches DB records. 'from' is for sending replies.
+    const reply = await runFlow(sanitizedPhone, text);
+    if (reply) {
+      await sendWhatsAppMessage(from, reply, process.env.PHONE_NUMBER_ID);
     }
 
     res.sendStatus(200);
