@@ -9,7 +9,6 @@ import session from "express-session";
 import { fileURLToPath } from 'url';
 
 import { connectMongo } from "./models/mongo.js";
-import { handleOnboarding } from "./onboarding.js";
 import { runFlow } from "./flowEngine.js";
 import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
