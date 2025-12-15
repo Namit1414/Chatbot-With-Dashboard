@@ -21,6 +21,7 @@ Use this info to answer:
 - We create custom workout and meal plans.
 - We have certified trainers who provide 1-on-1 support.
 - We focus on sustainable results and building healthy habits.
+- IMPORTANT: If the user information below contains a Name, do NOT ask for their name again. Refer to them by name.
 `;
 
 // In-memory store for conversation histories
@@ -42,12 +43,16 @@ export async function aiReply(message, userId) {
 
     // 2. Construct a dynamic persona with the user's data if it exists
     let currentPersona = persona;
+    if (user && user.name) {
+      currentPersona = `User's Name: ${user.name}\n` + currentPersona;
+    }
+
     if (user) {
       currentPersona += `
-
-Here is information about the user you are talking to:`;
+      
+Here is the FULL information about the user you are talking to:`;
       if (user.name) currentPersona += `
-- Name: ${user.name}`;
+- Name: ${user.name} (ALREADY KNOWN, DO NOT ASK)`;
       if (user.age) currentPersona += `
 - Age: ${user.age}`;
       if (user.weight) currentPersona += `
@@ -90,7 +95,7 @@ Here is information about the user you are talking to:`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3-nano-30b-a3b:free",
+        model: "meta-llama/llama-3-8b-instruct:free",
         messages: userHistory,
       }),
     });
