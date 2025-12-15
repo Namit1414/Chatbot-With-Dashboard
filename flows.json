@@ -1,0 +1,22 @@
+{
+  "greeting": {
+    "type": "message",
+    "text": "Hi! I am your demo bot. Reply with: 1) Order  2) Support"
+  },
+  "order": {
+    "type": "collect",
+    "questions": [
+      { "key": "name", "q": "What's your name?" },
+      { "key": "item", "q": "Which item would you like?" }
+    ],
+    "next": "order_confirm"
+  },
+  "order_confirm": {
+    "type": "message",
+    "text": "Thanks {name}! Order for {item} recorded. We'll contact you soon."
+  },
+  "support": {
+    "type": "message",
+    "text": "Support selected. Please describe your issue and we'll assist."
+  }
+}

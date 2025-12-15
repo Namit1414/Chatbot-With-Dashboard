@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Dashboard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --primary-color: #00a884;
+            /* WhatsApp Green */
+            --primary-dark: #008f6f;
+            --secondary-bg: #e9edef;
+            --chat-bg: #efeae2;
+            --sidebar-bg: #111b21;
+            --sidebar-text: #e9edef;
+            --sidebar-hover: #2a3942;
+            --message-out: #d9fdd3;
+            --message-in: #ffffff;
+            --text-main: #111b21;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--secondary-bg);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: #202c33;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.25rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .nav-pills {
+            padding: 10px;
+            gap: 5px;
+        }
+
+        .nav-link {
+            color: #aebac1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-hover);
+            color: var(--primary-color) !important;
+            font-weight: 500;
+        }
+
+        .nav-link i {
+            font-size: 1.2rem;
+        }
+
+        /* Main Content */
+        #content {
+            flex: 1;
+            background-color: #f0f2f5;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .page-content {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        /* Tables */
+        .card-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            border: none;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #54656f;
+            border-bottom: 1px solid #e9edef;
+            padding: 16px;
+        }
+
+        .table td {
+            vertical-align: middle;
+            padding: 16px;
+            color: var(--text-main);
+        }
+
+        /* Chat Interface */
+        .chat-layout {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--chat-bg);
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-blend-mode: overlay;
+            height: calc(100vh - 60px);
+            /* Adjust based on padding */
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: #f0f2f5;
+            padding: 15px 20px;
+            border-bottom: 1px solid #d1d7db;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        #chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            max-width: 65%;
+            padding: 8px 12px;
+            border-radius: 7.5px;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background-color: var(--message-out);
+            border-top-right-radius: 0;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background-color: var(--message-in);
+            border-top-left-radius: 0;
+        }
+
+        .message-meta {
+            display: block;
+            font-size: 0.7rem;
+            color: #667781;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message strong {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+            color: var(--primary-dark);
+        }
+
+        .input-area {
+            background-color: #f0f2f5;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #message-input {
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        #message-input:focus {
+            box-shadow: none;
+            outline: none;
+        }
+
+        #send-button {
+            background-color: var(--primary-color);
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        #send-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        #send-button i {
+            font-size: 1.2rem;
+            margin-left: 2px;
+            /* Visual correction */
+        }
+
+        /* Badges */
+        .unread-indicator {
+            background-color: #25d366;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .btn-chat {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-chat:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-whatsapp text-success" style="font-size: 1.8rem;"></i>
+            <h2>Bot Admin</h2>
+        </div>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li>
+                <a href="#" class="nav-link active" onclick="showContent('leads')">
+                    <i class="bi bi-people"></i> Lead Management
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('live-chat')">
+                    <i class="bi bi-chat-dots"></i> Live Chat
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('flows')">
+                    <i class="bi bi-diagram-3"></i> Flows & Templates
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('bulk-messaging')">
+                    <i class="bi bi-broadcast"></i> Bulk Messaging
+                </a>
+            </li>
+            <li class="mt-auto">
+                <a href="/logout" class="nav-link text-danger">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
+        <div class="p-3 fs-6 opacity-50">
+            <small>&copy; 2024 Bot Dashboard</small>
+        </div>
+    </div>
+
+    <div id="content">
+        <!-- Lead Management -->
+        <div id="leads" class="page-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Lead Management</h1>
+                <button class="btn btn-outline-secondary btn-sm" onclick="fetchLeads()"><i
+                        class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+
+            <div class="card card-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Unread</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Live Chat -->
+        <div id="live-chat" class="page-content" style="display: none; height: 100%;">
+            <div class="chat-layout h-100">
+                <div class="chat-header">
+                    <div>
+                        <h4 id="chat-title">Select a lead to chat</h4>
+                        <small class="text-secondary" id="chat-subtitle">No active chat</small>
+                    </div>
+                </div>
+                <div id="chat-container">
+                    <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                        <div class="text-center">
+                            <i class="bi bi-chat-square-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-2">Select a lead from Lead Management to start chatting</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="message-input" class="form-control" placeholder="Type a message..." disabled>
+                    <button id="send-button" class="btn btn-primary" disabled><i class="bi bi-send-fill"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flows -->
+        <div id="flows" class="page-content" style="display: none;">
+            <h1>Flows & Templates</h1>
+            <div class="card p-5 text-center">
+                <i class="bi bi-cone-striped display-4 text-warning mb-3"></i>
+                <p class="lead">Flow Builder Under Construction</p>
+            </div>
+        </div>
+
+        <!-- Bulk Messaging -->
+        <div id="bulk-messaging" class="page-content" style="display: none;">
+            <h1>Bulk Messaging</h1>
+            <div class="card p-5 text-center">
+                <i class="bi bi-cone-striped display-4 text-warning mb-3"></i>
+                <p class="lead">Bulk Messaging Under Construction</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let currentLeadPhone = null;
+
+        function showContent(contentId) {
+            document.querySelectorAll('.page-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            const selected = document.getElementById(contentId);
+            selected.style.display = contentId === 'live-chat' ? 'flex' : 'block';
+            if (contentId === 'live-chat') {
+                // Adjust layout if needed for flex container
+                selected.classList.add('flex-column');
+            }
+
+            document.querySelectorAll('#sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`#sidebar .nav-link[onclick*="${contentId}"]`).classList.add('active');
+        }
+
+        async function fetchLeads() {
+            try {
+                const response = await fetch('/api/leads');
+                const leads = await response.json();
+                const tableBody = document.getElementById('leads-table-body');
+                tableBody.innerHTML = '';
+                leads.forEach(lead => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><i class="bi bi-person-circle text-secondary me-2"></i> ${lead.name || 'Unknown'}</td>
+                        <td>${formatPhone(lead.phone)}</td>
+                        <td>${lead.completed ? '<span class="badge bg-success-subtle text-success border border-success">Completed</span>' : '<span class="badge bg-warning-subtle text-warning border border-warning">In Progress</span>'}</td>
+                        <td>${lead.unreadMessages > 0 ? `<span class="unread-indicator">${lead.unreadMessages}</span>` : ''}</td>
+                        <td class="text-end"><button class="btn btn-chat btn-sm" onclick="openChat('${lead.phone}', '${lead.name || 'Unknown'}')"><i class="bi bi-chat-quote"></i> Chat</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching leads:', error);
+            }
+        }
+
+        function formatPhone(phone) {
+            // Basic formatting (assumed string)
+            return phone.replace(/(\d{2})(\d{5})(\d{5})/, '+$1 $2 $3');
+        }
+
+        async function openChat(phone, name) {
+            currentLeadPhone = phone;
+            showContent('live-chat');
+
+            // Enable inputs
+            document.getElementById('message-input').disabled = false;
+            document.getElementById('send-button').disabled = false;
+            document.getElementById('message-input').focus();
+
+            // Update Header
+            document.getElementById('chat-title').innerText = name;
+            document.getElementById('chat-subtitle').innerText = `+${phone}`;
+
+            await fetch(`/api/leads/${phone}/read`, { method: 'POST' });
+
+            const response = await fetch(`/api/messages/${phone}`);
+            const messages = await response.json();
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.innerHTML = '';
+
+            if (messages.length === 0) {
+                chatContainer.innerHTML = '<div class="text-center text-muted mt-5"><small>No messages yet. Start the conversation!</small></div>';
+            }
+
+            messages.forEach(message => {
+                displayMessage(message);
+            });
+
+            fetchLeads(); // Update unread counts
+        }
+
+        function displayMessage(message) {
+            const chatContainer = document.getElementById('chat-container');
+
+            // Clear placeholder if it exists
+            if (chatContainer.querySelector('.text-muted.mt-5') || chatContainer.querySelector('.bi-chat-square-text')) {
+                chatContainer.innerHTML = '';
+            }
+
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+
+            const fromDashboard = message.from === 'dashboard';
+            const fromLead = message.from === currentLeadPhone;
+
+            // Logic to determine sender
+            if (fromDashboard) {
+                messageElement.classList.add('sent');
+                messageElement.innerHTML = `${message.text}`;
+            } else if (fromLead) {
+                messageElement.classList.add('received');
+                messageElement.innerHTML = `${message.text}`;
+            } else {
+                // Probably AI or System
+                messageElement.classList.add('sent');
+                messageElement.innerHTML = `<strong><i class="bi bi-robot"></i> AI</strong> ${message.text}`;
+                messageElement.style.border = "1px solid #ffd700";
+            }
+
+            // Add Timestamp (mocking current time if not in msg object, usually simpler to just omit if not robust)
+            // const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // messageElement.innerHTML += `<span class="message-meta">${time}</span>`;
+
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const text = messageInput.value;
+            if (text && currentLeadPhone) {
+                try {
+                    await fetch('/api/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ to: currentLeadPhone, text })
+                    });
+                } catch (e) {
+                    console.error("Send failed", e);
+                }
+
+                messageInput.value = '';
+            }
+        }
+
+        const socket = io();
+        socket.on('newMessage', (message) => {
+            if (message.from === currentLeadPhone || message.to === currentLeadPhone) {
+                // Determine if we should display it
+                // 'dashboard' messages are handled optimistically, so avoiding dupe if latency is low? 
+                // Actually socket comes back from server.
+                // To avoid duplicate from optimistic UI, we might need an ID. 
+                // For now, simpler: just append. If it looks like duplicate, users will notice.
+                // A better way is: removing optimistic one or checking content.
+                // However, I'll remove optimistic UI for safety to ensure Confirmation via Socket, 
+                // OR keep optimistic and potential duplicate for a millisecond.
+                // Let's simpler: remove optimistic logic or clear container?
+                // Actually, let's keep it simple: relying on socket for display is safer for sync.
+                // I will remove the Optimistic UI update in sendMessage to avoid duplicates.
+
+                // WAIT, if I remove optimistic UI, the user feels lag. 
+                // But without IDs, duplicates happen. 
+                // I will UNCOMMENT the optimistic part above but I need to handle duplicates in a real app. 
+                // For this fixing task, I will rely on the Socket to confirm message sent.
+                // So I will REMOVE the optimistic displayMessage(fakeMsg) from sendMessage.
+                displayMessage(message);
+            }
+        });
+
+        socket.on('leadUpdated', (lead) => {
+            fetchLeads();
+            // Optional notification sound could go here
+        });
+
+        fetchLeads();
+    </script>
+</body>
+
+</html>
