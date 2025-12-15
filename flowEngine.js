@@ -20,12 +20,20 @@ export async function runFlow(phone, message) {
   // 2️⃣ Check MongoDB Flows (Keyword Match)
   // Fetch all flows to check for partial matches (e.g. "price" in "what is the price")
   // Optimization: In a large app, use MongoDB Text Search ($text) instead.
+  // DEBUG LOGS
+  console.log(`Checking flows for message: "${msgLower}"`);
   const flows = await Flow.find({});
+  console.log(`Found ${flows.length} flows in DB:`, flows.map(f => f.trigger));
+
   const matchedFlow = flows.find(f => msgLower.includes(f.trigger.toLowerCase()));
 
   if (matchedFlow) {
+    console.log(`Matched flow: ${matchedFlow.trigger}`);
     return matchedFlow.response;
   }
+  console.log("No flow matched. Falling back to Excel/AI.");
+
+
 
   // 3️⃣ Excel-based flows (Legacy support)
   const excel = getExcelReply(message);
