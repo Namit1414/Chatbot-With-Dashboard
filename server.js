@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 
 import { connectMongo } from "./models/mongo.js";
 import { handleOnboarding } from "./onboarding.js";
-import { aiReply } from "./aiAgent.js";
+import { runFlow } from "./flowEngine.js";
 import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
@@ -188,7 +188,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     if (completedLead) {
-      const reply = await aiReply(text, from);
+      const reply = await runFlow(from, text);
       if (reply) {
         await sendWhatsAppMessage(from, reply, process.env.PHONE_NUMBER_ID);
       }
