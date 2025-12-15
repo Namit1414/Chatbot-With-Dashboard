@@ -17,26 +17,51 @@ const doc = new GoogleSpreadsheet(
 );
 
 async function getSheet() {
-  await doc.loadInfo(); // loads spreadsheet metadata
-  return doc.sheetsByIndex[0]; // first tab
+  try {
+    // Some setups require explicit service account auth
+    if (typeof doc.useServiceAccountAuth === "function") {
+      try {
+        await doc.useServiceAccountAuth({
+          client_email: process.env.GS_CLIENT_EMAIL,
+          private_key: key
+        });
+      } catch (e) {
+        // ignore, maybe already authenticated via JWT
+      }
+    }
+
+    await doc.loadInfo(); // loads spreadsheet metadata
+    return doc.sheetsByIndex[0]; // first tab
+  } catch (e) {
+    console.error("Error loading Google Sheet:", e);
+    throw e;
+  }
 }
 
 export async function saveLead(lead) {
-  const sheet = await getSheet();
+  try {
+    const sheet = await getSheet();
+    const sanitizedPhone = String(lead.phone || "").replace(/@s\.whatsapp\.net/g, "");
 
-  await sheet.addRow({
-    phone: lead.phone,
-    name: lead.name,
-    age: lead.age,
-    weight: lead.weight,
-    height: lead.height,
-    gender: lead.gender,
-    place: lead.place,
-    health_issues: lead.health_issues,
-    preferred_date: lead.preferred_date,
-    preferred_time: lead.preferred_time,
-    createdAt: new Date().toISOString()
-  });
+    await sheet.addRow({
+      phone: sanitizedPhone,
+      name: lead.name || "",
+      age: lead.age || "",
+      weight: lead.weight || "",
+      height: lead.height || "",
+      gender: lead.gender || "",
+      place: lead.place || "",
+      health_issues: lead.health_issues || "",
+      preferred_date: lead.preferred_date || "",
+      preferred_time: lead.preferred_time || "",
+      createdAt: new Date().toISOString()
+    });
+
+    console.log(`Saved lead to Google Sheet: ${sanitizedPhone}`);
+  } catch (error) {
+    console.error("Error saving lead to Google Sheet:", error);
+    throw error;
+  }
 }
 
 export async function findLeadByPhone(phone) {
