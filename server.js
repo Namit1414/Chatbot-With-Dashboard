@@ -126,6 +126,26 @@ app.post("/api/send", async (req, res) => {
   res.sendStatus(200);
 });
 
+// Bulk Messaging API
+app.post("/api/bulk-send", async (req, res) => {
+  try {
+    const { to, message } = req.body;
+
+    if (!to || !message) {
+      return res.status(400).json({ error: 'Missing required fields: to, message' });
+    }
+
+    // Send message via WhatsApp
+    await sendWhatsAppMessage(to, message, 'dashboard');
+
+    console.log(`📤 Bulk message sent to ${to}`);
+    res.status(200).json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Error in bulk send:', error);
+    res.status(500).json({ error: 'Failed to send message', details: error.message });
+  }
+});
+
 
 app.get("/debug/leads", async (req, res) => {
   const leads = await Lead.find({});
