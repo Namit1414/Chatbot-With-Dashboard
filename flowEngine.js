@@ -1,62 +1,55 @@
-import { getExcelReply } from "./excelFlow.js";
-import { aiReply } from "./aiAgent.js";
-import Flow from "./models/Flow.js";
-import {
-  isLeadInProgress,
-  handleLeadFlow,
-  startLeadFlow,
-  hasExistingLead
-} from "./leadManager.js";
+import Lead from "./models/Lead.js";
 
-export async function runFlow(phone, message) {
+const QUESTIONS = [
+  { key: "name", question: "😊 Great! Before we continue, what's your *name*?" },
+  { key: "age", question: "📅 How old are you?" },
+  { key: "weight", question: "⚖️ What is your current *weight* (in kg)?" },
+  { key: "height", question: "📏 What is your *height* (in cm)?" },
+  { key: "gender", question: "🚻 What is your *gender*? (Male / Female / Other)" }
+];
 
-  // 1️⃣ Continue lead flow if active
-  if (isLeadInProgress(phone)) {
-    return handleLeadFlow(phone, message);
+// In-memory session state (still fine for short term, but Redis is better for production)
+const userStates = {};
+
+export async function hasExistingLead(phone) {
+  const phoneStr = String(phone).trim();
+  const lead = await Lead.findOne({ phone: phoneStr, completed: true });
+  return !!lead;
+}
+
+async function saveLeadToDb(phone, data) {
+  try {
+    await Lead.findOneAndUpdate(
+      { phone },
+      { ...data, completed: true, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+  } catch (e) {
+    console.error("Error saving lead to DB:", e);
+  }
+}
+
+export function startLeadFlow(phone) {
+  userStates[phone] = { step: 0, data: {} };
+  return QUESTIONS[0].question;
+}
+
+export async function handleLeadFlow(phone, message) {
+  const state = userStates[phone];
+  const currentKey = QUESTIONS[state.step].key;
+
+  state.data[currentKey] = message;
+  state.step++;
+
+  if (state.step >= QUESTIONS.length) {
+    await saveLeadToDb(phone, state.data);
+    delete userStates[phone];
+    return "✅ Thanks! Your details have already been saved. How can I help you further?";
   }
 
-  const msgLower = message.toLowerCase().trim();
+  return QUESTIONS[state.step].question;
+}
 
-  // 2️⃣ Check MongoDB Flows (Keyword Match)
-  // Fetch all flows to check for partial matches (e.g. "price" in "what is the price")
-  // Optimization: In a large app, use MongoDB Text Search ($text) instead.
-  // DEBUG LOGS
-  console.log(`Checking flows for message: "${msgLower}"`);
-  const flows = await Flow.find({});
-  console.log(`Found ${flows.length} flows in DB:`, flows.map(f => f.trigger));
-
-  const matchedFlow = flows.find(f => msgLower.includes(f.trigger.toLowerCase()));
-
-  if (matchedFlow) {
-    console.log(`Matched flow: ${matchedFlow.trigger}`);
-    return matchedFlow.response;
-  }
-  console.log("No flow matched. Falling back to Excel/AI.");
-
-
-
-  // 3️⃣ Excel-based flows (Legacy support)
-  const excel = getExcelReply(message);
-  if (excel) {
-
-    // 🔒 Greeting intent
-    if (excel.intent === "greeting") {
-
-      // ✅ Already registered user
-      if (hasExistingLead(phone)) {
-        return "👋 Welcome back! How can I help you today?";
-      }
-
-      // 🆕 New user → start lead capture
-      return startLeadFlow(phone);
-    }
-
-    return excel.response;
-  }
-
-  // 4️⃣ AI fallback
-  const ai = await aiReply(message, phone);
-  if (ai) return ai;
-
-  return "Sorry, I didn’t quite understand that. Can you rephrase?";
+export function isLeadInProgress(phone) {
+  return !!userStates[phone];
 }
