@@ -1,11 +1,16 @@
 import Lead from "./models/Lead.js";
+import { saveLead } from "./googleSheet.js";
 
-const QUESTIONS = [
-  { key: "name", question: "😊 Great! Before we continue, what's your *name*?" },
-  { key: "age", question: "📅 How old are you?" },
-  { key: "weight", question: "⚖️ What is your current *weight* (in kg)?" },
-  { key: "height", question: "📏 What is your *height* (in cm)?" },
-  { key: "gender", question: "🚻 What is your *gender*? (Male / Female / Other)" }
+const questions = [
+  { key: "name", text: "😊 Great! What's your name?" },
+  { key: "age", text: "🎂 How old are you?" },
+  { key: "weight", text: "⚖️ Your current weight (kg)?" },
+  { key: "height", text: "📏 Your height (cm)?" },
+  { key: "gender", text: "👤 Your gender? (Male / Female / Other)" },
+  { key: "place", text: "Please mention your place or locality." },
+  { key: "health_issues", text: "Do You Have Any Health Issues? Please Mention If Any." },
+  { key: "preferred_date", text: "Please tell us your preferred Date to call you." },
+  { key: "preferred_time", text: "Preferred Time to call you?" }
 ];
 
 // In-memory session state (still fine for short term, but Redis is better for production)
@@ -43,6 +48,14 @@ export async function handleLeadFlow(phone, message) {
 
   if (state.step >= QUESTIONS.length) {
     await saveLeadToDb(phone, state.data);
+
+    // Try to save to Google Sheet as well (don't block the user on failure)
+    try {
+      await saveLead({ phone, ...state.data });
+    } catch (e) {
+      console.error("Failed to save lead to Google Sheet:", e);
+    }
+
     delete userStates[phone];
     return "✅ Thanks! Your details have already been saved. How can I help you further?";
   }
