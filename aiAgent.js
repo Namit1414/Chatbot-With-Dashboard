@@ -95,7 +95,7 @@ Here is the FULL information about the user you are talking to:`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct:free",
+        model: "nvidia/nemotron-3-nano-30b-a3b:free",
         messages: userHistory,
       }),
     });
