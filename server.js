@@ -13,6 +13,7 @@ import { handleOnboarding } from "./onboarding.js";
 import { aiReply } from "./aiAgent.js";
 import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
+import Flow from "./models/Flow.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -96,6 +97,28 @@ app.get("/api/messages/:phone", async (req, res) => {
   const phone = req.params.phone;
   const messages = await Message.find({ $or: [{ from: phone }, { to: phone }] }).sort({ timestamp: 1 });
   res.json(messages);
+});
+
+// Flow APIs
+app.get("/api/flows", async (req, res) => {
+  const flows = await Flow.find({}).sort({ createdAt: -1 });
+  res.json(flows);
+});
+
+app.post("/api/flows", async (req, res) => {
+  try {
+    const { trigger, response } = req.body;
+    const flow = new Flow({ trigger: trigger.toLowerCase(), response });
+    await flow.save();
+    res.json(flow);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/flows/:id", async (req, res) => {
+  await Flow.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
 });
 
 app.post("/api/send", async (req, res) => {
