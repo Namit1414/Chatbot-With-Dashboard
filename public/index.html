@@ -426,10 +426,194 @@
 
         <!-- Bulk Messaging -->
         <div id="bulk-messaging" class="page-content" style="display: none;">
-            <h1>Bulk Messaging</h1>
-            <div class="card p-5 text-center">
-                <i class="bi bi-cone-striped display-4 text-warning mb-3"></i>
-                <p class="lead">Bulk Messaging Under Construction</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-broadcast-pin"></i> Bulk Messaging</h1>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" onclick="resetBulkForm()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </button>
+                    <button class="btn btn-success" onclick="showBulkTemplates()" data-bs-toggle="modal"
+                        data-bs-target="#templatesModal">
+                        <i class="bi bi-file-earmark-text"></i> Templates
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Left: Recipients Selection -->
+                <div class="col-lg-6">
+                    <div class="card card-table h-100">
+                        <div
+                            class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                            <h5 class="mb-0"><i class="bi bi-people-fill text-primary"></i> Select Recipients</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select-all-leads"
+                                    onclick="toggleSelectAll()">
+                                <label class="form-check-label fw-bold" for="select-all-leads">
+                                    Select All
+                                </label>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <!-- Filter Options -->
+                            <div class="p-3 bg-light border-bottom">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <select class="form-select form-select-sm" id="filter-status"
+                                            onchange="filterLeads()">
+                                            <option value="all">All Status</option>
+                                            <option value="completed">Completed Only</option>
+                                            <option value="incomplete">Incomplete Only</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control form-control-sm" id="search-leads"
+                                            placeholder="Search by name or phone..." oninput="filterLeads()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recipients List -->
+                            <div id="bulk-recipients-list" style="max-height: 500px; overflow-y: auto;">
+                                <!-- Will be populated dynamically -->
+                            </div>
+
+                            <div class="p-3 bg-light border-top">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">
+                                        <i class="bi bi-check2-circle"></i>
+                                        <span id="selected-count">0</span> recipients selected
+                                    </span>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="clearSelection()">
+                                        <i class="bi bi-x-circle"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Message Composer -->
+                <div class="col-lg-6">
+                    <div class="card card-table h-100">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0"><i class="bi bi-chat-text-fill text-success"></i> Compose Message</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Message Content</label>
+                                <textarea class="form-control" id="bulk-message-text" rows="8"
+                                    placeholder="Type your message here...&#10;&#10;Tip: Use {name} to personalize with recipient names"
+                                    oninput="updateCharCount(); updatePreview()"></textarea>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-lightbulb"></i> Use {name} for personalization
+                                    </small>
+                                    <small id="char-count" class="text-muted">0 characters</small>
+                                </div>
+                            </div>
+
+                            <!-- Message Preview -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Preview</label>
+                                <div class="p-3 bg-light rounded position-relative"
+                                    style="min-height: 100px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                                    <div class="message sent" id="preview-message"
+                                        style="max-width: 80%; background-color: #d9fdd3;">
+                                        <em class="text-muted">Your message will appear here...</em>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Send Options -->
+                            <div class="mb-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="personalize-messages" checked
+                                        onchange="updatePreview()">
+                                    <label class="form-check-label" for="personalize-messages">
+                                        <i class="bi bi-person-badge"></i> Personalize with names
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="add-delay" checked>
+                                    <label class="form-check-label" for="add-delay">
+                                        <i class="bi bi-clock"></i> Add delay between messages (2 seconds)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Send Button -->
+                            <button class="btn btn-primary w-100 btn-lg" onclick="sendBulkMessages()"
+                                id="send-bulk-btn">
+                                <i class="bi bi-send-fill"></i> Send to <span id="send-count">0</span> Recipients
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sending Progress -->
+            <div id="bulk-progress-section" class="mt-4" style="display: none;">
+                <div class="card card-table">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h5 class="mb-0"><i class="bi bi-graph-up text-info"></i> Sending Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Progress</span>
+                                <span id="progress-text">0 / 0</span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                    role="progressbar" id="progress-bar" style="width: 0%">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="row text-center g-3">
+                            <div class="col-md-4">
+                                <div class="p-3 bg-success-subtle rounded">
+                                    <h3 class="mb-0 text-success" id="sent-count">0</h3>
+                                    <small class="text-muted">Sent Successfully</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 bg-danger-subtle rounded">
+                                    <h3 class="mb-0 text-danger" id="failed-count">0</h3>
+                                    <small class="text-muted">Failed</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-3 bg-warning-subtle rounded">
+                                    <h3 class="mb-0 text-warning" id="remaining-count">0</h3>
+                                    <small class="text-muted">Remaining</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3" id="bulk-log"
+                            style="max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem;">
+                            <!-- Logs will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Modal -->
+        <div class="modal fade" id="templatesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Message Templates</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3" id="templates-list">
+                            <!-- Templates will be loaded here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -677,6 +861,369 @@
 
         // Initialize
         fetchLeads();
+        fetchFlows();
+
+        // ========================================
+        // BULK MESSAGING FUNCTIONALITY
+        // ========================================
+
+        let allLeadsForBulk = [];
+        let selectedRecipients = new Set();
+
+        const messageTemplates = [
+            {
+                name: "Welcome Message",
+                text: "Hi {name}! 👋\n\nWelcome to our fitness community! We're excited to help you achieve your health goals. 💪\n\nOur team will be in touch soon!"
+            },
+            {
+                name: "Follow-up",
+                text: "Hello {name},\n\nJust checking in to see if you have any questions about our program. We're here to help! 😊"
+            },
+            {
+                name: "Special Offer",
+                text: "Hey {name}! 🎉\n\nWe have a special offer just for you! Get 20% off on our premium fitness program.\n\nReply 'INTERESTED' to learn more!"
+            },
+            {
+                name: "Reminder",
+                text: "Hi {name},\n\nThis is a friendly reminder about your scheduled consultation. Looking forward to speaking with you! 📅"
+            },
+            {
+                name: "Thank You",
+                text: "Dear {name},\n\nThank you for your interest! We appreciate you taking the time to connect with us. 🙏\n\nStay healthy and strong!"
+            }
+        ];
+
+        async function loadBulkRecipients() {
+            try {
+                const response = await fetch('/api/leads');
+                allLeadsForBulk = await response.json();
+                renderBulkRecipients(allLeadsForBulk);
+            } catch (error) {
+                console.error('Error loading bulk recipients:', error);
+            }
+        }
+
+        function renderBulkRecipients(leads) {
+            const container = document.getElementById('bulk-recipients-list');
+            container.innerHTML = '';
+
+            if (leads.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-3">No leads available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            leads.forEach(lead => {
+                const isSelected = selectedRecipients.has(lead.phone);
+                const item = document.createElement('div');
+                item.className = `p-3 border-bottom hover-bg ${isSelected ? 'bg-primary-subtle' : ''}`;
+                item.style.cursor = 'pointer';
+                item.style.transition = 'all 0.2s';
+                item.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${lead.phone}" 
+                            id="recipient-${lead.phone}" ${isSelected ? 'checked' : ''}
+                            onchange="toggleRecipient('${lead.phone}', '${lead.name || 'Unknown'}')">
+                        <label class="form-check-label w-100" for="recipient-${lead.phone}" style="cursor: pointer;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold"><i class="bi bi-person-circle me-2"></i>${lead.name || 'Unknown'}</div>
+                                    <small class="text-muted">${formatPhone(lead.phone)}</small>
+                                </div>
+                                <div class="text-end">
+                                    ${lead.completed ? '<span class="badge bg-success-subtle text-success border border-success">Completed</span>' : '<span class="badge bg-warning-subtle text-warning border border-warning">In Progress</span>'}
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            updateSelectionCount();
+        }
+
+        function toggleRecipient(phone, name) {
+            if (selectedRecipients.has(phone)) {
+                selectedRecipients.delete(phone);
+            } else {
+                selectedRecipients.add(phone);
+            }
+            updateSelectionCount();
+        }
+
+        function toggleSelectAll() {
+            const checkbox = document.getElementById('select-all-leads');
+            const currentlyDisplayed = Array.from(document.querySelectorAll('#bulk-recipients-list input[type="checkbox"]'));
+
+            if (checkbox.checked) {
+                currentlyDisplayed.forEach(cb => {
+                    selectedRecipients.add(cb.value);
+                    cb.checked = true;
+                });
+            } else {
+                currentlyDisplayed.forEach(cb => {
+                    selectedRecipients.delete(cb.value);
+                    cb.checked = false;
+                });
+            }
+
+            updateSelectionCount();
+            renderBulkRecipients(allLeadsForBulk.filter(lead => {
+                const filterStatus = document.getElementById('filter-status').value;
+                const searchTerm = document.getElementById('search-leads').value.toLowerCase();
+                return passesFilters(lead, filterStatus, searchTerm);
+            }));
+        }
+
+        function clearSelection() {
+            selectedRecipients.clear();
+            document.getElementById('select-all-leads').checked = false;
+            const checkboxes = document.querySelectorAll('#bulk-recipients-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelectionCount();
+            renderBulkRecipients(allLeadsForBulk);
+        }
+
+        function updateSelectionCount() {
+            const count = selectedRecipients.size;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('send-count').textContent = count;
+
+            // Enable/disable send button
+            const sendBtn = document.getElementById('send-bulk-btn');
+            sendBtn.disabled = count === 0;
+        }
+
+        function passesFilters(lead, filterStatus, searchTerm) {
+            // Status filter
+            if (filterStatus === 'completed' && !lead.completed) return false;
+            if (filterStatus === 'incomplete' && lead.completed) return false;
+
+            // Search filter
+            if (searchTerm && !lead.name?.toLowerCase().includes(searchTerm) &&
+                !lead.phone?.includes(searchTerm)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function filterLeads() {
+            const filterStatus = document.getElementById('filter-status').value;
+            const searchTerm = document.getElementById('search-leads').value.toLowerCase();
+
+            const filtered = allLeadsForBulk.filter(lead => passesFilters(lead, filterStatus, searchTerm));
+            renderBulkRecipients(filtered);
+        }
+
+        function updateCharCount() {
+            const text = document.getElementById('bulk-message-text').value;
+            document.getElementById('char-count').textContent = `${text.length} characters`;
+        }
+
+        function updatePreview() {
+            const text = document.getElementById('bulk-message-text').value;
+            const personalize = document.getElementById('personalize-messages').checked;
+            const previewEl = document.getElementById('preview-message');
+
+            if (!text) {
+                previewEl.innerHTML = '<em class="text-muted">Your message will appear here...</em>';
+                return;
+            }
+
+            let previewText = text;
+            if (personalize) {
+                previewText = text.replace(/{name}/g, '<strong style="color: #00a884;">John</strong>');
+            }
+
+            previewEl.innerHTML = previewText.replace(/\n/g, '<br>');
+        }
+
+        function showBulkTemplates() {
+            const container = document.getElementById('templates-list');
+            container.innerHTML = '';
+
+            messageTemplates.forEach((template, index) => {
+                const card = document.createElement('div');
+                card.className = 'col-md-6';
+                card.innerHTML = `
+                    <div class="card h-100 border hover-shadow" style="cursor: pointer; transition: all 0.2s;">
+                        <div class="card-body">
+                            <h6 class="card-title text-primary">
+                                <i class="bi bi-file-text"></i> ${template.name}
+                            </h6>
+                            <p class="card-text small text-muted" style="white-space: pre-line;">${template.text}</p>
+                        </div>
+                        <div class="card-footer bg-white border-0">
+                            <button class="btn btn-sm btn-outline-primary w-100" onclick="useTemplate(${index})">
+                                <i class="bi bi-plus-circle"></i> Use Template
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function useTemplate(index) {
+            const template = messageTemplates[index];
+            document.getElementById('bulk-message-text').value = template.text;
+            updateCharCount();
+            updatePreview();
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('templatesModal'));
+            modal.hide();
+        }
+
+        async function sendBulkMessages() {
+            const message = document.getElementById('bulk-message-text').value.trim();
+
+            if (!message) {
+                alert('Please enter a message to send.');
+                return;
+            }
+
+            if (selectedRecipients.size === 0) {
+                alert('Please select at least one recipient.');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to send this message to ${selectedRecipients.size} recipients?`)) {
+                return;
+            }
+
+            // Show progress section
+            document.getElementById('bulk-progress-section').style.display = 'block';
+            document.getElementById('bulk-progress-section').scrollIntoView({ behavior: 'smooth' });
+
+            // Reset counters
+            let sent = 0;
+            let failed = 0;
+            const total = selectedRecipients.size;
+            const personalize = document.getElementById('personalize-messages').checked;
+            const addDelay = document.getElementById('add-delay').checked;
+
+            document.getElementById('sent-count').textContent = '0';
+            document.getElementById('failed-count').textContent = '0';
+            document.getElementById('remaining-count').textContent = total;
+            document.getElementById('progress-bar').style.width = '0%';
+            document.getElementById('progress-bar').textContent = '0%';
+            document.getElementById('bulk-log').innerHTML = '';
+
+            // Disable send button
+            document.getElementById('send-bulk-btn').disabled = true;
+
+            // Get selected leads data
+            const recipients = allLeadsForBulk.filter(lead => selectedRecipients.has(lead.phone));
+
+            for (const lead of recipients) {
+                let personalizedMessage = message;
+
+                if (personalize) {
+                    personalizedMessage = message.replace(/{name}/g, lead.name || 'there');
+                }
+
+                try {
+                    const response = await fetch('/api/bulk-send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: lead.phone,
+                            message: personalizedMessage
+                        })
+                    });
+
+                    if (response.ok) {
+                        sent++;
+                        addLog('success', `✓ Sent to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)})`);
+                    } else {
+                        failed++;
+                        addLog('error', `✗ Failed to send to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)})`);
+                    }
+                } catch (error) {
+                    failed++;
+                    addLog('error', `✗ Error sending to ${lead.name || 'Unknown'}: ${error.message}`);
+                }
+
+                // Update progress
+                const completed = sent + failed;
+                const percentage = Math.round((completed / total) * 100);
+
+                document.getElementById('sent-count').textContent = sent;
+                document.getElementById('failed-count').textContent = failed;
+                document.getElementById('remaining-count').textContent = total - completed;
+                document.getElementById('progress-text').textContent = `${completed} / ${total}`;
+                document.getElementById('progress-bar').style.width = `${percentage}%`;
+                document.getElementById('progress-bar').textContent = `${percentage}%`;
+
+                // Add delay if enabled
+                if (addDelay && completed < total) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            // Re-enable send button
+            document.getElementById('send-bulk-btn').disabled = false;
+
+            // Final log
+            addLog('info', `📊 Bulk send completed: ${sent} sent, ${failed} failed out of ${total} total`);
+
+            if (failed === 0) {
+                alert(`Success! All ${sent} messages were sent successfully! 🎉`);
+            } else {
+                alert(`Bulk send completed: ${sent} sent, ${failed} failed.`);
+            }
+        }
+
+        function addLog(type, message) {
+            const logContainer = document.getElementById('bulk-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                success: 'text-success',
+                error: 'text-danger',
+                info: 'text-primary'
+            };
+
+            const logEntry = document.createElement('div');
+            logEntry.className = `${colors[type] || 'text-muted'} mb-1`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function resetBulkForm() {
+            document.getElementById('bulk-message-text').value = '';
+            document.getElementById('personalize-messages').checked = true;
+            document.getElementById('add-delay').checked = true;
+            clearSelection();
+            document.getElementById('bulk-progress-section').style.display = 'none';
+            updateCharCount();
+            updatePreview();
+        }
+
+        // Load bulk recipients when showing bulk messaging tab
+        const originalShowContent = showContent;
+        showContent = function (contentId) {
+            originalShowContent(contentId);
+            if (contentId === 'bulk-messaging' && allLeadsForBulk.length === 0) {
+                loadBulkRecipients();
+            }
+            if (contentId === 'flows') {
+                fetchFlows();
+            }
+        };
+
+        // ========================================
+        // END BULK MESSAGING FUNCTIONALITY
+        // ========================================
+
         fetchFlows();
     </script>
 </body>
