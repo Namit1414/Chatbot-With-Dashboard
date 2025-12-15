@@ -2,15 +2,15 @@ import Lead from "./models/Lead.js";
 import { saveLead } from "./googleSheet.js";
 
 const questions = [
-  { key: "name", text: "😊 Great! What's your name?" },
+  { key: "name", text: "😊 Great! What's your *name*?" },
   { key: "age", text: "🎂 How old are you?" },
-  { key: "weight", text: "⚖️ Your current weight (kg)?" },
-  { key: "height", text: "📏 Your height (cm)?" },
-  { key: "gender", text: "👤 Your gender? (Male / Female / Other)" },
-  { key: "place", text: "Please mention your place or locality." },
-  { key: "health_issues", text: "Do You Have Any Health Issues? Please Mention If Any." },
-  { key: "preferred_date", text: "Please tell us your preferred Date to call you." },
-  { key: "preferred_time", text: "Preferred Time to call you?" }
+  { key: "weight", text: "⚖️ What is your current *weight* (in kg)?" },
+  { key: "height", text: "📏 What is your *height* (in cm)?" },
+  { key: "gender", text: "� What is your *gender*? (Male / Female / Other)" },
+  { key: "place", text: "📍 Please mention your *place* or *locality*." },
+  { key: "health_issues", text: "🏥 Do you have any *health issues*? Please mention if any." },
+  { key: "preferred_date", text: "📅 Please tell us your *preferred date* to call you." },
+  { key: "preferred_time", text: "⏰ What's your *preferred time* to call you?" }
 ];
 
 // In-memory session state (still fine for short term, but Redis is better for production)
