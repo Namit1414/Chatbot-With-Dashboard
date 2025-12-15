@@ -36,17 +36,17 @@ async function saveLeadToDb(phone, data) {
 
 export function startLeadFlow(phone) {
   userStates[phone] = { step: 0, data: {} };
-  return QUESTIONS[0].question;
+  return questions[0].text;
 }
 
 export async function handleLeadFlow(phone, message) {
   const state = userStates[phone];
-  const currentKey = QUESTIONS[state.step].key;
+  const currentKey = questions[state.step].key;
 
   state.data[currentKey] = message;
   state.step++;
 
-  if (state.step >= QUESTIONS.length) {
+  if (state.step >= questions.length) {
     await saveLeadToDb(phone, state.data);
 
     // Try to save to Google Sheet as well (don't block the user on failure)
@@ -60,7 +60,7 @@ export async function handleLeadFlow(phone, message) {
     return "✅ Thanks! Your details have already been saved. How can I help you further?";
   }
 
-  return QUESTIONS[state.step].question;
+  return questions[state.step].text;
 }
 
 export function isLeadInProgress(phone) {
