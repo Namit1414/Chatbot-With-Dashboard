@@ -1,5 +1,6 @@
 import { getExcelReply } from "./excelFlow.js";
 import { aiReply } from "./aiAgent.js";
+import Flow from "./models/Flow.js";
 import {
   isLeadInProgress,
   handleLeadFlow,
@@ -14,7 +15,15 @@ export async function runFlow(phone, message) {
     return handleLeadFlow(phone, message);
   }
 
-  // 2️⃣ Excel-based flows
+  const msgLower = message.toLowerCase().trim();
+
+  // 2️⃣ Check MongoDB Flows
+  const dbFlow = await Flow.findOne({ trigger: msgLower });
+  if (dbFlow) {
+    return dbFlow.response;
+  }
+
+  // 3️⃣ Excel-based flows (Legacy support)
   const excel = getExcelReply(message);
   if (excel) {
 
@@ -33,7 +42,7 @@ export async function runFlow(phone, message) {
     return excel.response;
   }
 
-  // 3️⃣ AI fallback
+  // 4️⃣ AI fallback
   const ai = await aiReply(message, phone);
   if (ai) return ai;
 
