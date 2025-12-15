@@ -17,10 +17,14 @@ export async function runFlow(phone, message) {
 
   const msgLower = message.toLowerCase().trim();
 
-  // 2️⃣ Check MongoDB Flows
-  const dbFlow = await Flow.findOne({ trigger: msgLower });
-  if (dbFlow) {
-    return dbFlow.response;
+  // 2️⃣ Check MongoDB Flows (Keyword Match)
+  // Fetch all flows to check for partial matches (e.g. "price" in "what is the price")
+  // Optimization: In a large app, use MongoDB Text Search ($text) instead.
+  const flows = await Flow.find({});
+  const matchedFlow = flows.find(f => msgLower.includes(f.trigger.toLowerCase()));
+
+  if (matchedFlow) {
+    return matchedFlow.response;
   }
 
   // 3️⃣ Excel-based flows (Legacy support)
