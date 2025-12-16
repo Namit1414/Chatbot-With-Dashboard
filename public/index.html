@@ -2540,6 +2540,11 @@
         }
 
         // Show node properties editor
+        function copyToClipboard(text) {
+            if (!text) return;
+            navigator.clipboard.writeText(text);
+        }
+
         function showNodeProperties(node) {
             const panel = document.getElementById('node-properties');
 
@@ -2570,6 +2575,13 @@
                                     <div class="d-flex justify-content-between mb-2">
                                         <small class="fw-bold">Button ${i + 1}</small>
                                         <button class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeButton(${i})">&times;</button>
+                                    </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                         <span class="input-group-text bg-white text-muted">ID</span>
+                                         <input type="text" class="form-control bg-white" id="btn-id-${i}" value="${btn.id}" readonly>
+                                         <button class="btn btn-outline-secondary" onclick="copyToClipboard('${btn.id}')" title="Copy ID">
+                                            <i class="bi bi-clipboard"></i>
+                                         </button>
                                     </div>
                                     <input type="text" class="form-control form-control-sm mb-1" id="btn-text-${i}" value="${btn.text}" placeholder="Label">
                                     <select class="form-select form-select-sm mb-1" id="btn-type-${i}">
@@ -2694,7 +2706,7 @@
                 const btnCards = container.children;
                 for (let i = 0; i < btnCards.length; i++) {
                     btns.push({
-                        id: `btn_${Date.now()}_${i}`,
+                        id: document.getElementById(`btn-id-${i}`).value,
                         text: document.getElementById(`btn-text-${i}`).value,
                         type: document.getElementById(`btn-type-${i}`).value,
                         value: document.getElementById(`btn-value-${i}`).value
