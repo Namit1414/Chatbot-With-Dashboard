@@ -14,6 +14,7 @@ import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
+import ButtonResponse from "./models/ButtonResponse.js";
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
@@ -151,6 +152,44 @@ app.post("/api/bulk-send", async (req, res) => {
 });
 
 // ========================================
+// BUTTON AUTOMATION APIs
+// ========================================
+
+app.get("/api/button-responses", async (req, res) => {
+  try {
+    const responses = await ButtonResponse.find({}).sort({ createdAt: -1 });
+    res.json(responses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/button-responses", async (req, res) => {
+  try {
+    const { triggerId, responseText } = req.body;
+    // Update if exists, otherwise create (Upsert)
+    // We use findOneAndUpdate to easily handle 'update existing rule' logic
+    const rule = await ButtonResponse.findOneAndUpdate(
+      { triggerId },
+      { responseText, createdAt: new Date() }, // update timestamp on edit
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    res.json(rule);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/button-responses/:id", async (req, res) => {
+  try {
+    await ButtonResponse.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========================================
 // ADVANCED FLOW BUILDER APIs
 // ========================================
 
@@ -281,7 +320,6 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  console.log("🔔 Webhook endpoint hit!"); // Debug log
   try {
     const msg = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!msg) return res.sendStatus(200);
