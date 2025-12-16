@@ -47,7 +47,14 @@ export async function handleLeadFlow(phone, message) {
   if (currentKey === "preferred_date") {
     if (!isValidDate(message)) {
       // Return error message and stay on same step (don't increment)
-      return "⚠️ That doesn't look like a valid date. Please select a date from the list or type it in format YYYY-MM-DD or 'Today'.";
+      return "⚠️ That doesn't look like a valid date. Please select a date from the list or type it in format YYYY-MM-DD.";
+    }
+  }
+
+  // Validate Time
+  if (currentKey === "preferred_time") {
+    if (!isValidTime(message)) {
+      return "⚠️ Please select a valid time range from the list OR type a time between 10:00 AM and 10:00 PM.";
     }
   }
 
@@ -68,10 +75,13 @@ export async function handleLeadFlow(phone, message) {
     return "✅ Thanks! Your details have already been saved. How can I help you further?";
   }
 
-  // Check if NEXT question is the date question, and return List Message if so
+  // Check if NEXT question is the date or time question, and return List Message if so
   const nextQuestion = questions[state.step];
   if (nextQuestion.key === "preferred_date") {
     return generateDateListMessage(nextQuestion.text);
+  }
+  if (nextQuestion.key === "preferred_time") {
+    return generateTimeListMessage(nextQuestion.text);
   }
 
   return nextQuestion.text;
@@ -124,5 +134,85 @@ function generateDateListMessage(text) {
     messageType: 'list',
     content: text,
     items: items
+  };
+}
+
+// Helper to validate time
+function isValidTime(input) {
+  const timeStr = input.trim();
+
+  // 1. Check if it matches one of our ranges (Simple string match)
+  if (timeStr.includes('-') && (timeStr.includes('AM') || timeStr.includes('PM'))) {
+    // Assume valid if it looks like our range format "10:00 AM - 12:00 PM"
+    // Strict check:
+    const ranges = [
+      "10:00 AM - 12:00 PM",
+      "12:00 PM - 02:00 PM",
+      "02:00 PM - 04:00 PM",
+      "04:00 PM - 06:00 PM",
+      "06:00 PM - 08:00 PM",
+      "08:00 PM - 10:00 PM"
+    ];
+    // Allow fuzzy match or exact? Let's do exact or startsWith
+    // If user picked from list, it sends exact.
+    if (ranges.includes(timeStr)) return true;
+  }
+
+  // 2. Check if specific valid time (between 10 AM and 10 PM)
+  // Formats: "10:30", "10:30 AM", "22:15"
+  // Convert to minutes from midnight
+  try {
+    const timeRegex = /^(\d{1,2})[:.](\d{2})\s?(AM|PM|am|pm)?$/i;
+    const match = timeStr.match(timeRegex);
+
+    if (!match) return false;
+
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3] ? match[3].toUpperCase() : null;
+
+    if (minutes < 0 || minutes > 59) return false;
+
+    // Convert to 24h
+    if (period) {
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+    }
+
+    // Calculate total minutes
+    const totalMinutes = hours * 60 + minutes;
+
+    // Range: 10:00 AM (600 min) to 10:00 PM (1320 min)
+    if (totalMinutes >= 600 && totalMinutes <= 1320) {
+      return true;
+    }
+  } catch (e) {
+    return false;
+  }
+
+  return false;
+}
+
+// Helper to generate Time Range List
+function generateTimeListMessage(text) {
+  // 2-hour slots to fit within 10-item limit (10AM to 10PM = 12 hours)
+  // 10-12, 12-2, 2-4, 4-6, 6-8, 8-10 -> 6 slots. Perfect.
+  const ranges = [
+    { id: "slot_10_12", title: "10:00 AM - 12:00 PM" },
+    { id: "slot_12_02", title: "12:00 PM - 02:00 PM" },
+    { id: "slot_02_04", title: "02:00 PM - 04:00 PM" },
+    { id: "slot_04_06", title: "04:00 PM - 06:00 PM" },
+    { id: "slot_06_08", title: "06:00 PM - 08:00 PM" },
+    { id: "slot_08_10", title: "08:00 PM - 10:00 PM" }
+  ];
+
+  return {
+    messageType: 'list',
+    content: text,
+    items: ranges.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: "Select this slot"
+    }))
   };
 }
