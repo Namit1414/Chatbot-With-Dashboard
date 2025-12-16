@@ -7,6 +7,7 @@ import {
   startLeadFlow,
   hasExistingLead
 } from "./leadManager.js";
+import { executeAdvancedFlow, getFlowSession } from "./advancedFlowEngine.js";
 
 export async function runFlow(phone, message) {
 
@@ -15,17 +16,23 @@ export async function runFlow(phone, message) {
     return handleLeadFlow(phone, message);
   }
 
+  // 2️⃣ Check Advanced Flows FIRST (Visual Flow Builder flows)
+  const advancedFlowResult = await executeAdvancedFlow(phone, message);
+  if (advancedFlowResult) {
+    // Format response based on type
+    return formatAdvancedFlowResponse(advancedFlowResult);
+  }
+
   const msgLower = message.toLowerCase().trim();
 
-  // 2️⃣ Check MongoDB Flows (Keyword Match)
-  // Fetch all flows to check for partial matches (e.g. "price" in "what is the price")
-  // Optimization: In a large app, use MongoDB Text Search ($text) instead.
+  // 3️⃣ Check MongoDB Flows (Simple Keyword Match)
   const flows = await Flow.find({});
   const matchedFlow = flows.find(f => msgLower.includes(f.trigger.toLowerCase()));
 
   if (matchedFlow) {
     return matchedFlow.response;
   }
+
   const excel = getExcelReply(message);
   if (excel) {
 
@@ -47,7 +54,29 @@ export async function runFlow(phone, message) {
   const ai = await aiReply(message, phone);
   if (ai) return ai;
 
-  return "Sorry, I didn’t quite understand that. Can you rephrase?";
+  return "Sorry, I didn't quite understand that. Can you rephrase?";
 }
 
-export default runFlow;
+/**
+ * Format advanced flow response for WhatsApp API
+ */
+function formatAdvancedFlowResponse(result) {
+  if (!result) return null;
+
+  // For simple text messages
+  if (result.type === 'text') {
+    return result.content;
+  }
+
+  // For now, return as structured object for later WhatsApp API integration
+  // The server will need to handle these special response types
+  return {
+    messageType: result.type,
+    content: result.content,
+    buttons: result.buttons,
+    items: result.items,
+    url: result.url,
+    caption: result.caption,
+    filename: result.filename
+  };
+}
