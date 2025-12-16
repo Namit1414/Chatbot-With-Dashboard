@@ -14,6 +14,7 @@ import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
+import { initScheduler } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
@@ -77,6 +78,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 await connectMongo();
+initScheduler();
 
 function sanitizePhone(phone) {
   if (!phone) return "";
