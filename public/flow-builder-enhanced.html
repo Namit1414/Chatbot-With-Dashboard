@@ -192,6 +192,9 @@
                             <small class="text-muted">Build your WhatsApp chatbot flows visually</small>
                         </div>
                         <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" onclick="openFlowSettings()">
+                                <i class="bi bi-gear"></i> Settings
+                            </button>
                             <button class="btn btn-outline-secondary" onclick="clearCanvas()">
                                 <i class="bi bi-trash"></i> Clear
                             </button>
@@ -208,47 +211,8 @@
         </div>
 
         <div class="row g-3">
-            <!-- Left: Node Palette -->
-            <div class="col-lg-2">
-                <div class="node-palette">
-                    <h6 class="mb-3"><i class="bi bi-puzzle-fill"></i> Add Nodes</h6>
-                    <button class="palette-btn" onclick="addNode('message')">
-                        <i class="bi bi-chat-text text-primary"></i>
-                        <span>Message</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('buttons')">
-                        <i class="bi bi-ui-checks text-success"></i>
-                        <span>Buttons</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('list')">
-                        <i class="bi bi-list-ul text-purple"></i>
-                        <span>List</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('image')">
-                        <i class="bi bi-image text-warning"></i>
-                        <span>Image</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('video')">
-                        <i class="bi bi-play-btn text-danger"></i>
-                        <span>Video</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('document')">
-                        <i class="bi bi-file-earmark-pdf text-info"></i>
-                        <span>Document</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('delay')">
-                        <i class="bi bi-clock text-secondary"></i>
-                        <span>Delay</span>
-                    </button>
-                    <button class="palette-btn" onclick="addNode('condition')">
-                        <i class="bi bi-shuffle text-dark"></i>
-                        <span>Condition</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Center: Canvas -->
-            <div class="col-lg-7">
+            <!-- Left: Canvas (Expanded) -->
+            <div class="col-lg-9">
                 <div class="flow-canvas" id="flow-canvas">
                     <svg class="connections" id="connections-svg">
                         <defs>
@@ -264,9 +228,41 @@
                 </div>
             </div>
 
-            <!-- Right: Properties -->
-            <div class="col-lg-3">
-                <div class="properties-panel" id="properties-panel">
+            <!-- Right: Sidebar (Palette + Properties) -->
+            <div class="col-lg-3 d-flex flex-column gap-3">
+                <!-- Node Palette -->
+                <div class="node-palette" style="max-height: 400px; overflow-y: auto;">
+                    <h6 class="mb-3"><i class="bi bi-puzzle-fill"></i> Add Nodes</h6>
+                    <div class="d-grid gap-2">
+                        <button class="palette-btn mb-0" onclick="addNode('message')">
+                            <i class="bi bi-chat-text text-primary"></i> Message
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('buttons')">
+                            <i class="bi bi-ui-checks text-success"></i> Buttons
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('list')">
+                            <i class="bi bi-list-ul text-purple"></i> List
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('image')">
+                            <i class="bi bi-image text-warning"></i> Image
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('video')">
+                            <i class="bi bi-play-btn text-danger"></i> Video
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('document')">
+                            <i class="bi bi-file-earmark-pdf text-info"></i> Document
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('delay')">
+                            <i class="bi bi-clock text-secondary"></i> Delay
+                        </button>
+                        <button class="palette-btn mb-0" onclick="addNode('condition')">
+                            <i class="bi bi-shuffle text-dark"></i> Condition
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Properties -->
+                <div class="properties-panel flex-grow-1" id="properties-panel">
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.3;"></i>
                         <p class="mt-2 small">Select a node to edit its properties</p>
@@ -276,126 +272,161 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Flow Builder State
-        let nodes = [];
-        let connections = [];
-        let selectedNodeId = null;
-        let nodeIdCounter = 0;
-        let isDragging = false;
-        let draggedNode = null;
-        let dragOffset = { x: 0, y: 0 };
-        let isConnecting = false;
-        let connectionStart = null;
+    <!-- Flow Settings Modal -->
+    <div class="modal fade" id="flowSettingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Flow Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="flowSettingsForm">
+                        <div class="mb-3">
+                            <label class="form-label">Flow Name</label>
+                            <input type="text" class="form-control" id="flow-name" value="New Flow">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Trigger Keyword</label>
+                            <input type="text" class="form-control" id="flow-trigger" placeholder="e.g. promo2024">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Recipients</label>
+                            <select class="form-select" id="flow-recipients" multiple size="5">
+                                <option value="all">All Leads</option>
+                                <!-- Leads will be populated here -->
+                            </select>
+                            <div class="form-text">Hold Ctrl to select multiple specific leads (or 'All Leads')</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveFlowSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
 
-        // Initialize with start node
-        window.addEventListener('DOMContentLoaded', () => {
-            addNode('start');
-        });
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Flow Builder State
+            let nodes = [];
+            let connections = [];
+            let selectedNodeId = null;
+            let nodeIdCounter = 0;
+            let isDragging = false;
+            let draggedNode = null;
+            let dragOffset = { x: 0, y: 0 };
+            let isConnecting = false;
+            let connectionStart = null;
 
-        // Add node to canvas
-        function addNode(type) {
-            const nodeId = `node_${nodeIdCounter++}`;
-            const node = {
-                id: nodeId,
-                type,
-                position: {
-                    x: 100 + (nodes.length * 60),
-                    y: 100 + (nodes.length * 40)
-                },
-                data: getDefaultNodeData(type)
-            };
-
-            nodes.push(node);
-            renderCanvas();
-            selectNode(nodeId);
-        }
-
-        // Get default data for node type
-        function getDefaultNodeData(type) {
-            const defaults = {
-                start: { text: 'Flow Start' },
-                message: { text: 'Hello! How can I help you?' },
-                buttons: {
-                    text: 'Choose an option:',
-                    buttons: [{ id: 'btn1', text: 'Option 1', type: 'reply', value: 'option1' }]
-                },
-                list: {
-                    text: 'Select from list:',
-                    listItems: [{ id: 'item1', title: 'Item 1', description: 'Description' }]
-                },
-                image: { mediaUrl: '', caption: '' },
-                video: { mediaUrl: '', caption: '' },
-                document: { mediaUrl: '', caption: '', filename: 'document.pdf' },
-                delay: { delaySeconds: 2 },
-                condition: { variable: 'lastResponse', condition: 'contains:yes' }
-            };
-            return defaults[type] || {};
-        }
-
-        // Render entire canvas
-        function renderCanvas() {
-            const canvas = document.getElementById('flow-canvas');
-            const placeholder = document.getElementById('canvas-placeholder');
-
-            if (nodes.length === 0) {
-                placeholder.style.display = 'block';
-                return;
-            }
-
-            placeholder.style.display = 'none';
-
-            // Clear existing nodes (keep SVG)
-            const existingNodes = canvas.querySelectorAll('.flow-node');
-            existingNodes.forEach(n => n.remove());
-
-            // Render nodes
-            nodes.forEach(node => {
-                const nodeElement = createNodeElement(node);
-                canvas.appendChild(nodeElement);
+            // Initialize with start node
+            window.addEventListener('DOMContentLoaded', () => {
+                addNode('start');
             });
 
-            // Render connections
-            renderConnections();
-        }
+            // Add node to canvas
+            function addNode(type) {
+                const nodeId = `node_${nodeIdCounter++}`;
+                const node = {
+                    id: nodeId,
+                    type,
+                    position: {
+                        x: 100 + (nodes.length * 60),
+                        y: 100 + (nodes.length * 40)
+                    },
+                    data: getDefaultNodeData(type)
+                };
 
-        // Create node DOM element
-        function createNodeElement(node) {
-            const div = document.createElement('div');
-            div.className = 'flow-node';
-            if (selectedNodeId === node.id) {
-                div.classList.add('selected');
+                nodes.push(node);
+                renderCanvas();
+                selectNode(nodeId);
             }
-            div.id = node.id;
-            div.style.left = `${node.position.x}px`;
-            div.style.top = `${node.position.y}px`;
 
-            const icons = {
-                start: 'bi-play-fill',
-                message: 'bi-chat-text',
-                buttons: 'bi-ui-checks',
-                list: 'bi-list-ul',
-                image: 'bi-image',
-                video: 'bi-play-btn',
-                document: 'bi-file-earmark-pdf',
-                delay: 'bi-clock',
-                condition: 'bi-shuffle'
-            };
+            // Get default data for node type
+            function getDefaultNodeData(type) {
+                const defaults = {
+                    start: { text: 'Flow Start' },
+                    message: { text: 'Hello! How can I help you?' },
+                    buttons: {
+                        text: 'Choose an option:',
+                        buttons: [{ id: 'btn1', text: 'Option 1', type: 'reply', value: 'option1' }]
+                    },
+                    list: {
+                        text: 'Select from list:',
+                        listItems: [{ id: 'item1', title: 'Item 1', description: 'Description' }]
+                    },
+                    image: { mediaUrl: '', caption: '' },
+                    video: { mediaUrl: '', caption: '' },
+                    document: { mediaUrl: '', caption: '', filename: 'document.pdf' },
+                    delay: { delaySeconds: 2 },
+                    condition: { variable: 'lastResponse', condition: 'contains:yes' }
+                };
+                return defaults[type] || {};
+            }
 
-            const colors = {
-                start: '#4caf50',
-                message: '#2196f3',
-                buttons: '#00a884',
-                list: '#9c27b0',
-                image: '#ff9800',
-                video: '#e91e63',
-                document: '#00bcd4',
-                delay: '#607d8b',
-                condition: '#f44336'
-            };
+            // Render entire canvas
+            function renderCanvas() {
+                const canvas = document.getElementById('flow-canvas');
+                const placeholder = document.getElementById('canvas-placeholder');
 
-            div.innerHTML = `
+                if (nodes.length === 0) {
+                    placeholder.style.display = 'block';
+                    return;
+                }
+
+                placeholder.style.display = 'none';
+
+                // Clear existing nodes (keep SVG)
+                const existingNodes = canvas.querySelectorAll('.flow-node');
+                existingNodes.forEach(n => n.remove());
+
+                // Render nodes
+                nodes.forEach(node => {
+                    const nodeElement = createNodeElement(node);
+                    canvas.appendChild(nodeElement);
+                });
+
+                // Render connections
+                renderConnections();
+            }
+
+            // Create node DOM element
+            function createNodeElement(node) {
+                const div = document.createElement('div');
+                div.className = 'flow-node';
+                if (selectedNodeId === node.id) {
+                    div.classList.add('selected');
+                }
+                div.id = node.id;
+                div.style.left = `${node.position.x}px`;
+                div.style.top = `${node.position.y}px`;
+
+                const icons = {
+                    start: 'bi-play-fill',
+                    message: 'bi-chat-text',
+                    buttons: 'bi-ui-checks',
+                    list: 'bi-list-ul',
+                    image: 'bi-image',
+                    video: 'bi-play-btn',
+                    document: 'bi-file-earmark-pdf',
+                    delay: 'bi-clock',
+                    condition: 'bi-shuffle'
+                };
+
+                const colors = {
+                    start: '#4caf50',
+                    message: '#2196f3',
+                    buttons: '#00a884',
+                    list: '#9c27b0',
+                    image: '#ff9800',
+                    video: '#e91e63',
+                    document: '#00bcd4',
+                    delay: '#607d8b',
+                    condition: '#f44336'
+                };
+
+                div.innerHTML = `
                 <div class="node-header">
                     <div class="node-type" style="color: ${colors[node.type]};">
                         <i class="bi ${icons[node.type]}"></i>
@@ -412,202 +443,202 @@
                 <div class="connection-point output" data-node="${node.id}" data-type="output"></div>
             `;
 
-            // Drag events
-            div.addEventListener('mousedown', (e) => handleNodeMouseDown(e, node));
-            div.addEventListener('click', (e) => {
-                e.stopPropagation();
-                selectNode(node.id);
-            });
-
-            // Connection point events
-            const outputPoint = div.querySelector('.connection-point.output');
-            outputPoint.addEventListener('click', (e) => {
-                e.stopPropagation();
-                startConnection(node.id);
-            });
-
-            const inputPoint = div.querySelector('.connection-point.input');
-            inputPoint.addEventListener('click', (e) => {
-                e.stopPropagation();
-                endConnection(node.id);
-            });
-
-            return div;
-        }
-
-        // Get node preview content
-        function getNodePreview(node) {
-            if (node.type === 'message') {
-                return node.data.text || 'Empty message';
-            } else if (node.type === 'buttons') {
-                const count = node.data.buttons?.length || 0;
-                return `${node.data.text || 'Choose option'}<br><small>${count} button(s)</small>`;
-            } else if (node.type === 'list') {
-                const count = node.data.listItems?.length || 0;
-                return `${count} list item(s)`;
-            } else if (node.type === 'image') {
-                return node.data.caption || 'Image message';
-            } else if (node.type === 'video') {
-                return node.data.caption || 'Video message';
-            } else if (node.type === 'document') {
-                return node.data.filename || 'Document';
-            } else if (node.type === 'delay') {
-                return `Wait ${node.data.delaySeconds || 0} seconds`;
-            } else if (node.type === 'start') {
-                return 'Flow entry point';
-            }
-            return '';
-        }
-
-        // Handle node mouse down for dragging
-        function handleNodeMouseDown(e, node) {
-            if (e.target.closest('.connection-point') || e.target.closest('button')) {
-                return; // Don't drag if clicking connection points or buttons
-            }
-
-            isDragging = true;
-            draggedNode = node;
-
-            const canvas = document.getElementById('flow-canvas');
-            const canvasRect = canvas.getBoundingClientRect();
-            const nodeElement = document.getElementById(node.id);
-
-            dragOffset = {
-                x: e.clientX - canvasRect.left - node.position.x - canvas.scrollLeft,
-                y: e.clientY - canvasRect.top - node.position.y - canvas.scrollTop
-            };
-
-            nodeElement.classList.add('dragging');
-            e.preventDefault();
-        }
-
-        // Global mouse move for dragging
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging || !draggedNode) return;
-
-            const canvas = document.getElementById('flow-canvas');
-            const canvasRect = canvas.getBoundingClientRect();
-
-            const newX = e.clientX - canvasRect.left - dragOffset.x + canvas.scrollLeft;
-            const newY = e.clientY - canvasRect.top - dragOffset.y + canvas.scrollTop;
-
-            draggedNode.position.x = Math.max(0, newX);
-            draggedNode.position.y = Math.max(0, newY);
-
-            const nodeElement = document.getElementById(draggedNode.id);
-            nodeElement.style.left = `${draggedNode.position.x}px`;
-            nodeElement.style.top = `${draggedNode.position.y}px`;
-
-            renderConnections();
-        });
-
-        // Global mouse up to stop dragging
-        document.addEventListener('mouseup', () => {
-            if (isDragging && draggedNode) {
-                const nodeElement = document.getElementById(draggedNode.id);
-                nodeElement.classList.remove('dragging');
-            }
-            isDragging = false;
-            draggedNode = null;
-        });
-
-        // Start creating a connection
-        function startConnection(nodeId) {
-            if (isConnecting) {
-                endConnection(nodeId);
-            } else {
-                isConnecting = true;
-                connectionStart = nodeId;
-                console.log('Connection started from:', nodeId);
-            }
-        }
-
-        // End creating a connection
-        function endConnection(nodeId) {
-            if (!isConnecting || !connectionStart) return;
-
-            if (connectionStart === nodeId) {
-                // Can't connect to self
-                isConnecting = false;
-                connectionStart = null;
-                return;
-            }
-
-            // Check if connection already exists
-            const exists = connections.find(c =>
-                c.source === connectionStart && c.target === nodeId
-            );
-
-            if (!exists) {
-                connections.push({
-                    id: `conn_${connections.length}`,
-                    source: connectionStart,
-                    target: nodeId
+                // Drag events
+                div.addEventListener('mousedown', (e) => handleNodeMouseDown(e, node));
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectNode(node.id);
                 });
-                renderConnections();
+
+                // Connection point events
+                const outputPoint = div.querySelector('.connection-point.output');
+                outputPoint.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startConnection(node.id);
+                });
+
+                const inputPoint = div.querySelector('.connection-point.input');
+                inputPoint.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    endConnection(node.id);
+                });
+
+                return div;
             }
 
-            isConnecting = false;
-            connectionStart = null;
-            console.log('Connection created');
-        }
+            // Get node preview content
+            function getNodePreview(node) {
+                if (node.type === 'message') {
+                    return node.data.text || 'Empty message';
+                } else if (node.type === 'buttons') {
+                    const count = node.data.buttons?.length || 0;
+                    return `${node.data.text || 'Choose option'}<br><small>${count} button(s)</small>`;
+                } else if (node.type === 'list') {
+                    const count = node.data.listItems?.length || 0;
+                    return `${count} list item(s)`;
+                } else if (node.type === 'image') {
+                    return node.data.caption || 'Image message';
+                } else if (node.type === 'video') {
+                    return node.data.caption || 'Video message';
+                } else if (node.type === 'document') {
+                    return node.data.filename || 'Document';
+                } else if (node.type === 'delay') {
+                    return `Wait ${node.data.delaySeconds || 0} seconds`;
+                } else if (node.type === 'start') {
+                    return 'Flow entry point';
+                }
+                return '';
+            }
 
-        // Render SVG connections
-        function renderConnections() {
-            const svg = document.getElementById('connections-svg');
+            // Handle node mouse down for dragging
+            function handleNodeMouseDown(e, node) {
+                if (e.target.closest('.connection-point') || e.target.closest('button')) {
+                    return; // Don't drag if clicking connection points or buttons
+                }
 
-            // Clear existing paths
-            const existingPaths = svg.querySelectorAll('path');
-            existingPaths.forEach(p => p.remove());
+                isDragging = true;
+                draggedNode = node;
 
-            connections.forEach(conn => {
-                const sourceNode = nodes.find(n => n.id === conn.source);
-                const targetNode = nodes.find(n => n.id === conn.target);
+                const canvas = document.getElementById('flow-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                const nodeElement = document.getElementById(node.id);
 
-                if (!sourceNode || !targetNode) return;
+                dragOffset = {
+                    x: e.clientX - canvasRect.left - node.position.x - canvas.scrollLeft,
+                    y: e.clientY - canvasRect.top - node.position.y - canvas.scrollTop
+                };
 
-                const sourceEl = document.getElementById(sourceNode.id);
-                const targetEl = document.getElementById(targetNode.id);
+                nodeElement.classList.add('dragging');
+                e.preventDefault();
+            }
 
-                if (!sourceEl || !targetEl) return;
+            // Global mouse move for dragging
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || !draggedNode) return;
 
-                const sourceRect = sourceEl.getBoundingClientRect();
-                const targetRect = targetEl.getBoundingClientRect();
                 const canvas = document.getElementById('flow-canvas');
                 const canvasRect = canvas.getBoundingClientRect();
 
-                const x1 = sourceNode.position.x + (sourceRect.width / 2);
-                const y1 = sourceNode.position.y + sourceRect.height;
-                const x2 = targetNode.position.x + (targetRect.width / 2);
-                const y2 = targetNode.position.y;
+                const newX = e.clientX - canvasRect.left - dragOffset.x + canvas.scrollLeft;
+                const newY = e.clientY - canvasRect.top - dragOffset.y + canvas.scrollTop;
 
-                // Create curved path
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const d = `M ${x1} ${y1} C ${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
-                path.setAttribute('d', d);
-                path.setAttribute('class', 'connection-line');
-                path.style.cursor = 'pointer';
-                path.onclick = () => selectConnection(conn.id);
+                draggedNode.position.x = Math.max(0, newX);
+                draggedNode.position.y = Math.max(0, newY);
 
-                svg.appendChild(path);
+                const nodeElement = document.getElementById(draggedNode.id);
+                nodeElement.style.left = `${draggedNode.position.x}px`;
+                nodeElement.style.top = `${draggedNode.position.y}px`;
+
+                renderConnections();
             });
-        }
 
-        // Select node
-        function selectNode(nodeId) {
-            selectedNodeId = nodeId;
-            const node = nodes.find(n => n.id === nodeId);
-            if (node) {
-                showNodeProperties(node);
-                renderCanvas();
+            // Global mouse up to stop dragging
+            document.addEventListener('mouseup', () => {
+                if (isDragging && draggedNode) {
+                    const nodeElement = document.getElementById(draggedNode.id);
+                    nodeElement.classList.remove('dragging');
+                }
+                isDragging = false;
+                draggedNode = null;
+            });
+
+            // Start creating a connection
+            function startConnection(nodeId) {
+                if (isConnecting) {
+                    endConnection(nodeId);
+                } else {
+                    isConnecting = true;
+                    connectionStart = nodeId;
+                    console.log('Connection started from:', nodeId);
+                }
             }
-        }
 
-        // Show node properties in right panel
-        function showNodeProperties(node) {
-            const panel = document.getElementById('properties-panel');
+            // End creating a connection
+            function endConnection(nodeId) {
+                if (!isConnecting || !connectionStart) return;
 
-            let propertiesHTML = `
+                if (connectionStart === nodeId) {
+                    // Can't connect to self
+                    isConnecting = false;
+                    connectionStart = null;
+                    return;
+                }
+
+                // Check if connection already exists
+                const exists = connections.find(c =>
+                    c.source === connectionStart && c.target === nodeId
+                );
+
+                if (!exists) {
+                    connections.push({
+                        id: `conn_${connections.length}`,
+                        source: connectionStart,
+                        target: nodeId
+                    });
+                    renderConnections();
+                }
+
+                isConnecting = false;
+                connectionStart = null;
+                console.log('Connection created');
+            }
+
+            // Render SVG connections
+            function renderConnections() {
+                const svg = document.getElementById('connections-svg');
+
+                // Clear existing paths
+                const existingPaths = svg.querySelectorAll('path');
+                existingPaths.forEach(p => p.remove());
+
+                connections.forEach(conn => {
+                    const sourceNode = nodes.find(n => n.id === conn.source);
+                    const targetNode = nodes.find(n => n.id === conn.target);
+
+                    if (!sourceNode || !targetNode) return;
+
+                    const sourceEl = document.getElementById(sourceNode.id);
+                    const targetEl = document.getElementById(targetNode.id);
+
+                    if (!sourceEl || !targetEl) return;
+
+                    const sourceRect = sourceEl.getBoundingClientRect();
+                    const targetRect = targetEl.getBoundingClientRect();
+                    const canvas = document.getElementById('flow-canvas');
+                    const canvasRect = canvas.getBoundingClientRect();
+
+                    const x1 = sourceNode.position.x + (sourceRect.width / 2);
+                    const y1 = sourceNode.position.y + sourceRect.height;
+                    const x2 = targetNode.position.x + (targetRect.width / 2);
+                    const y2 = targetNode.position.y;
+
+                    // Create curved path
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const d = `M ${x1} ${y1} C ${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'connection-line');
+                    path.style.cursor = 'pointer';
+                    path.onclick = () => selectConnection(conn.id);
+
+                    svg.appendChild(path);
+                });
+            }
+
+            // Select node
+            function selectNode(nodeId) {
+                selectedNodeId = nodeId;
+                const node = nodes.find(n => n.id === nodeId);
+                if (node) {
+                    showNodeProperties(node);
+                    renderCanvas();
+                }
+            }
+
+            // Show node properties in right panel
+            function showNodeProperties(node) {
+                const panel = document.getElementById('properties-panel');
+
+                let propertiesHTML = `
                 <h6 class="mb-3"><i class="bi bi-sliders"></i> Node Properties</h6>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Node ID</label>
@@ -615,8 +646,8 @@
                 </div>
             `;
 
-            if (node.type === 'message') {
-                propertiesHTML += `
+                if (node.type === 'message') {
+                    propertiesHTML += `
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Message Text</label>
                         <textarea class="form-control" id="prop-text" rows="4">${node.data.text || ''}</textarea>
@@ -625,8 +656,8 @@
                         <i class="bi bi-check"></i> Update
                     </button>
                 `;
-            } else if (node.type === 'buttons') {
-                let buttonsHTML = (node.data.buttons || []).map((btn, idx) => `
+                } else if (node.type === 'buttons') {
+                    let buttonsHTML = (node.data.buttons || []).map((btn, idx) => `
                     <div class="border rounded p-2 mb-2">
                         <input type="text" class="form-control form-control-sm mb-1" value="${btn.text}" 
                             id="btn-text-${idx}" placeholder="Button text">
@@ -640,7 +671,7 @@
                     </div>
                 `).join('');
 
-                propertiesHTML += `
+                    propertiesHTML += `
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Message Text</label>
                         <textarea class="form-control form-control-sm" id="prop-text" rows="2">${node.data.text || ''}</textarea>
@@ -656,8 +687,66 @@
                         <i class="bi bi-check"></i> Update
                     </button>
                 `;
-            } else if (node.type === 'delay') {
-                propertiesHTML += `
+                } else if (node.type === 'list') {
+                    let itemsHTML = (node.data.listItems || []).map((item, idx) => `
+                    <div class="border rounded p-2 mb-2">
+                        <input type="text" class="form-control form-control-sm mb-1" value="${item.title}" 
+                            id="list-title-${idx}" placeholder="Title">
+                        <input type="text" class="form-control form-control-sm" value="${item.description || ''}"
+                            id="list-desc-${idx}" placeholder="Description">
+                    </div>
+                `).join('');
+
+                    propertiesHTML += `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">List Header Text</label>
+                        <textarea class="form-control form-control-sm" id="prop-text" rows="2">${node.data.text || ''}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">List Items</label>
+                        <div id="items-container">${itemsHTML}</div>
+                        <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="addListItemToNode('${node.id}')">
+                            <i class="bi bi-plus"></i> Add Item
+                        </button>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('${node.id}', 'list')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+                } else if (node.type === 'image' || node.type === 'video') {
+                    propertiesHTML += `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Media URL</label>
+                        <input type="text" class="form-control" id="prop-mediaUrl" value="${node.data.mediaUrl || ''}" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Caption</label>
+                        <textarea class="form-control" id="prop-caption" rows="2">${node.data.caption || ''}</textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('${node.id}', '${node.type}')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+                } else if (node.type === 'document') {
+                    propertiesHTML += `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Media URL</label>
+                        <input type="text" class="form-control" id="prop-mediaUrl" value="${node.data.mediaUrl || ''}" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Filename</label>
+                        <input type="text" class="form-control" id="prop-filename" value="${node.data.filename || 'file.pdf'}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Caption</label>
+                        <textarea class="form-control" id="prop-caption" rows="2">${node.data.caption || ''}</textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('${node.id}', 'document')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+                } else if (node.type === 'delay') {
+                    propertiesHTML += `
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Delay (seconds)</label>
                         <input type="number" class="form-control" id="prop-delaySeconds" value="${node.data.delaySeconds || 2}" min="1" max="60">
@@ -666,85 +755,246 @@
                         <i class="bi bi-check"></i> Update
                     </button>
                 `;
-            }
-
-            panel.innerHTML = propertiesHTML;
-        }
-
-        // Update node property
-        function updateNodeProperty(nodeId, type) {
-            const node = nodes.find(n => n.id === nodeId);
-            if (!node) return;
-
-            if (type === 'message') {
-                node.data.text = document.getElementById('prop-text').value;
-            } else if (type === 'buttons') {
-                node.data.text = document.getElementById('prop-text').value;
-                const buttons = [];
-                let idx = 0;
-                while (document.getElementById(`btn-text-${idx}`)) {
-                    buttons.push({
-                        id: `btn${idx + 1}`,
-                        text: document.getElementById(`btn-text-${idx}`).value,
-                        type: document.getElementById(`btn-type-${idx}`).value,
-                        value: document.getElementById(`btn-value-${idx}`).value
-                    });
-                    idx++;
+                } else if (node.type === 'condition') {
+                    propertiesHTML += `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Variable</label>
+                        <input type="text" class="form-control mb-2" id="prop-variable" value="${node.data.variable || 'lastResponse'}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Condition</label>
+                        <select class="form-select mb-2" id="prop-condition">
+                            <option value="contains" ${!node.data.condition || node.data.condition.includes('contains') ? 'selected' : ''}>Contains</option>
+                            <option value="equals" ${node.data.condition && node.data.condition.includes('equals') ? 'selected' : ''}>Equals</option>
+                        </select>
+                        <input type="text" class="form-control" id="prop-value" value="${node.data.value || ''}" placeholder="Value to check">
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('${node.id}', 'condition')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
                 }
-                node.data.buttons = buttons;
-            } else if (type === 'delay') {
-                node.data.delaySeconds = parseInt(document.getElementById('prop-delaySeconds').value);
+
+                panel.innerHTML = propertiesHTML;
             }
 
-            renderCanvas();
-            showNodeProperties(node);
-        }
+            // Update node property
+            function updateNodeProperty(nodeId, type) {
+                const node = nodes.find(n => n.id === nodeId);
+                if (!node) return;
 
-        // Remove node
-        function removeNode(nodeId) {
-            nodes = nodes.filter(n => n.id !== nodeId);
-            connections = connections.filter(c => c.source !== nodeId && c.target !== nodeId);
-            selectedNodeId = null;
-            renderCanvas();
+                if (type === 'message') {
+                    node.data.text = document.getElementById('prop-text').value;
+                } else if (type === 'buttons') {
+                    node.data.text = document.getElementById('prop-text').value;
+                    const buttons = [];
+                    let idx = 0;
+                    while (document.getElementById(`btn-text-${idx}`)) {
+                        buttons.push({
+                            id: `btn${idx + 1}`,
+                            text: document.getElementById(`btn-text-${idx}`).value,
+                            type: document.getElementById(`btn-type-${idx}`).value,
+                            value: document.getElementById(`btn-value-${idx}`).value
+                        });
+                        idx++;
+                    }
+                    node.data.buttons = buttons;
+                } else if (type === 'list') {
+                    node.data.text = document.getElementById('prop-text').value;
+                    const items = [];
+                    let idx = 0;
+                    while (document.getElementById(`list-title-${idx}`)) {
+                        items.push({
+                            id: `item${idx + 1}`,
+                            title: document.getElementById(`list-title-${idx}`).value,
+                            description: document.getElementById(`list-desc-${idx}`).value
+                        });
+                        idx++;
+                    }
+                    node.data.listItems = items;
+                } else if (type === 'image' || type === 'video') {
+                    node.data.mediaUrl = document.getElementById('prop-mediaUrl').value;
+                    node.data.caption = document.getElementById('prop-caption').value;
+                } else if (type === 'document') {
+                    node.data.mediaUrl = document.getElementById('prop-mediaUrl').value;
+                    node.data.caption = document.getElementById('prop-caption').value;
+                    node.data.filename = document.getElementById('prop-filename').value;
+                } else if (type === 'delay') {
+                    node.data.delaySeconds = parseInt(document.getElementById('prop-delaySeconds').value);
+                } else if (type === 'condition') {
+                    node.data.variable = document.getElementById('prop-variable').value;
+                    node.data.condition = document.getElementById('prop-condition').value;
+                    node.data.value = document.getElementById('prop-value').value;
+                }
 
-            const panel = document.getElementById('properties-panel');
-            panel.innerHTML = `
+                renderCanvas();
+                showNodeProperties(node);
+            }
+
+            function addButtonToNode(nodeId) {
+                const node = nodes.find(n => n.id === nodeId);
+                if (!node) return;
+                if (!node.data.buttons) node.data.buttons = [];
+                node.data.buttons.push({ id: `btn${node.data.buttons.length + 1}`, text: 'New Button', type: 'reply', value: 'yes' });
+                showNodeProperties(node);
+            }
+
+            function addListItemToNode(nodeId) {
+                const node = nodes.find(n => n.id === nodeId);
+                if (!node) return;
+                if (!node.data.listItems) node.data.listItems = [];
+                node.data.listItems.push({ id: `item${node.data.listItems.length + 1}`, title: 'New Item', description: '' });
+                showNodeProperties(node);
+            }
+
+            // Remove node
+            function removeNode(nodeId) {
+                nodes = nodes.filter(n => n.id !== nodeId);
+                connections = connections.filter(c => c.source !== nodeId && c.target !== nodeId);
+                selectedNodeId = null;
+                renderCanvas();
+
+                const panel = document.getElementById('properties-panel');
+                panel.innerHTML = `
                 <div class="text-center text-muted py-5">
                     <i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.3;"></i>
                     <p class="mt-2 small">Select a node to edit its properties</p>
                 </div>
             `;
-        }
+            }
 
-        // Clear canvas
-        function clearCanvas() {
-            if (nodes.length > 0 && !confirm('Clear all nodes?')) return;
-            nodes = [];
-            connections = [];
-            selectedNodeId = null;
-            nodeIdCounter = 0;
-            renderCanvas();
-        }
+            // Open Flow Settings Modal and populate leads
+            async function openFlowSettings() {
+                const recipientsSelect = document.getElementById('flow-recipients');
 
-        // Save flow (placeholder)
-        function saveFlow() {
-            const flowData = {
-                nodes,
-                connections,
-                name: prompt('Enter flow name:', 'My Flow') || 'Untitled Flow',
-                trigger: prompt('Enter trigger keyword:', 'hello') || 'hello'
-            };
+                // Fetch leads if empty (simple cache)
+                if (recipientsSelect.options.length <= 1) { // 1 because 'All Leads' check
+                    try {
+                        const response = await fetch('/api/leads');
+                        const leads = await response.json();
+                        leads.forEach(lead => {
+                            const option = document.createElement('option');
+                            option.value = lead.phone;
+                            option.text = `${lead.name || 'Unknown'} (${lead.phone})`;
+                            recipientsSelect.add(option);
+                        });
+                    } catch (e) {
+                        console.error('Error fetching leads:', e);
+                    }
+                }
 
-            console.log('Flow data:', flowData);
-            alert('Flow saved! (Check console for data)');
-            // TODO: Send to backend API
-        }
+                const modal = new bootstrap.Modal(document.getElementById('flowSettingsModal'));
+                modal.show();
+            }
 
-        // Test flow (placeholder)
-        function testFlow() {
-            alert('Flow testing feature coming soon!');
-        }
-    </script>
+            function saveFlowSettings() {
+                // Just close the modal for now, verify fields
+                const modal = bootstrap.Modal.getInstance(document.getElementById('flowSettingsModal'));
+                modal.hide();
+            }
+
+            // Save flow
+            async function saveFlow() {
+                if (nodes.length === 0) {
+                    alert('Cannot save an empty flow.');
+                    return;
+                }
+
+                // Get settings
+                const name = document.getElementById('flow-name').value || 'Untitled Flow';
+                const trigger = document.getElementById('flow-trigger').value || '';
+                const recipientSelect = document.getElementById('flow-recipients');
+
+                // Build Recipient Config
+                let recipientConfig = { audienceType: 'all', phones: [] };
+                const selectedOptions = Array.from(recipientSelect.selectedOptions).map(opt => opt.value);
+
+                if (selectedOptions.includes('all') || selectedOptions.length === 0) {
+                    recipientConfig.audienceType = 'all';
+                } else {
+                    recipientConfig.audienceType = 'specific';
+                    recipientConfig.phones = selectedOptions;
+                }
+
+                // Require trigger
+                if (!trigger) {
+                    alert('Please set a trigger keyword in Settings.');
+                    openFlowSettings();
+                    return;
+                }
+
+                const flowData = {
+                    name,
+                    trigger,
+                    triggerType: 'contains',
+                    nodes,
+                    connections,
+                    recipientConfig,
+                    active: true
+                };
+
+                try {
+                    // Determine if create or update. For now, assuming create (POST).
+                    // In a real app, we'd check if we are editing an existing ID.
+                    const res = await fetch('/api/advanced-flows', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(flowData)
+                    });
+
+                    if (res.ok) {
+                        const saved = await res.json();
+                        alert('Flow saved successfully!');
+                        console.log('Saved Flow:', saved);
+                    } else {
+                        const err = await res.json();
+                        alert('Failed to save flow: ' + (err.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('Error saving flow: ' + e.message);
+                }
+            }
+
+            // Test flow
+            async function testFlow() {
+                const phone = prompt('Enter phone number for testing (e.g. 1234567890):');
+                if (!phone) return;
+
+                const flowData = {
+                    nodes,
+                    connections,
+                    trigger: document.getElementById('flow-trigger').value || 'test',
+                };
+
+                try {
+                    const res = await fetch('/api/test-flow', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone, flowData })
+                    });
+                    const data = await res.json();
+                    alert(data.message || 'Test initiated');
+                } catch (e) {
+                    alert('Error testing flow: ' + e.message);
+                }
+            }
+
+            // Redefined clearCanvas to fix bug
+            function clearCanvas() {
+                if (nodes.length > 0 && !confirm('Clear all nodes?')) return;
+                nodes = [];
+                connections = [];
+                selectedNodeId = null;
+                nodeIdCounter = 0;
+
+                // Explicitly clear DOM
+                const canvas = document.getElementById('flow-canvas');
+                const existingNodes = canvas.querySelectorAll('.flow-node');
+                existingNodes.forEach(n => n.remove());
+
+                renderCanvas();
+            }
+        </script>
 </body>
 
 </html>
