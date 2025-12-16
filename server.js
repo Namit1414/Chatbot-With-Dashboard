@@ -13,7 +13,9 @@ import { runFlow } from "./flowEngine.js";
 import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
+import AdvancedFlow from "./models/AdvancedFlow.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
+import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,6 +148,115 @@ app.post("/api/bulk-send", async (req, res) => {
   }
 });
 
+// ========================================
+// ADVANCED FLOW BUILDER APIs
+// ========================================
+
+// Get all advanced flows
+app.get("/api/advanced-flows", async (req, res) => {
+  try {
+    const flows = await AdvancedFlow.find({}).sort({ updatedAt: -1 });
+    res.json(flows);
+  } catch (error) {
+    console.error('Error fetching advanced flows:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single flow by ID
+app.get("/api/advanced-flows/:id", async (req, res) => {
+  try {
+    const flow = await AdvancedFlow.findById(req.params.id);
+    if (!flow) {
+      return res.status(404).json({ error: 'Flow not found' });
+    }
+    res.json(flow);
+  } catch (error) {
+    console.error('Error fetching flow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new advanced flow
+app.post("/api/advanced-flows", async (req, res) => {
+  try {
+    const flowData = req.body;
+    const flow = new AdvancedFlow(flowData);
+    await flow.save();
+    res.status(201).json(flow);
+  } catch (error) {
+    console.error('Error creating flow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update advanced flow
+app.put("/api/advanced-flows/:id", async (req, res) => {
+  try {
+    const flow = await AdvancedFlow.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!flow) {
+      return res.status(404).json({ error: 'Flow not found' });
+    }
+    res.json(flow);
+  } catch (error) {
+    console.error('Error updating flow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete advanced flow
+app.delete("/api/advanced-flows/:id", async (req, res) => {
+  try {
+    const flow = await AdvancedFlow.findByIdAndDelete(req.params.id);
+    if (!flow) {
+      return res.status(404).json({ error: 'Flow not found' });
+    }
+    res.json({ success: true, message: 'Flow deleted' });
+  } catch (error) {
+    console.error('Error deleting flow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Toggle flow active status
+app.patch("/api/advanced-flows/:id/toggle", async (req, res) => {
+  try {
+    const flow = await AdvancedFlow.findById(req.params.id);
+    if (!flow) {
+      return res.status(404).json({ error: 'Flow not found' });
+    }
+    flow.active = !flow.active;
+    await flow.save();
+    res.json(flow);
+  } catch (error) {
+    console.error('Error toggling flow:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update flow stats
+app.post("/api/advanced-flows/:id/stats", async (req, res) => {
+  try {
+    const { metric } = req.body; // 'sent', 'delivered', 'read', 'clicked', 'errors'
+    const flow = await AdvancedFlow.findById(req.params.id);
+    if (!flow) {
+      return res.status(404).json({ error: 'Flow not found' });
+    }
+    if (flow.stats[metric] !== undefined) {
+      flow.stats[metric]++;
+      await flow.save();
+    }
+    res.json(flow);
+  } catch (error) {
+    console.error('Error updating stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.get("/debug/leads", async (req, res) => {
   const leads = await Lead.find({});
@@ -207,30 +318,34 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-async function sendWhatsAppMessage(to, text, from) {
-  const message = new Message({ to, from, text });
+async function sendWhatsAppMessage(to, messageData, from) {
+  // Extract text content for database storage
+  let textContent = '';
+
+  if (typeof messageData === 'string') {
+    textContent = messageData;
+  } else if (messageData && messageData.content) {
+    textContent = messageData.content;
+  } else if (messageData && messageData.messageType) {
+    textContent = `[${messageData.messageType}] ${messageData.content || ''}`;
+  }
+
+  // Save to database
+  const message = new Message({ to, from, text: textContent });
   await message.save();
   io.emit('newMessage', message);
 
-  // Send to WhatsApp API
+  // Send to WhatsApp API using Business API helper
   try {
-    const response = await fetch(`https://graph.facebook.com/v19.0/${process.env.PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: { body: text }
-      })
-    });
-    const data = await response.json();
-    console.log("WhatsApp API Response:", data);
+    await sendWhatsAppBusinessMessage(
+      to,
+      messageData,
+      process.env.WHATSAPP_TOKEN,
+      process.env.PHONE_NUMBER_ID
+    );
+    console.log("✅ WhatsApp message sent successfully");
   } catch (err) {
-    console.error("Error sending to WhatsApp:", err);
+    console.error("❌ Error sending to WhatsApp:", err);
   }
 }
 
