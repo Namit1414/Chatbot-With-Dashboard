@@ -14,7 +14,7 @@ import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
-import { initScheduler } from "./advancedFlowEngine.js";
+import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
@@ -82,7 +82,7 @@ initScheduler();
 
 function sanitizePhone(phone) {
   if (!phone) return "";
-  return phone.replace(/@s\\.whatsapp\\.net/g, "");
+  return phone.replace(/\D/g, "");
 }
 
 app.get("/api/leads", async (req, res) => {
@@ -281,17 +281,31 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  console.log("🔔 Webhook endpoint hit!"); // Debug log
   try {
     const msg = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!msg) return res.sendStatus(200);
 
     const from = msg.from;
-    const text = msg.text?.body || "";
     const sanitizedPhone = sanitizePhone(from);
+    let text = "";
 
-    console.log("📩 Incoming:", from, text);
+    // Handle different message types
+    if (msg.type === "text") {
+      text = msg.text?.body || "";
+    } else if (msg.type === "interactive") {
+      // Handle button clicks and list selections
+      if (msg.interactive.type === "button_reply") {
+        // Use ID (payload) as the primary value to match against button value
+        text = msg.interactive.button_reply.id;
+      } else if (msg.interactive.type === "list_reply") {
+        text = msg.interactive.list_reply.id;
+      }
+    }
 
-    const message = new Message({ from: sanitizedPhone, to: process.env.PHONE_NUMBER_ID, text });
+    console.log("📩 Incoming:", from, text, `[${msg.type}]`);
+
+    const message = new Message({ from: sanitizedPhone, to: process.env.PHONE_NUMBER_ID, text, messageType: msg.type });
     await message.save();
     io.emit('newMessage', message);
 
@@ -317,6 +331,57 @@ app.post("/webhook", async (req, res) => {
   } catch (e) {
     console.error("Error in webhook:", e);
     res.sendStatus(500);
+  }
+});
+
+// Test Flow API
+app.post("/api/test-flow", async (req, res) => {
+  try {
+    const { phone, flowId, flowData } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const sanitizedPhone = sanitizePhone(phone);
+    let flowToRun;
+
+    if (flowId) {
+      flowToRun = await AdvancedFlow.findById(flowId);
+    } else if (flowData) {
+      // Construct a temporary flow object
+      flowToRun = {
+        _id: 'temp_test_' + Date.now(),
+        nodes: flowData.nodes || [],
+        connections: flowData.connections || [],
+        trigger: 'test',
+        triggerType: 'exact',
+        stats: { sent: 0, delivered: 0, read: 0, clicked: 0, errors: 0 }
+      };
+      // Register temp flow so continueFlow can find it later
+      registerTempFlow(flowToRun);
+    }
+
+    if (!flowToRun) {
+      return res.status(404).json({ error: 'Flow not found or invalid data' });
+    }
+
+    // Run flow
+    const result = await startFlow(sanitizedPhone, flowToRun);
+
+    // Send initial message if any
+    if (result) {
+      let msgToSend = result;
+      if (result.type && !result.messageType) {
+        msgToSend = { ...result, messageType: result.type };
+      }
+      await sendWhatsAppBusinessMessage(sanitizedPhone, msgToSend, process.env.WHATSAPP_TOKEN, process.env.PHONE_NUMBER_ID);
+    }
+
+    res.json({ success: true, message: 'Flow started for ' + sanitizedPhone });
+  } catch (error) {
+    console.error('Test flow error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
