@@ -1,4 +1,5 @@
 import AdvancedFlow from "./models/AdvancedFlow.js";
+import Lead from "./models/Lead.js";
 
 // Session management for multi-step flows
 const flowSessions = new Map(); // phoneNumber -> { flowId, currentNodeId, variables }
@@ -444,4 +445,106 @@ export function clearFlowSession(phone) {
  */
 export function getFlowSession(phone) {
     return flowSessions.get(phone);
+}
+
+/**
+ * Initialize Scheduler for Scheduled Flows
+ */
+export function initScheduler() {
+    console.log('Advanced Flow Scheduler initialized...');
+
+    // Check every minute
+    setInterval(async () => {
+        try {
+            const now = new Date();
+            // Find active scheduled flows that are due
+            const flows = await AdvancedFlow.find({
+                active: true,
+                triggerType: 'scheduled',
+                'schedule.nextRun': { $lte: now }
+            });
+
+            if (flows.length > 0) {
+                console.log(`Scheduler: Found ${flows.length} flows due for execution at ${now.toISOString()}`);
+                for (const flow of flows) {
+                    await executeScheduledFlow(flow);
+                }
+            }
+        } catch (error) {
+            console.error('Scheduler error:', error);
+        }
+    }, 60000); // Check every 60 seconds
+}
+
+/**
+ * Execute a single scheduled flow
+ */
+async function executeScheduledFlow(flow) {
+    console.log(`Executing scheduled flow: "${flow.name}"`);
+
+    // 1. Identify Recipients
+    let recipients = [];
+    try {
+        const config = flow.recipientConfig || { audienceType: 'all' };
+
+        if (config.audienceType === 'tags') {
+            const tags = config.tags || [];
+            if (tags.length > 0) {
+                // Determine if 'tags' field exists by checking one document or just running query
+                recipients = await Lead.find({ tags: { $in: tags } });
+            }
+        } else if (config.audienceType === 'specific') {
+            const phones = config.phones || [];
+            // We need to create objects that look like leads
+            recipients = phones.map(p => ({
+                phone: p.replace(/\D/g, ''), // clean number
+                name: 'User'
+            })).filter(r => r.phone.length > 0);
+        } else {
+            // 'all'
+            recipients = await Lead.find({});
+        }
+    } catch (e) {
+        console.error('Error fetching recipients for scheduler:', e);
+        recipients = [];
+    }
+
+    console.log(`Targeting ${recipients.length} recipients for flow "${flow.name}"`);
+
+    // 2. Execute Flow for each recipient
+    for (const recipient of recipients) {
+        try {
+            // Initiate flow
+            await startFlow(recipient.phone, flow);
+        } catch (err) {
+            console.error(`Failed to start flow for ${recipient.phone}:`, err);
+        }
+    }
+
+    // 3. Update Schedule
+    flow.schedule.lastRun = new Date();
+
+    // Calculate next run
+    if (flow.schedule.repeat && flow.schedule.repeat !== 'once') {
+        let nextRun = new Date(flow.schedule.nextRun);
+        // Ensure nextRun is in the future. If we missed multiple cycles, skip them?
+        // This simple logic just adds one interval. 
+
+        if (flow.schedule.repeat === 'daily') {
+            nextRun.setDate(nextRun.getDate() + 1);
+        } else if (flow.schedule.repeat === 'weekly') {
+            nextRun.setDate(nextRun.getDate() + 7);
+        } else if (flow.schedule.repeat === 'monthly') {
+            nextRun.setMonth(nextRun.getMonth() + 1);
+        }
+
+        flow.schedule.nextRun = nextRun;
+    } else {
+        // Run once: disable or set nextRun to null
+        flow.schedule.nextRun = null;
+        flow.active = false; // Disable it
+    }
+
+    await flow.save();
+    console.log(`Updated schedule for flow "${flow.name}". Next run: ${flow.schedule.nextRun}`);
 }
