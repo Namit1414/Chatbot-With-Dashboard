@@ -659,6 +659,13 @@
                 } else if (node.type === 'buttons') {
                     let buttonsHTML = (node.data.buttons || []).map((btn, idx) => `
                     <div class="border rounded p-2 mb-2">
+                        <div class="d-flex gap-1 mb-1">
+                            <input type="text" class="form-control form-control-sm" value="${btn.id}" 
+                                id="btn-id-${idx}" placeholder="ID (required)" readonly style="background-color: #f8f9fa;" title="Use this ID for Automation">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('${btn.id}')" title="Copy ID">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
                         <input type="text" class="form-control form-control-sm mb-1" value="${btn.text}" 
                             id="btn-text-${idx}" placeholder="Button text">
                         <select class="form-select form-select-sm mb-1" id="btn-type-${idx}">
@@ -791,12 +798,13 @@
                     let idx = 0;
                     while (document.getElementById(`btn-text-${idx}`)) {
                         buttons.push({
-                            id: `btn${idx + 1}`,
-                            text: document.getElementById(`btn-text-${idx}`).value,
-                            type: document.getElementById(`btn-type-${idx}`).value,
-                            value: document.getElementById(`btn-value-${idx}`).value
-                        });
-                        idx++;
+                            buttons.push({
+                                id: document.getElementById(`btn-id-${idx}`).value,
+                                text: document.getElementById(`btn-text-${idx}`).value,
+                                type: document.getElementById(`btn-type-${idx}`).value,
+                                value: document.getElementById(`btn-value-${idx}`).value
+                            });
+                            idx++;
                     }
                     node.data.buttons = buttons;
                 } else if (type === 'list') {
