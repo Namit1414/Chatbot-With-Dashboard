@@ -43,6 +43,14 @@ export async function handleLeadFlow(phone, message) {
   const state = userStates[phone];
   const currentKey = questions[state.step].key;
 
+  // Check if the PREVIOUS answer (currentKey) needs validation
+  if (currentKey === "preferred_date") {
+    if (!isValidDate(message)) {
+      // Return error message and stay on same step (don't increment)
+      return "⚠️ That doesn't look like a valid date. Please select a date from the list or type it in format YYYY-MM-DD or 'Today'.";
+    }
+  }
+
   state.data[currentKey] = message;
   state.step++;
 
@@ -60,9 +68,61 @@ export async function handleLeadFlow(phone, message) {
     return "✅ Thanks! Your details have already been saved. How can I help you further?";
   }
 
-  return questions[state.step].text;
+  // Check if NEXT question is the date question, and return List Message if so
+  const nextQuestion = questions[state.step];
+  if (nextQuestion.key === "preferred_date") {
+    return generateDateListMessage(nextQuestion.text);
+  }
+
+  return nextQuestion.text;
 }
 
 export function isLeadInProgress(phone) {
   return !!userStates[phone];
+}
+
+// Helper to validate date
+function isValidDate(dateStr) {
+  // Check if it's one of our list IDs or titles (optional, but good for safety if we used unique IDs)
+  // Simple check: is it a valid date string?
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return true;
+
+  // Allow keywords
+  const lower = dateStr.toLowerCase();
+  if (lower.includes('today') || lower.includes('tomorrow')) return true;
+
+  return false;
+}
+
+// Helper to generate List Message for dates
+function generateDateListMessage(text) {
+  const items = [];
+  const today = new Date();
+
+  // Generate next 7 days
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+
+    const dateString = d.toDateString(); // e.g. "Fri Dec 17 2025" (Using toDateString for readability)
+    // Or simpler format:
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    const title = i === 0 ? "Today" : (i === 1 ? "Tomorrow" : d.toLocaleDateString('en-US', options));
+
+    // ID should be unique-ish
+    const id = d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    items.push({
+      id: id,
+      title: title,
+      description: dateString
+    });
+  }
+
+  return {
+    messageType: 'list',
+    content: text,
+    items: items
+  };
 }
