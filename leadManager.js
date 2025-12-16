@@ -22,6 +22,12 @@ const TIME_RANGES = [
   { id: "slot_08_10", title: "08:00 PM - 10:00 PM" }
 ];
 
+const GENDER_OPTIONS = [
+  { id: "gender_male", title: "Male" },
+  { id: "gender_female", title: "Female" },
+  { id: "gender_other", title: "Other" }
+];
+
 // In-memory session state (still fine for short term, but Redis is better for production)
 const userStates = {};
 
@@ -61,6 +67,14 @@ export async function handleLeadFlow(phone, message) {
     }
   }
 
+  // Normalize Gender Selection
+  if (currentKey === "gender") {
+    const selectedGender = GENDER_OPTIONS.find(g => g.id === message);
+    if (selectedGender) {
+      message = selectedGender.title;
+    }
+  }
+
   // Check if the PREVIOUS answer (currentKey) needs validation
   if (currentKey === "preferred_date") {
     if (!isValidDate(message)) {
@@ -73,6 +87,13 @@ export async function handleLeadFlow(phone, message) {
   if (currentKey === "preferred_time") {
     if (!isValidTime(message)) {
       return "⚠️ Please select a valid time range from the list OR type a time between 10:00 AM and 10:00 PM.";
+    }
+  }
+
+  // Validate Gender
+  if (currentKey === "gender") {
+    if (!isValidGender(message)) {
+      return "⚠️ Please select a valid gender from the list (Male, Female, Other).";
     }
   }
 
@@ -100,6 +121,9 @@ export async function handleLeadFlow(phone, message) {
   }
   if (nextQuestion.key === "preferred_time") {
     return generateTimeListMessage(nextQuestion.text);
+  }
+  if (nextQuestion.key === "gender") {
+    return generateGenderListMessage(nextQuestion.text);
   }
 
   return nextQuestion.text;
@@ -209,6 +233,25 @@ function generateTimeListMessage(text) {
       id: r.id,
       title: r.title,
       description: "Select this slot"
+    }))
+  };
+}
+
+// Helper to validate gender
+function isValidGender(input) {
+  const validGenders = ["male", "female", "other"];
+  return validGenders.includes(input.toLowerCase().trim());
+}
+
+// Helper to generate Gender List
+function generateGenderListMessage(text) {
+  return {
+    messageType: 'list',
+    content: text,
+    items: GENDER_OPTIONS.map(g => ({
+      id: g.id,
+      title: g.title,
+      description: "Select Gender"
     }))
   };
 }
