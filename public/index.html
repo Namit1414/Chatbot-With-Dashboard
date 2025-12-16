@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -16,22 +16,34 @@
 
     <style>
         :root {
+            /* Premium Dark Mode Palette */
             --primary-color: #00a884;
-            /* WhatsApp Green */
             --primary-dark: #008f6f;
-            --secondary-bg: #e9edef;
-            --chat-bg: #efeae2;
+            --secondary-bg: #0b141a;
+            /* Global App Background */
+            --chat-bg: #0b141a;
+            /* Chat Area Background */
             --sidebar-bg: #111b21;
+            /* Sidebar Background */
             --sidebar-text: #e9edef;
             --sidebar-hover: #2a3942;
-            --message-out: #d9fdd3;
-            --message-in: #ffffff;
-            --text-main: #111b21;
+            --message-out: #005c4b;
+            /* Deep Green for sent messages */
+            --message-in: #202c33;
+            /* Dark Gray for received messages */
+            --text-main: #e9edef;
+            /* Light text */
+            --text-secondary: #8696a0;
+            /* Muted text */
+            --surface-bg: #202c33;
+            /* Cards, Modals, Inputs */
+            --border-color: #2a3942;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--secondary-bg);
+            color: var(--text-main);
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -44,13 +56,13 @@
             color: var(--sidebar-text);
             display: flex;
             flex-direction: column;
-            border-right: 1px solid #333;
+            border-right: 1px solid var(--border-color);
             transition: all 0.3s ease;
         }
 
         .sidebar-header {
             padding: 20px;
-            background-color: #202c33;
+            background-color: var(--sidebar-bg);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -68,7 +80,7 @@
         }
 
         .nav-link {
-            color: #aebac1;
+            color: var(--text-secondary);
             padding: 12px 16px;
             border-radius: 8px;
             display: flex;
@@ -95,7 +107,7 @@
         /* Main Content */
         #content {
             flex: 1;
-            background-color: #f0f2f5;
+            background-color: var(--secondary-bg);
             overflow-y: auto;
             position: relative;
         }
@@ -137,22 +149,25 @@
 
         /* Tables */
         .card-table {
-            background: white;
+            background: var(--surface-bg);
             border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             overflow: hidden;
-            border: none;
+            border: 1px solid var(--border-color);
         }
 
         .table {
             margin-bottom: 0;
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-main);
+            --bs-table-border-color: var(--border-color);
         }
 
         .table th {
-            background-color: #f8f9fa;
+            background-color: var(--sidebar-bg);
             font-weight: 600;
-            color: #54656f;
-            border-bottom: 1px solid #e9edef;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
             padding: 16px;
         }
 
@@ -177,9 +192,9 @@
         }
 
         .chat-header {
-            background-color: #f0f2f5;
+            background-color: var(--surface-bg);
             padding: 15px 20px;
-            border-bottom: 1px solid #d1d7db;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -239,7 +254,7 @@
         }
 
         .input-area {
-            background-color: #f0f2f5;
+            background-color: var(--surface-bg);
             padding: 15px;
             display: flex;
             gap: 10px;
@@ -309,8 +324,9 @@
             position: absolute;
             min-width: 220px;
             max-width: 280px;
-            background: white;
-            border: 2px solid #ddd;
+            background: var(--surface-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
             border-radius: 12px;
             padding: 16px;
             cursor: move;
@@ -326,9 +342,9 @@
         }
 
         .flow-node.selected {
-            border-color: #2196F3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
-            background: #e3f2fd;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2);
+            background: #18222c;
         }
 
         .flow-node.dragging {
@@ -756,7 +772,7 @@
 
                         <!-- Properties -->
                         <div class="card card-table shadow-sm flex-grow-1">
-                            <div class="card-header bg-white border-bottom py-2">
+                            <div class="card-header bg-transparent border-bottom py-2">
                                 <h6 class="mb-0 small fw-bold"><i class="bi bi-sliders"></i> Properties</h6>
                             </div>
                             <div class="card-body p-3 overflow-auto" id="node-properties" style="max-height: 500px;">
@@ -771,69 +787,124 @@
 
                 <!-- Flow Settings Modal -->
                 <div class="modal fade" id="flowSettingsModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Flow Settings</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title fs-5"><i class="bi bi-gear-fill me-2"></i>Flow Configuration</h5>
+                                <button type="button" class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Flow Name</label>
-                                    <input type="text" class="form-control" id="flow-name"
-                                        placeholder="e.g. Welcome Flow">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Description</label>
-                                    <textarea class="form-control" id="flow-description" rows="2"></textarea>
-                                </div>
-                                <hr>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Trigger</label>
+                            <div class="modal-body p-4">
+                                <!-- Genera Info -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                        style="font-size: 0.75rem; letter-spacing: 1px;">General</label>
                                     <div class="input-group mb-2">
-                                        <select class="form-select" id="flow-trigger-type" style="max-width: 140px;">
-                                            <option value="contains">Contains</option>
-                                            <option value="exact">Exact Match</option>
-                                            <option value="regex">Regex</option>
-                                            <option value="scheduled">Scheduled</option>
-                                        </select>
-                                        <input type="text" class="form-control" id="flow-trigger"
-                                            placeholder="Keyword (e.g. hello)">
+                                        <span class="input-group-text bg-transparent border-end-0"><i
+                                                class="bi bi-tag text-muted"></i></span>
+                                        <input type="text" class="form-control border-start-0 ps-0" id="flow-name"
+                                            placeholder="Name your flow..." value="New Flow">
+                                    </div>
+                                    <div class="input-group">
+                                        <span
+                                            class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
+                                                class="bi bi-card-text text-muted"></i></span>
+                                        <textarea class="form-control border-start-0 ps-0" id="flow-description"
+                                            rows="2" placeholder="Description (optional)"></textarea>
                                     </div>
                                 </div>
 
-                                <div id="schedule-options" class="mb-3 bg-light p-3 rounded" style="display: none;">
-                                    <label class="form-label fw-semibold small">Schedule Time</label>
-                                    <input type="datetime-local" class="form-control mb-2" id="flow-schedule-time">
-                                    <label class="form-label fw-semibold small">Repeat</label>
-                                    <select class="form-select" id="flow-schedule-repeat">
-                                        <option value="once">Once</option>
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="monthly">Monthly</option>
-                                    </select>
+                                <!-- Scheduling -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                        style="font-size: 0.75rem; letter-spacing: 1px;">Scheduling</label>
+                                    <div class="card bg-body-tertiary border-0">
+                                        <div class="card-body p-3">
+                                            <div class="mb-3">
+                                                <label class="form-label small text-muted mb-1">Start Time</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text bg-transparent border-end-0"><i
+                                                            class="bi bi-calendar-event text-primary"></i></span>
+                                                    <input type="datetime-local"
+                                                        class="form-control border-start-0 ps-0"
+                                                        id="flow-schedule-time">
+                                                </div>
+                                            </div>
+                                            <div class="mb-0">
+                                                <label class="form-label small text-muted mb-1">Frequency</label>
+                                                <div class="btn-group w-100" role="group">
+                                                    <input type="radio" class="btn-check" name="repeatOptions"
+                                                        id="repeat-once" value="once" checked
+                                                        onclick="updateRepeatSelect('once')">
+                                                    <label class="btn btn-outline-secondary btn-sm"
+                                                        for="repeat-once">Once</label>
+
+                                                    <input type="radio" class="btn-check" name="repeatOptions"
+                                                        id="repeat-daily" value="daily"
+                                                        onclick="updateRepeatSelect('daily')">
+                                                    <label class="btn btn-outline-secondary btn-sm"
+                                                        for="repeat-daily">Daily</label>
+
+                                                    <input type="radio" class="btn-check" name="repeatOptions"
+                                                        id="repeat-weekly" value="weekly"
+                                                        onclick="updateRepeatSelect('weekly')">
+                                                    <label class="btn btn-outline-secondary btn-sm"
+                                                        for="repeat-weekly">Weekly</label>
+
+                                                    <input type="radio" class="btn-check" name="repeatOptions"
+                                                        id="repeat-monthly" value="monthly"
+                                                        onclick="updateRepeatSelect('monthly')">
+                                                    <label class="btn btn-outline-secondary btn-sm"
+                                                        for="repeat-monthly">Monthly</label>
+                                                </div>
+                                                <select class="form-select d-none" id="flow-schedule-repeat">
+                                                    <option value="once">Once</option>
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Recipients</label>
-                                    <!-- Use a simple multiple select for now, can be enhanced -->
-                                    <select class="form-select" id="flow-recipient-list" multiple size="5">
-                                        <option value="all">All Leads (Select this for broadcast)</option>
-                                        <!-- Leads populated via JS -->
-                                    </select>
-                                    <div class="form-text small">Hold Ctrl/Cmd to select specific users. Select 'All
-                                        Leads' to target everyone.</div>
+                                <!-- Audience -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                        style="font-size: 0.75rem; letter-spacing: 1px;">Target Audience</label>
+                                    <div class="input-group">
+                                        <span
+                                            class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
+                                                class="bi bi-people text-muted"></i></span>
+                                        <select class="form-select border-start-0 ps-0" id="flow-recipient-list"
+                                            multiple size="4">
+                                            <option value="all">All Leads (Broadcast)</option>
+                                            <!-- Leads populated via JS -->
+                                        </select>
+                                    </div>
+                                    <div class="form-text small text-end mt-1 text-muted"><i
+                                            class="bi bi-info-circle me-1"></i>Hold Ctrl/Cmd to select multiple</div>
                                 </div>
 
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="flow-active" checked>
-                                    <label class="form-check-label" for="flow-active">Flow Active</label>
+                                <!-- Active Toggle -->
+                                <div class="card border-0 shadow-sm bg-body-tertiary">
+                                    <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                                        <span class="fw-semibold text-secondary small"><i
+                                                class="bi bi-toggle-on me-2"></i>Status</span>
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input" type="checkbox" id="flow-active" checked>
+                                            <label class="form-check-label small" for="flow-active">Active</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-primary"
-                                    onclick="applyFlowSettings()">Apply</button>
+                            <div class="modal-footer bg-body-tertiary border-top-0">
+                                <button type="button" class="btn btn-link text-secondary text-decoration-none"
+                                    data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm"
+                                    onclick="applyFlowSettings()">
+                                    <i class="bi bi-check-lg me-1"></i> Apply Settings
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -861,7 +932,7 @@
                 <div class="col-lg-6">
                     <div class="card card-table h-100">
                         <div
-                            class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                            class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center py-3">
                             <h5 class="mb-0"><i class="bi bi-people-fill text-primary"></i> Select Recipients</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="select-all-leads"
@@ -873,7 +944,7 @@
                         </div>
                         <div class="card-body p-0">
                             <!-- Filter Options -->
-                            <div class="p-3 bg-light border-bottom">
+                            <div class="p-3 bg-body-tertiary border-bottom">
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <select class="form-select form-select-sm" id="filter-status"
@@ -895,7 +966,7 @@
                                 <!-- Will be populated dynamically -->
                             </div>
 
-                            <div class="p-3 bg-light border-top">
+                            <div class="p-3 bg-body-tertiary border-top">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="text-muted small">
                                         <i class="bi bi-check2-circle"></i>
@@ -913,7 +984,7 @@
                 <!-- Right: Message Composer -->
                 <div class="col-lg-6">
                     <div class="card card-table h-100">
-                        <div class="card-header bg-white border-bottom py-3">
+                        <div class="card-header bg-transparent border-bottom py-3">
                             <h5 class="mb-0"><i class="bi bi-chat-text-fill text-success"></i> Compose Message</h5>
                         </div>
                         <div class="card-body">
@@ -933,11 +1004,11 @@
                             <!-- Message Preview -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Preview</label>
-                                <div class="p-3 bg-light rounded position-relative"
-                                    style="min-height: 100px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                                <div class="p-3 bg-body-tertiary rounded position-relative"
+                                    style="min-height: 100px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
                                     <div class="message sent" id="preview-message"
-                                        style="max-width: 80%; background-color: #d9fdd3;">
-                                        <em class="text-muted">Your message will appear here...</em>
+                                        style="max-width: 80%; background-color: var(--message-out); color: white;">
+                                        <em class="text-white-50">Your message will appear here...</em>
                                     </div>
                                 </div>
                             </div>
@@ -972,7 +1043,7 @@
             <!-- Sending Progress -->
             <div id="bulk-progress-section" class="mt-4" style="display: none;">
                 <div class="card card-table">
-                    <div class="card-header bg-white border-bottom py-3">
+                    <div class="card-header bg-transparent border-bottom py-3">
                         <h5 class="mb-0"><i class="bi bi-graph-up text-info"></i> Sending Progress</h5>
                     </div>
                     <div class="card-body">
@@ -1009,7 +1080,7 @@
                         </div>
 
                         <div class="mt-3" id="bulk-log"
-                            style="max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem;">
+                            style="max-height: 200px; overflow-y: auto; background: var(--surface-bg); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border-color);">
                             <!-- Logs will appear here -->
                         </div>
                     </div>
@@ -1227,13 +1298,13 @@
                     const card = document.createElement('div');
                     card.className = 'col-md-4 mb-3';
                     card.innerHTML = `
-                        <div class="card h-100 border-0 shadow-sm">
+                        <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
                             <div class="card-body">
                                 <h5 class="card-title text-primary"><i class="bi bi-lightning-fill"></i> ${flow.trigger}</h5>
                                 <p class="card-text text-muted small">Reponds with:</p>
-                                <p class="card-text bg-light p-2 rounded">${flow.response}</p>
+                                <p class="card-text bg-body p-2 rounded">${flow.response}</p>
                             </div>
-                            <div class="card-footer bg-white border-0 text-end">
+                            <div class="card-footer bg-transparent border-0 text-end">
                                 <button class="btn btn-outline-danger btn-sm" onclick="deleteFlow('${flow._id}')">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
@@ -1337,7 +1408,8 @@
             leads.forEach(lead => {
                 const isSelected = selectedRecipients.has(lead.phone);
                 const item = document.createElement('div');
-                item.className = `p-3 border-bottom hover-bg ${isSelected ? 'bg-primary-subtle' : ''}`;
+                item.className = `p-3 border-bottom hover-bg ${isSelected ? 'bg-primary-subtle text-primary-emphasis' : 'text-body'}`;
+                item.style.borderColor = 'var(--border-color)';
                 item.style.cursor = 'pointer';
                 item.style.transition = 'all 0.2s';
                 item.innerHTML = `
@@ -1469,14 +1541,14 @@
                 const card = document.createElement('div');
                 card.className = 'col-md-6';
                 card.innerHTML = `
-                    <div class="card h-100 border hover-shadow" style="cursor: pointer; transition: all 0.2s;">
+                    <div class="card h-100 border hover-shadow bg-body-tertiary" style="cursor: pointer; transition: all 0.2s;">
                         <div class="card-body">
                             <h6 class="card-title text-primary">
                                 <i class="bi bi-file-text"></i> ${template.name}
                             </h6>
                             <p class="card-text small text-muted" style="white-space: pre-line;">${template.text}</p>
                         </div>
-                        <div class="card-footer bg-white border-0">
+                        <div class="card-footer bg-transparent border-0">
                             <button class="btn btn-sm btn-outline-primary w-100" onclick="useTemplate(${index})">
                                 <i class="bi bi-plus-circle"></i> Use Template
                             </button>
@@ -1704,7 +1776,7 @@
                 const deliveryRate = flow.stats.sent > 0 ? ((flow.stats.delivered / flow.stats.sent) * 100).toFixed(1) : '0.0';
 
                 card.innerHTML = `
-                    <div class="card h-100 border-0 shadow-sm hover-shadow" style="transition: all 0.2s; cursor: pointer;">
+                    <div class="card h-100 border-0 shadow-sm hover-shadow bg-body-tertiary" style="transition: all 0.2s; cursor: pointer;">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0">
@@ -1742,7 +1814,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-white border-0">
+                        <div class="card-footer bg-transparent border-0">
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-primary flex-fill" onclick="editFlow('${flow._id}')">
                                     <i class="bi bi-pencil"></i> Edit
@@ -1762,40 +1834,6 @@
         }
 
         // Create new flow
-        function createNewFlow() {
-            currentFlowId = null;
-            currentFlowNodes = [];
-            currentFlowConnections = [];
-            selectedNodeId = null;
-            nodeIdCounter = 0;
-
-            // Reset Settings
-            document.getElementById('flow-name').value = '';
-            document.getElementById('editor-flow-name-display').textContent = 'Untitled Flow';
-            document.getElementById('flow-description').value = '';
-            document.getElementById('flow-trigger').value = '';
-            document.getElementById('flow-trigger-type').value = 'contains';
-            document.getElementById('flow-active').checked = true;
-            document.getElementById('flow-schedule-time').value = '';
-            document.getElementById('flow-schedule-repeat').value = 'once';
-
-            const recipientSelect = document.getElementById('flow-recipient-list');
-            if (recipientSelect) recipientSelect.selectedIndex = -1;
-
-            // Show editor
-            document.getElementById('flow-list-view').style.display = 'none';
-            document.getElementById('flow-editor-view').style.display = 'block';
-
-            // Clear canvas
-            clearCanvas();
-
-            // Add start node automatically
-            addNode('start');
-
-            // Open settings initially
-            openFlowSettings();
-        }
-
         // Edit existing flow
         async function editFlow(flowId) {
             try {
@@ -1815,8 +1853,7 @@
                 document.getElementById('flow-name').value = flow.name;
                 document.getElementById('editor-flow-name-display').textContent = flow.name;
                 document.getElementById('flow-description').value = flow.description || '';
-                document.getElementById('flow-trigger').value = flow.trigger;
-                document.getElementById('flow-trigger-type').value = flow.triggerType;
+                // Trigger inputs removed from UI
                 document.getElementById('flow-active').checked = flow.active;
 
                 if (flow.schedule) {
@@ -1824,7 +1861,10 @@
                     const offset = date.getTimezoneOffset() * 60000;
                     const localDate = new Date(date.getTime() - offset);
                     document.getElementById('flow-schedule-time').value = localDate.toISOString().slice(0, 16);
-                    document.getElementById('flow-schedule-repeat').value = flow.schedule.repeat || 'once';
+                    const repeatVal = flow.schedule.repeat || 'once';
+                    document.getElementById('flow-schedule-repeat').value = repeatVal;
+                    const radio = document.getElementById('repeat-' + repeatVal);
+                    if (radio) radio.checked = true;
                 }
 
                 // Storing recipient config temporarily to set it when modal opens
@@ -1850,6 +1890,11 @@
         }
 
         // Settings Modal Functions
+
+        function updateRepeatSelect(value) {
+            document.getElementById('flow-schedule-repeat').value = value;
+        }
+
         async function openFlowSettings() {
             // Populate leads
             const recipientList = document.getElementById('flow-recipient-list');
@@ -1884,25 +1929,14 @@
                 window.tempRecipientConfig = null; // Clear
             }
 
-            // Toggle schedule fields based on current selection
-            const trgType = document.getElementById('flow-trigger-type');
-            const schedOptions = document.getElementById('schedule-options');
-            const trgInput = document.getElementById('flow-trigger');
+            // Toggle schedule fields based on current selection - REMOVED since only scheduled flows are supported now
+            // const trgType = document.getElementById('flow-trigger-type'); 
+            // const schedOptions = document.getElementById('schedule-options');
+            // const trgInput = document.getElementById('flow-trigger');
 
-            const updateSched = () => {
-                if (trgType.value === 'scheduled') {
-                    schedOptions.style.display = 'block';
-                    trgInput.disabled = true;
-                    trgInput.value = 'scheduled';
-                } else {
-                    schedOptions.style.display = 'none';
-                    trgInput.disabled = false;
-                    if (trgInput.value === 'scheduled') trgInput.value = '';
-                }
-            };
+            // Logic removed for pure scheduled flows
 
-            trgType.onchange = updateSched;
-            updateSched(); // Initial check
+            // Logic removed for pure scheduled flows
 
             const modal = new bootstrap.Modal(document.getElementById('flowSettingsModal'));
             modal.show();
@@ -1918,6 +1952,53 @@
             modal.hide();
         }
 
+        // Create new flow
+        function createNewFlow() {
+            currentFlowId = null;
+            currentFlowNodes = [];
+            currentFlowConnections = [];
+            selectedNodeId = null;
+            nodeIdCounter = 0;
+
+            // Reset Settings
+            document.getElementById('flow-name').value = '';
+            document.getElementById('editor-flow-name-display').textContent = 'Untitled Flow';
+            document.getElementById('flow-description').value = '';
+            // document.getElementById('flow-trigger').value = ''; // Removed
+            // document.getElementById('flow-trigger-type').value = 'scheduled'; // Removed from DOM
+            document.getElementById('flow-active').checked = true;
+            document.getElementById('flow-schedule-time').value = '';
+            document.getElementById('flow-schedule-repeat').value = 'once';
+            document.getElementById('repeat-once').checked = true;
+
+            const recipientSelect = document.getElementById('flow-recipient-list');
+            if (recipientSelect) recipientSelect.selectedIndex = -1;
+
+            // Show editor
+            document.getElementById('flow-list-view').style.display = 'none';
+            document.getElementById('flow-editor-view').style.display = 'block';
+
+            // Clear canvas
+            clearCanvas();
+
+            // Add start node automatically
+            addNode('start');
+
+            // Open settings initially
+            openFlowSettings();
+        }
+
+        // ... (existing editFlow logic, omitting to save tokens, assuming it handles missing IDs gracefully or I should update it separately? 
+        // editFlow tries to set values to elements that might be missing: flow-trigger, flow-trigger-type. 
+        // I should probably update editFlow too, or let it fail silently/check if element exists. 
+        // For now, let's just focus on saveCurrentFlow.
+        // Actually, I'll update editFlow in a separate call if needed, but let's do safe save first)
+        // Oops, I can't update createNewFlow in the same replace block if the line ranges don't match or are far apart. 
+        // The user instruction said "Updated saveCurrentFlow". 
+        // Wait, looking at line numbers: createNewFlow ends around 1797. saveCurrentFlow starts around 1922. 
+        // I should do two separate edits or one big one if I include everything in between. 
+        // It's safer to do separate edits. I will stick to saveCurrentFlow logic here.
+
         // Save current flow
         async function saveCurrentFlow() {
             if (currentFlowNodes.length === 0) {
@@ -1926,8 +2007,8 @@
             }
 
             const name = document.getElementById('flow-name').value.trim();
-            const trigger = document.getElementById('flow-trigger').value.trim();
-            const triggerType = document.getElementById('flow-trigger-type').value;
+            // const trigger = document.getElementById('flow-trigger').value.trim(); // Removed
+            // const triggerType = document.getElementById('flow-trigger-type').value; // Removed
 
             if (!name) {
                 alert('Please provide a flow name in Settings.');
@@ -1935,8 +2016,10 @@
                 return;
             }
 
-            if (triggerType !== 'scheduled' && !trigger) {
-                alert('Please provide a trigger keyword in Settings.');
+            // Validating Schedule Time
+            const scheduleTime = document.getElementById('flow-schedule-time').value;
+            if (!scheduleTime) {
+                alert('Please provide schedule time.');
                 openFlowSettings();
                 return;
             }
@@ -1955,28 +2038,20 @@
             const flowData = {
                 name,
                 description: document.getElementById('flow-description').value.trim(),
-                trigger: triggerType === 'scheduled' ? 'scheduled' : trigger,
-                triggerType,
+                trigger: 'Scheduled',
+                triggerType: 'scheduled',
                 active: document.getElementById('flow-active').checked,
                 recipientConfig,
                 nodes: currentFlowNodes,
-                connections: currentFlowConnections
+                connections: currentFlowConnections,
+                schedule: {
+                    time: new Date(scheduleTime),
+                    repeat: document.getElementById('flow-schedule-repeat').value,
+                    nextRun: new Date(scheduleTime)
+                }
             };
 
-            if (triggerType === 'scheduled') {
-                const scheduleTime = document.getElementById('flow-schedule-time').value;
-                const scheduleRepeat = document.getElementById('flow-schedule-repeat').value;
-                if (!scheduleTime) {
-                    alert('Please provide schedule time.');
-                    openFlowSettings();
-                    return;
-                }
-                flowData.schedule = {
-                    time: new Date(scheduleTime),
-                    repeat: scheduleRepeat,
-                    nextRun: new Date(scheduleTime)
-                };
-            }
+            // Previous trigger checks removed
 
             try {
                 let response;
