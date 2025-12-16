@@ -11,16 +11,24 @@ import { executeAdvancedFlow, getFlowSession } from "./advancedFlowEngine.js";
 
 export async function runFlow(phone, message) {
 
-  // 1️⃣ Continue lead flow if active
-  if (isLeadInProgress(phone)) {
-    return handleLeadFlow(phone, message);
-  }
+  console.log(`[UnifiedHandler] runFlow called for ${phone} msg="${message}"`);
 
-  // 2️⃣ Check Advanced Flows FIRST (Visual Flow Builder flows)
+  // 1️⃣ Check Advanced Flows FIRST (Visual Flow Builder flows)
+  // This ensures active flow sessions take precedence over legacy lead capture
   const advancedFlowResult = await executeAdvancedFlow(phone, message);
   if (advancedFlowResult) {
+    // If flow is complete (handled but ended), we stop here and return nothing (null)
+    // so the AI doesn't pick it up.
+    if (advancedFlowResult.type === 'flow_complete') {
+      return null;
+    }
     // Format response based on type
     return formatAdvancedFlowResponse(advancedFlowResult);
+  }
+
+  // 2️⃣ Continue lead flow if active
+  if (isLeadInProgress(phone)) {
+    return handleLeadFlow(phone, message);
   }
 
   const msgLower = message.toLowerCase().trim();
@@ -66,6 +74,11 @@ function formatAdvancedFlowResponse(result) {
   // For simple text messages
   if (result.type === 'text') {
     return result.content;
+  }
+
+  // Flow ended with no response
+  if (result.type === 'no_reply') {
+    return null;
   }
 
   // For now, return as structured object for later WhatsApp API integration
