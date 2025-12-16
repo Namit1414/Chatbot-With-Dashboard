@@ -2,18 +2,56 @@ import AdvancedFlow from "./models/AdvancedFlow.js";
 
 import Lead from "./models/Lead.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
+import { logToFile } from "./debugLogger.js";
 
 // Session management for multi-step flows
+// Session management for multi-step flows
 const flowSessions = new Map(); // phoneNumber -> { flowId, currentNodeId, variables }
+const tempFlows = new Map(); // flowId -> flowObject (for testing unsaved flows)
+
+/**
+ * Helper to find session with fuzzy matching
+ * Handles cases where user enters local format (890...) but WhatsApp sends intl (91890...)
+ */
+export function findSession(phone) {
+    if (flowSessions.has(phone)) return { phone, session: flowSessions.get(phone) };
+
+    const phoneStr = String(phone);
+    // Scan all sessions for partial match
+    for (const [key, session] of flowSessions.entries()) {
+        const keyStr = String(key);
+        // Check if one ends with the other (suffix match for phone numbers)
+        if (keyStr.endsWith(phoneStr) || phoneStr.endsWith(keyStr)) {
+            console.log(`[FlowEngine] Fuzzy match found: '${phone}' matched session '${key}'`);
+            logToFile(`[FuzzyMatch] Input: ${phone} matched SessionKey: ${key}`);
+            return { phone: key, session };
+        }
+    }
+    return null;
+}
+
+export function registerTempFlow(flow) {
+    tempFlows.set(flow._id, flow);
+    // Auto-expire temp flows after 1 hour to prevent memory leaks
+    setTimeout(() => tempFlows.delete(flow._id), 3600000);
+}
 
 /**
  * Execute advanced flow when triggered
  */
 export async function executeAdvancedFlow(phone, message) {
     try {
+        console.log(`[FlowEngine] executeAdvancedFlow called for: ${phone} (Message: "${message}")`);
+        console.log(`[FlowEngine] Active Sessions: ${flowSessions.size}. Has session? ${flowSessions.has(phone)}`);
+
         // Check if user has an active flow session
-        if (flowSessions.has(phone)) {
-            return await continueFlow(phone, message);
+        const activeSessionObj = findSession(phone);
+
+        if (activeSessionObj) {
+            console.log(`[FlowEngine] Resuming session for ${phone} (Session Key: ${activeSessionObj.phone})`);
+            logToFile(`[Resume] Found session for ${activeSessionObj.phone} (Input: ${phone})`);
+            // Pass the original session key to ensure consistency
+            return await continueFlow(activeSessionObj.phone, message);
         }
 
         // Find matching flow by trigger
@@ -21,9 +59,11 @@ export async function executeAdvancedFlow(phone, message) {
         const matchedFlow = findMatchingFlow(flows, message);
 
         if (!matchedFlow) {
+            console.log(`[FlowEngine] No matching new flow for message: "${message}"`);
             return null; // No flow matched
         }
 
+        console.log(`[FlowEngine] Found matching new flow: ${matchedFlow.name}`);
         // Start new flow session
         return await startFlow(phone, matchedFlow);
     } catch (error) {
@@ -65,7 +105,9 @@ function findMatchingFlow(flows, message) {
 /**
  * Start a new flow session
  */
-async function startFlow(phone, flow) {
+export async function startFlow(phone, flow) {
+    console.log(`[FlowEngine] Starting flow "${flow.name}" (${flow._id}) for ${phone}`);
+
     // Find start node
     const startNode = flow.nodes.find(n => n.type === 'start');
 
@@ -81,6 +123,7 @@ async function startFlow(phone, flow) {
         variables: {},
         nodeHistory: [startNode.id]
     });
+    console.log(`[FlowEngine] Session created for ${phone}. Total sessions: ${flowSessions.size}`);
 
     // Update stats
     await updateFlowStats(flow._id, 'sent');
@@ -89,8 +132,11 @@ async function startFlow(phone, flow) {
     const nextNode = findNextNode(flow, startNode.id);
 
     if (!nextNode) {
+        console.log('[FlowEngine] Flow started but no next node after start.');
         endFlowSession(phone);
-        return null;
+        return null; // Or { type: 'no_reply' }? If it starts and ends immediately, maybe null is fine or we want to prevent AI.
+        // If we return null, AI picks up. If we want silence, use no_reply.
+        // Let's assume if it starts and halts, it's a dead flow.
     }
 
     // Execute next node
@@ -101,20 +147,29 @@ async function startFlow(phone, flow) {
  * Continue existing flow session
  */
 async function continueFlow(phone, message) {
+    console.log(`continueFlow called for ${phone} with message: "${message}"`);
+    logToFile(`[Continue] Phone: ${phone}, Msg: ${message}`);
     const session = flowSessions.get(phone);
 
     if (!session) return null;
 
     // Load flow
-    const flow = await AdvancedFlow.findById(session.flowId);
+    let flow;
+    if (session.flowId.toString().startsWith('temp')) {
+        flow = tempFlows.get(session.flowId);
+    } else {
+        flow = await AdvancedFlow.findById(session.flowId);
+    }
 
     if (!flow) {
+        console.warn('Flow definition not found (expired temp flow or deleted DB flow). Ending session.');
         endFlowSession(phone);
         return null;
     }
 
     // Get current node
     const currentNode = flow.nodes.find(n => n.id === session.currentNodeId);
+    console.log(`Current Node: ${session.currentNodeId} (${currentNode?.type})`);
 
     if (!currentNode) {
         endFlowSession(phone);
@@ -123,17 +178,34 @@ async function continueFlow(phone, message) {
 
     // Handle user response based on node type
     if (currentNode.type === 'buttons') {
+        console.log('Checking button reply match...');
         // Check if user clicked a button
-        const clickedButton = currentNode.data.buttons?.find(btn =>
-            message.toLowerCase().trim() === btn.value.toLowerCase().trim()
+        // Incoming message is usually the button ID (payload) for interactive messages
+        let clickedButton = currentNode.data.buttons?.find(btn =>
+            message === btn.id
         );
 
+        // Fallback: Check if message matches the value (text match)
+        if (!clickedButton) {
+            clickedButton = currentNode.data.buttons?.find(btn =>
+                message.toLowerCase().trim() === btn.value.toLowerCase().trim()
+            );
+        }
+
         if (clickedButton) {
+            console.log(`Button Matched: ${clickedButton.value}`);
+            logToFile(`[ButtonMatch] Matched button id: ${clickedButton.id}, value: ${clickedButton.value}`);
             // Track button click
             await updateFlowStats(flow._id, 'clicked');
 
             // Store in variables if needed
             session.variables.lastButtonClicked = clickedButton.id;
+
+            // IMPORTANT: Update the 'message' to be the button VALUE
+            // This allows downstream Condition Nodes to check against "yes" instead of "btn_123"
+            message = clickedButton.value;
+        } else {
+            console.log('No button matched. Treating as raw input.');
         }
     }
 
@@ -144,8 +216,11 @@ async function continueFlow(phone, message) {
     const nextNode = findNextNode(flow, currentNode.id, message, session);
 
     if (!nextNode) {
+        console.log('Flow ended (no next node).');
+        logToFile(`[FlowEnd] No next node after ${currentNode.id}`);
         endFlowSession(phone);
-        return null;
+        // RETURN SPECIAL TYPE TO PREVENT AI FALLBACK
+        return { type: 'flow_complete' };
     }
 
     // Execute next node
@@ -211,9 +286,17 @@ function evaluateCondition(condition, userMessage, session) {
  * Execute a specific node
  */
 async function executeNode(phone, flow, node) {
+    // Use exact match here as we should have resolved the correct phone key by now
+    // But for safety in other calls, we can use findSession if needed. 
+    // However, executeNode is internal and usually passed the correct phone key.
+    // Let's stick to get() but logging if missing.
     const session = flowSessions.get(phone);
 
-    if (!session) return null;
+    if (!session) {
+        console.error(`[FlowEngine] Critical: Session missing in executeNode for ${phone}`);
+        logToFile(`[Critical] Session missing in executeNode for ${phone}`);
+        return null;
+    }
 
     // Update session current node
     session.currentNodeId = node.id;
@@ -366,31 +449,84 @@ async function executeDelayNode(phone, flow, node) {
             const result = await executeNode(phone, flow, nextNode);
             if (result) {
                 // Send the delayed message (this would need to be handled by the webhook)
-                console.log('Delayed message for', phone, ':', result);
+                // Note: For a real app, we need a way to send async messages back to the user
+                // potentially via a callback or event emitter.
+                console.log('Delayed message generated:', result);
+                // For now, we can only log it because the HTTP response is already sent.
+                // To fix this properly, we'd need to call sendWhatsAppMessage here directly.
+                const { sendWhatsAppBusinessMessage } = await import('./whatsappBusinessAPI.js');
+
+                // Map 'type' to 'messageType' if needed
+                let msgToSend = result;
+                if (result.type && !result.messageType) {
+                    msgToSend = { ...result, messageType: result.type };
+                }
+
+                // Helper to send async
+                // We need token and phoneID. Assuming they are in process.env
+                if (process.env.WHATSAPP_TOKEN && process.env.PHONE_NUMBER_ID) {
+                    await sendWhatsAppBusinessMessage(
+                        phone,
+                        msgToSend,
+                        process.env.WHATSAPP_TOKEN,
+                        process.env.PHONE_NUMBER_ID
+                    );
+                }
             }
         }
     }, delayMs);
 
-    return null; // Don't send anything immediately
+    return { type: 'no_reply' }; // Handled, but no immediate response
 }
+
 
 /**
  * Execute condition node
  */
 async function executeConditionNode(phone, flow, node) {
+    console.log(`Executing Condition Node ${node.id}`);
+    const targetValue = (node.data.value || '').toLowerCase().trim();
+
+    // Use get() directly
     const session = flowSessions.get(phone);
-    const variable = node.data.variable || 'lastResponse';
-    const condition = node.data.condition || '';
-    const value = session?.variables[variable];
+
+
+    // Get actual value from session variables
+    // Default to empty string to avoid crashes
+    const actualValue = (session?.variables[variable] || '').toLowerCase().trim();
+
+    console.log(`Condition Check: Variable=${variable}, Actual="${actualValue}" ${conditionType} Target="${targetValue}"`);
+
+    let isMatch = false;
+    if (conditionType === 'equals') {
+        isMatch = actualValue === targetValue;
+    } else if (conditionType === 'contains') {
+        isMatch = actualValue.includes(targetValue);
+    } else if (conditionType === 'regex') {
+        try {
+            const regex = new RegExp(targetValue, 'i');
+            isMatch = regex.test(actualValue);
+        } catch (e) {
+            console.error('Invalid Regex in condition:', e);
+        }
+    }
+
+    if (!isMatch) {
+        console.log('Condition Failed: Stopping flow or taking false branch (not impl).');
+        return { type: 'no_reply' }; // Stop flow gracefully (no AI fallback)
+    }
+
+    console.log('Condition Passed: Proceeding to next node.');
 
     // Evaluate condition and find appropriate next node
-    const nextNode = findNextNode(flow, node.id, value, session);
+    // Pass null/empty for label matching since we handled logic here
+    const nextNode = findNextNode(flow, node.id);
 
     if (nextNode) {
         return await executeNode(phone, flow, nextNode);
     }
 
-    return null;
+    return { type: 'no_reply' };
 }
 
 /**
@@ -403,10 +539,13 @@ function personalizeMessage(text, phone, session) {
     result = result.replace(/{phone}/g, phone);
 
     // Replace session variables
-    if (session?.variables) {
-        Object.keys(session.variables).forEach(key => {
+    // Resolve session if not passed or ensure we have it
+    const activeSession = session || flowSessions.get(phone);
+
+    if (activeSession?.variables) {
+        Object.keys(activeSession.variables).forEach(key => {
             const regex = new RegExp(`{${key}}`, 'g');
-            result = result.replace(regex, session.variables[key] || '');
+            result = result.replace(regex, activeSession.variables[key] || '');
         });
     }
 
@@ -417,6 +556,11 @@ function personalizeMessage(text, phone, session) {
  * Update flow statistics
  */
 async function updateFlowStats(flowId, metric) {
+    // Skip stats for temporary test flows
+    if (typeof flowId === 'string' && flowId.startsWith('temp')) {
+        return;
+    }
+
     try {
         const flow = await AdvancedFlow.findById(flowId);
         if (flow && flow.stats[metric] !== undefined) {
@@ -439,14 +583,18 @@ function endFlowSession(phone) {
  * Clear session for a phone number (exposed for external use)
  */
 export function clearFlowSession(phone) {
-    endFlowSession(phone);
+    const s = findSession(phone);
+    if (s) {
+        endFlowSession(s.phone);
+    }
 }
 
 /**
  * Get active session info
  */
 export function getFlowSession(phone) {
-    return flowSessions.get(phone);
+    const s = findSession(phone);
+    return s ? s.session : null;
 }
 
 /**
