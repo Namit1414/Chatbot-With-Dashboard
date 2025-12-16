@@ -1,6 +1,7 @@
 import { getExcelReply } from "./excelFlow.js";
 import { aiReply } from "./aiAgent.js";
 import Flow from "./models/Flow.js";
+import ButtonResponse from "./models/ButtonResponse.js";
 import {
   isLeadInProgress,
   handleLeadFlow,
@@ -58,7 +59,14 @@ export async function runFlow(phone, message) {
     return excel.response;
   }
 
-  // 4️⃣ AI fallback
+  // 4️⃣ Check Button Automations (Exact ID/Text Match)
+  const buttonRule = await ButtonResponse.findOne({ triggerId: message }); // Exact match
+  if (buttonRule) {
+    console.log(`[UnifiedHandler] Matched Button Automation: ${message}`);
+    return buttonRule.responseText;
+  }
+
+  // 5️⃣ AI fallback
   const ai = await aiReply(message, phone);
   if (ai) return ai;
 
