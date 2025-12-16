@@ -690,7 +690,7 @@
                     <div class="col-lg-9">
                         <div class="card card-table shadow-sm" style="height: 700px; overflow: hidden;">
                             <div class="card-body p-0 h-100" id="flow-canvas"
-                                style="background: linear-gradient(90deg, #f0f0f0 1px, transparent 1px), linear-gradient(#f0f0f0 1px, transparent 1px); background-size: 20px 20px; position: relative; overflow: auto; width: 100%; height: 100%;">
+                                style="background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px); background-size: 20px 20px; position: relative; overflow: auto; width: 100%; height: 100%;">
                                 <!-- SVG layer for connections -->
                                 <svg class="connections" id="connections-svg">
                                     <defs>
@@ -713,7 +713,7 @@
                     <div class="col-lg-3 d-flex flex-column gap-3">
                         <!-- Node Palette -->
                         <div class="card card-table shadow-sm">
-                            <div class="card-header bg-white border-bottom py-2">
+                            <div class="card-header bg-transparent border-bottom py-2">
                                 <h6 class="mb-0 small fw-bold"><i class="bi bi-puzzle-fill"></i> Add Nodes</h6>
                             </div>
                             <div class="card-body p-2">
@@ -727,7 +727,7 @@
                                     <div class="col-6">
                                         <button class="btn btn-outline-success btn-sm w-100 text-start"
                                             onclick="addNode('buttons')">
-                                            <i class="bi bi-ui-checks"></i> Btns
+                                            <i class="bi bi-ui-checks"></i> Buttons
                                         </button>
                                     </div>
                                     <div class="col-6">
@@ -1361,7 +1361,7 @@
         const messageTemplates = [
             {
                 name: "Welcome Message",
-                text: "Hi {name}! ðŸ‘‹\n\nWelcome to our fitness community! We're excited to help you achieve your health goals. ðŸ’ª\n\nOur team will be in touch soon!"
+                text: "Hi {name}! 👋\n\nWelcome to our fitness community! We're excited to help you achieve your health goals. 💪\n\nOur team will be in touch soon!"
             },
             {
                 name: "Follow-up",
@@ -1377,7 +1377,11 @@
             },
             {
                 name: "Thank You",
-                text: "Dear {name},\n\nThank you for your interest! We appreciate you taking the time to connect with us. ðŸ™\n\nStay healthy and strong!"
+                text: "Dear {name},\n\nThank you for your interest! We appreciate you taking the time to connect with us. 🙏\n\nStay healthy and strong!"
+            },
+            {
+                name: "Scheduling Follow-up",
+                text: "Hi {name}, regarding your request for a call on {preferred_date} Between {preferred_time}. Are you available?"
             }
         ];
 
@@ -1527,7 +1531,10 @@
 
             let previewText = text;
             if (personalize) {
-                previewText = text.replace(/{name}/g, '<strong style="color: #00a884;">John</strong>');
+                previewText = text
+                    .replace(/{name}/g, '<strong style="color: #00a884;">John</strong>')
+                    .replace(/{preferred_date}/g, '<strong style="color: #00a884;">Tomorrow</strong>')
+                    .replace(/{preferred_time}/g, '<strong style="color: #00a884;">10:00 AM - 12:00 PM</strong>');
             }
 
             previewEl.innerHTML = previewText.replace(/\n/g, '<br>');
@@ -1615,7 +1622,10 @@
                 let personalizedMessage = message;
 
                 if (personalize) {
-                    personalizedMessage = message.replace(/{name}/g, lead.name || 'there');
+                    personalizedMessage = message
+                        .replace(/{name}/g, lead.name || 'there')
+                        .replace(/{preferred_date}/g, lead.preferred_date || 'your requested date')
+                        .replace(/{preferred_time}/g, lead.preferred_time || 'your requested time');
                 }
 
                 try {
@@ -2214,6 +2224,13 @@
 
         // Remove Node
         function removeNode(nodeId) {
+            // Prevent deletion of start node
+            const node = currentFlowNodes.find(n => n.id === nodeId);
+            if (node && node.type === 'start') {
+                alert('Cannot delete the start node. Every flow must have an entry point.');
+                return;
+            }
+
             currentFlowNodes = currentFlowNodes.filter(n => n.id !== nodeId);
             currentFlowConnections = currentFlowConnections.filter(c => c.source !== nodeId && c.target !== nodeId);
             renderCanvas();
@@ -2301,9 +2318,9 @@
                         <i class="bi ${icons[node.type]}"></i>
                         <span>${node.type.charAt(0).toUpperCase() + node.type.slice(1)}</span>
                     </div>
-                    <button class="btn btn-sm btn-outline-danger" onclick="removeNode('${node.id}'); event.stopPropagation();" style="padding: 2px 8px;">
+                    ${node.type !== 'start' ? `<button class="btn btn-sm btn-outline-danger" onclick="removeNode('${node.id}'); event.stopPropagation();" style="padding: 2px 8px;">
                         <i class="bi bi-x"></i>
-                    </button>
+                    </button>` : ''}
                 </div>
                 <div class="node-content">
                     ${getNodePreview(node)}
@@ -2584,7 +2601,7 @@
                     <label class="form-label fw-semibold">Buttons</label>
                     <div id="prop-buttons-list">
                         ${(node.data.buttons || []).map((btn, i) => `
-                            <div class="card mb-2 bg-light">
+                            <div class="card mb-2 bg-body-tertiary">
                                 <div class="card-body p-2">
                                     <div class="d-flex justify-content-between mb-2">
                                         <small class="fw-bold">Button ${i + 1}</small>
@@ -2616,7 +2633,7 @@
                     <label class="form-label fw-semibold">List Items</label>
                     <div id="prop-list-items">
                          ${(node.data.listItems || []).map((item, i) => `
-                            <div class="card mb-2 bg-light">
+                            <div class="card mb-2 bg-body-tertiary">
                                 <div class="card-body p-2">
                                     <div class="d-flex justify-content-between mb-1">
                                          <small class="fw-bold">Item ${i + 1}</small>
@@ -2707,19 +2724,19 @@
                 node.data.text = document.getElementById('prop-text').value;
             } else if (type === 'buttons') {
                 node.data.text = document.getElementById('prop-text').value;
-                const btns = [];
+                const Buttons = [];
                 // Reconstruct buttons from inputs
                 const container = document.getElementById('prop-buttons-list');
                 const btnCards = container.children;
                 for (let i = 0; i < btnCards.length; i++) {
-                    btns.push({
+                    Buttons.push({
                         id: `btn_${Date.now()}_${i}`,
                         text: document.getElementById(`btn-text-${i}`).value,
                         type: document.getElementById(`btn-type-${i}`).value,
                         value: document.getElementById(`btn-value-${i}`).value
                     });
                 }
-                node.data.buttons = btns;
+                node.data.buttons = Buttons;
             } else if (type === 'list') {
                 node.data.text = document.getElementById('prop-text').value;
                 node.data.title = document.getElementById('prop-title').value;
