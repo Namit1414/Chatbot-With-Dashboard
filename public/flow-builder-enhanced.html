@@ -798,13 +798,12 @@
                     let idx = 0;
                     while (document.getElementById(`btn-text-${idx}`)) {
                         buttons.push({
-                            buttons.push({
-                                id: document.getElementById(`btn-id-${idx}`).value,
-                                text: document.getElementById(`btn-text-${idx}`).value,
-                                type: document.getElementById(`btn-type-${idx}`).value,
-                                value: document.getElementById(`btn-value-${idx}`).value
-                            });
-                            idx++;
+                            id: document.getElementById(`btn-id-${idx}`).value,
+                            text: document.getElementById(`btn-text-${idx}`).value,
+                            type: document.getElementById(`btn-type-${idx}`).value,
+                            value: document.getElementById(`btn-value-${idx}`).value
+                        });
+                        idx++;
                     }
                     node.data.buttons = buttons;
                 } else if (type === 'list') {
