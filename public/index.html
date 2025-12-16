@@ -119,6 +119,16 @@
             }
         }
 
+        .page-content-fluid {
+            padding: 30px;
+            width: 100%;
+            /* Full width */
+            padding-right: 30px;
+            /* Ensure right padding */
+            margin: 0;
+            animation: fadeIn 0.3s ease;
+        }
+
         h1 {
             color: var(--text-main);
             font-weight: 600;
@@ -293,43 +303,230 @@
             background-color: var(--primary-color);
             color: white;
         }
+
+        /* Enhanced Flow Builder Styles */
+        .flow-node {
+            position: absolute;
+            min-width: 220px;
+            max-width: 280px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: move;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .flow-node:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .flow-node.selected {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+            background: #e3f2fd;
+        }
+
+        .flow-node.dragging {
+            opacity: 0.7;
+            cursor: grabbing;
+            z-index: 100;
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .node-type {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .node-content {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .connection-point {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: white;
+            border: 3px solid #2196F3;
+            border-radius: 50%;
+            cursor: crosshair;
+            z-index: 20;
+            transition: all 0.2s;
+        }
+
+        .connection-point.input {
+            top: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .connection-point.output {
+            bottom: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .connection-point:hover {
+            background: #2196F3;
+            transform: translateX(-50%) scale(1.4);
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+        }
+
+        .connection-point.connecting {
+            background: #4caf50;
+            border-color: #4caf50;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: translateX(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateX(-50%) scale(1.3);
+            }
+        }
+
+        svg.connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .connection-line {
+            stroke: #2196F3;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+            pointer-events: stroke;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .connection-line:hover {
+            stroke: #1976D2;
+            stroke-width: 3;
+        }
+
+        .connection-line.selected {
+            stroke: #ff5722;
+            stroke-width: 3;
+        }
+
+        #flow-canvas {
+            position: relative;
+        }
+
+        /* Performance optimization for dragging */
+        .flow-node.dragging * {
+            pointer-events: none;
+        }
+
+        #sidebar.collapsed {
+            width: 70px;
+        }
+
+        #sidebar.collapsed .sidebar-header .d-flex,
+        #sidebar.collapsed .nav-link span,
+        #sidebar.collapsed .sidebar-footer {
+            display: none !important;
+        }
+
+        #sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        #sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #aebac1;
+            cursor: pointer;
+            padding: 5px;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover {
+            color: white;
+        }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
         <div class="sidebar-header">
-            <i class="bi bi-whatsapp text-success" style="font-size: 1.8rem;"></i>
-            <h2>Bot Admin</h2>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-whatsapp text-success" style="font-size: 1.8rem;"></i>
+                <h2>Bot Admin</h2>
+            </div>
+            <button class="toggle-btn" onclick="toggleSidebar()">
+                <i class="bi bi-list fs-4"></i>
+            </button>
         </div>
         <ul class="nav nav-pills flex-column mb-auto">
             <li>
                 <a href="#" class="nav-link active" onclick="showContent('leads')">
-                    <i class="bi bi-people"></i> Lead Management
+                    <i class="bi bi-people"></i> <span>Lead Management</span>
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" onclick="showContent('live-chat')">
-                    <i class="bi bi-chat-dots"></i> Live Chat
+                    <i class="bi bi-chat-dots"></i> <span>Live Chat</span>
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" onclick="showContent('flows')">
-                    <i class="bi bi-diagram-3"></i> Flows & Templates
+                    <i class="bi bi-diagram-3"></i> <span>Flows & Templates</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('flow-builder')">
+                    <i class="bi bi-diagram-3-fill"></i> <span>Flow Builder</span>
                 </a>
             </li>
             <li>
                 <a href="#" class="nav-link" onclick="showContent('bulk-messaging')">
-                    <i class="bi bi-broadcast"></i> Bulk Messaging
+                    <i class="bi bi-broadcast"></i> <span>Bulk Messaging</span>
                 </a>
             </li>
             <li class="mt-auto">
                 <a href="/logout" class="nav-link text-danger">
-                    <i class="bi bi-box-arrow-right"></i> Logout
+                    <i class="bi bi-box-arrow-right"></i> <span>Logout</span>
                 </a>
             </li>
         </ul>
-        <div class="p-3 fs-6 opacity-50">
+        <div class="p-3 fs-6 opacity-50 sidebar-footer">
             <small>&copy; 2024 Bot Dashboard</small>
         </div>
     </div>
@@ -418,6 +615,231 @@
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100">Create Flow</button>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flow Builder -->
+        <div id="flow-builder" class="page-content-fluid" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-diagram-3-fill"></i> Flow Builder</h1>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" onclick="loadAdvancedFlows()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="createNewFlow()">
+                        <i class="bi bi-plus-lg"></i> Create New Flow
+                    </button>
+                </div>
+            </div>
+
+            <!-- Flow List View -->
+            <div id="flow-list-view">
+                <div class="row g-3" id="advanced-flows-container">
+                    <!-- Flows will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Flow Editor View (Hidden by default) -->
+            <div id="flow-editor-view" style="display: none;">
+                <div class="mb-3">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="backToFlowList()">
+                        <i class="bi bi-arrow-left"></i> Back to Flows
+                    </button>
+                    <button class="btn btn-success btn-sm ms-2" onclick="saveCurrentFlow()" id="save-flow-btn">
+                        <i class="bi bi-save"></i> Save Flow
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm ms-2" onclick="testCurrentFlow()">
+                        <i class="bi bi-play-fill"></i> Test Flow
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Left: Flow Settings -->
+                    <div class="col-lg-2">
+                        <div class="card card-table">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0"><i class="bi bi-gear-fill"></i> Flow Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Flow Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="flow-name"
+                                        placeholder="e.g., Welcome Flow">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Description</label>
+                                    <textarea class="form-control form-control-sm" id="flow-description" rows="2"
+                                        placeholder="What does this flow do?"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Trigger Keyword</label>
+                                    <input type="text" class="form-control form-control-sm" id="flow-trigger"
+                                        placeholder="e.g., hello">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Trigger Type</label>
+                                    <select class="form-select form-select-sm" id="flow-trigger-type"
+                                        onchange="toggleScheduleFields()">
+                                        <option value="contains">Keyword - Contains</option>
+                                        <option value="exact">Keyword - Exact Match</option>
+                                        <option value="regex">Keyword - Regex</option>
+                                        <option value="scheduled">Scheduled - Date/Time</option>
+                                    </select>
+                                </div>
+                                <div id="schedule-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Schedule Date & Time</label>
+                                        <input type="datetime-local" class="form-control form-control-sm"
+                                            id="flow-schedule-time">
+                                        <small class="text-muted">Flow will execute at this time</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Repeat</label>
+                                        <select class="form-select form-select-sm" id="flow-schedule-repeat">
+                                            <option value="once">Once</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Recipients</label>
+                                    <select class="form-select form-select-sm" id="flow-recipient-type"
+                                        onchange="toggleRecipientFields()">
+                                        <option value="all">All Leads</option>
+                                        <option value="tags">By Tags</option>
+                                        <option value="specific">Specific Numbers</option>
+                                    </select>
+                                </div>
+                                <div id="recipient-fields-tags" style="display: none;" class="mb-3">
+                                    <label class="form-label fw-semibold">Tags (comma separated)</label>
+                                    <input type="text" class="form-control form-control-sm" id="flow-recipient-tags"
+                                        placeholder="e.g. vip, new, interest">
+                                </div>
+                                <div id="recipient-fields-specific" style="display: none;" class="mb-3">
+                                    <label class="form-label fw-semibold">Phones (comma separated)</label>
+                                    <textarea class="form-control form-control-sm" id="flow-recipient-phones" rows="2"
+                                        placeholder="e.g. 919876543210, 15551234567"></textarea>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="flow-active" checked>
+                                    <label class="form-check-label fw-semibold" for="flow-active">
+                                        Active
+                                    </label>
+                                </div>
+
+                                <hr class="my-3">
+
+                                <h6 class="mb-2"><i class="bi bi-bar-chart-fill"></i> Analytics</h6>
+                                <div class="small">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted">Sent:</span>
+                                        <span class="fw-semibold" id="flow-stats-sent">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted">Delivered:</span>
+                                        <span class="fw-semibold" id="flow-stats-delivered">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-muted">Clicked:</span>
+                                        <span class="fw-semibold" id="flow-stats-clicked">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Errors:</span>
+                                        <span class="fw-semibold text-danger" id="flow-stats-errors">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Node Palette -->
+                        <div class="card card-table mt-3">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0"><i class="bi bi-puzzle-fill"></i> Add Nodes</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="addNode('message')">
+                                        <i class="bi bi-chat-text"></i> Message
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm" onclick="addNode('buttons')">
+                                        <i class="bi bi-ui-checks"></i> Buttons (CTA)
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" onclick="addNode('list')">
+                                        <i class="bi bi-list-ul"></i> List Message
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="addNode('image')">
+                                        <i class="bi bi-image"></i> Image
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="addNode('video')">
+                                        <i class="bi bi-play-btn"></i> Video
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" onclick="addNode('document')">
+                                        <i class="bi bi-file-earmark-pdf"></i> Document
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="addNode('delay')">
+                                        <i class="bi bi-clock"></i> Delay
+                                    </button>
+                                    <button class="btn btn-outline-purple btn-sm" onclick="addNode('condition')"
+                                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                                        <i class="bi bi-shuffle"></i> Condition
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Flow Canvas -->
+                    <div class="col-lg-8">
+                        <div class="card card-table" style="min-height: 600px;">
+                            <div
+                                class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="bi bi-layers"></i> Flow Canvas</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="clearCanvas()"
+                                        title="Clear All Nodes">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0" id="flow-canvas"
+                                style="min-height: 550px; background: linear-gradient(90deg, #f0f0f0 1px, transparent 1px), linear-gradient(#f0f0f0 1px, transparent 1px); background-size: 20px 20px; overflow: auto; position: relative;">
+                                <!-- SVG layer for connections -->
+                                <svg class="connections" id="connections-svg">
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3"
+                                            orient="auto">
+                                            <polygon points="0 0, 10 3, 0 6" fill="#2196F3" />
+                                        </marker>
+                                    </defs>
+                                </svg>
+                                <!-- Flow nodes will be rendered here -->
+                                <div class="text-center text-muted" style="padding-top: 200px;" id="canvas-placeholder">
+                                    <i class="bi bi-diagram-2" style="font-size: 4rem; opacity: 0.3;"></i>
+                                    <p class="mt-3">Add nodes to build your flow</p>
+                                    <small class="text-muted">💡 Tip: Click bottom port → top port of another node to
+                                        connect them</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Node Properties -->
+                    <div class="col-lg-2">
+                        <div class="card card-table">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0"><i class="bi bi-sliders"></i> Node Properties</h6>
+                            </div>
+                            <div class="card-body" id="node-properties">
+                                <div class="text-center text-muted py-5">
+                                    <i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.3;"></i>
+                                    <p class="mt-2 small">Select a node to edit its properties</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -624,7 +1046,7 @@
         let currentLeadPhone = null;
 
         function showContent(contentId) {
-            document.querySelectorAll('.page-content').forEach(content => {
+            document.querySelectorAll('.page-content, .page-content-fluid').forEach(content => {
                 content.style.display = 'none';
             });
             const selected = document.getElementById(contentId);
@@ -1222,6 +1644,924 @@
 
         // ========================================
         // END BULK MESSAGING FUNCTIONALITY
+        // ========================================
+
+        // ========================================
+        // FLOW BUILDER FUNCTIONALITY
+        // ========================================
+
+        let currentFlowId = null;
+        let currentFlowNodes = [];
+        let currentFlowConnections = [];
+        let selectedNodeId = null;
+        let nodeIdCounter = 0;
+
+        // Drag and drop state
+        let isDragging = false;
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Connection state
+        let isConnecting = false;
+        let connectionStart = null;
+
+        // Load all advanced flows
+        async function loadAdvancedFlows() {
+            try {
+                const response = await fetch('/api/advanced-flows');
+                const flows = await response.json();
+                renderAdvancedFlows(flows);
+            } catch (error) {
+                console.error('Error loading flows:', error);
+            }
+        }
+
+        // Render flows as cards
+        function renderAdvancedFlows(flows) {
+            const container = document.getElementById('advanced-flows-container');
+            container.innerHTML = '';
+
+            if (flows.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-diagram-3" style="font-size: 4rem; opacity: 0.3;"></i>
+                        <p class="mt-3">No flows created yet. Create your first flow!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            flows.forEach(flow => {
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4';
+                const deliveryRate = flow.stats.delivered > 0 ? ((flow.stats.delivered / flow.stats.sent) * 100).toFixed(1) : '0.0';
+
+                card.innerHTML = `
+                    <div class="card h-100 border-0 shadow-sm hover-shadow" style="transition: all 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-diagram-3-fill text-primary"></i> ${flow.name}
+                                </h5>
+                                <span class="badge ${flow.active ? 'bg-success' : 'bg-secondary'}">${flow.active ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <p class="card-text text-muted small mb-2">${flow.description || 'No description'}</p>
+                            <div class="mb-3">
+                                <span class="badge bg-primary-subtle text-primary border border-primary">
+                                    <i class="bi bi-key"></i> ${flow.trigger}
+                                </span>
+                                <span class="badge bg-info-subtle text-info border border-info ms-1">
+                                    ${flow.triggerType}
+                                </span>
+                            </div>
+                            
+                            <!-- Analytics -->
+                            <div class="row text-center small mb-3">
+                                <div class="col-3">
+                                    <div class="text-muted">Sent</div>
+                                    <div class="fw-bold">${flow.stats.sent || 0}</div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="text-muted">Rate</div>
+                                    <div class="fw-bold text-success">${deliveryRate}%</div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="text-muted">Clicks</div>
+                                    <div class="fw-bold text-info">${flow.stats.clicked || 0}</div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="text-muted">Nodes</div>
+                                    <div class="fw-bold">${flow.nodes?.length || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-0">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary flex-fill" onclick="editFlow('${flow._id}')">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-${flow.active ? 'warning' : 'success'}" onclick="toggleFlowActive('${flow._id}')">
+                                    <i class="bi bi-${flow.active ? 'pause' : 'play'}-fill"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteAdvancedFlow('${flow._id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Create new flow
+        function createNewFlow() {
+            currentFlowId = null;
+            currentFlowNodes = [];
+            currentFlowConnections = [];
+            selectedNodeId = null;
+            nodeIdCounter = 0;
+
+            // Reset form
+            document.getElementById('flow-name').value = '';
+            document.getElementById('flow-description').value = '';
+            document.getElementById('flow-trigger').value = '';
+            document.getElementById('flow-trigger-type').value = 'contains';
+            document.getElementById('flow-recipient-type').value = 'all';
+            document.getElementById('flow-recipient-tags').value = '';
+            document.getElementById('flow-recipient-phones').value = '';
+            toggleScheduleFields();
+            toggleRecipientFields();
+            document.getElementById('flow-active').checked = true;
+
+            // Reset stats
+            document.getElementById('flow-stats-sent').textContent = '0';
+            document.getElementById('flow-stats-delivered').textContent = '0';
+            document.getElementById('flow-stats-clicked').textContent = '0';
+            document.getElementById('flow-stats-errors').textContent = '0';
+
+            // Show editor
+            document.getElementById('flow-list-view').style.display = 'none';
+            document.getElementById('flow-editor-view').style.display = 'block';
+
+            // Clear canvas
+            clearCanvas();
+
+            // Add start node automatically
+            addNode('start');
+        }
+
+        // Edit existing flow
+        async function editFlow(flowId) {
+            try {
+                const response = await fetch(`/api/advanced-flows/${flowId}`);
+                const flow = await response.json();
+
+                currentFlowId = flow._id;
+                currentFlowNodes = flow.nodes || [];
+                currentFlowConnections = flow.connections || [];
+
+                // Populate form
+                document.getElementById('flow-name').value = flow.name;
+                document.getElementById('flow-description').value = flow.description || '';
+                document.getElementById('flow-trigger').value = flow.trigger;
+                document.getElementById('flow-trigger-type').value = flow.triggerType;
+                document.getElementById('flow-active').checked = flow.active;
+
+                // Populate stats
+                document.getElementById('flow-stats-sent').textContent = flow.stats.sent || 0;
+                document.getElementById('flow-stats-delivered').textContent = flow.stats.delivered || 0;
+                document.getElementById('flow-stats-clicked').textContent = flow.stats.clicked || 0;
+                document.getElementById('flow-stats-errors').textContent = flow.stats.errors || 0;
+                if (flow.schedule) {
+                    const date = new Date(flow.schedule.time);
+                    const offset = date.getTimezoneOffset() * 60000; // Convert offset to milliseconds
+                    const localDate = new Date(date.getTime() - offset);
+                    document.getElementById('flow-schedule-time').value = localDate.toISOString().slice(0, 16);
+                    document.getElementById('flow-schedule-repeat').value = flow.schedule.repeat || 'once';
+                }
+
+                // Set recipient config
+                if (flow.recipientConfig) {
+                    document.getElementById('flow-recipient-type').value = flow.recipientConfig.audienceType || 'all';
+                    document.getElementById('flow-recipient-tags').value = (flow.recipientConfig.tags || []).join(', ');
+                    document.getElementById('flow-recipient-phones').value = (flow.recipientConfig.phones || []).join(', ');
+                } else {
+                    document.getElementById('flow-recipient-type').value = 'all';
+                }
+
+                toggleScheduleFields();
+                toggleRecipientFields();
+
+                // Show editor
+                document.getElementById('flow-list-view').style.display = 'none';
+                document.getElementById('flow-editor-view').style.display = 'block';
+
+                // Render canvas
+                renderCanvas();
+            } catch (error) {
+                console.error('Error loading flow:', error);
+                alert('Failed to load flow');
+            }
+        }
+
+        // Back to flow list
+        function backToFlowList() {
+            document.getElementById('flow-editor-view').style.display = 'none';
+            document.getElementById('flow-list-view').style.display = 'block';
+            loadAdvancedFlows();
+        }
+
+        // Save current flow
+        async function saveCurrentFlow() {
+            const name = document.getElementById('flow-name').value.trim();
+            const trigger = document.getElementById('flow-trigger').value.trim();
+            const triggerType = document.getElementById('flow-trigger-type').value;
+
+            if (!name) {
+                alert('Please provide flow name');
+                return;
+            }
+
+            if (triggerType !== 'scheduled' && !trigger) {
+                alert('Please provide trigger keyword');
+                return;
+            }
+
+            const flowData = {
+                name,
+                description: document.getElementById('flow-description').value.trim(),
+                trigger: triggerType === 'scheduled' ? 'scheduled' : trigger,
+                triggerType,
+                active: document.getElementById('flow-active').checked,
+                nodes: currentFlowNodes,
+                connections: currentFlowConnections
+            };
+
+            // Add schedule data if it's a scheduled flow
+            if (triggerType === 'scheduled') {
+                const scheduleTime = document.getElementById('flow-schedule-time').value;
+                const scheduleRepeat = document.getElementById('flow-schedule-repeat').value;
+
+                if (!scheduleTime) {
+                    alert('Please provide schedule date and time');
+                    return;
+                }
+
+                flowData.schedule = {
+                    time: new Date(scheduleTime),
+                    repeat: scheduleRepeat,
+                    nextRun: new Date(scheduleTime)
+                };
+            }
+
+            // Add recipient config
+            const recipientType = document.getElementById('flow-recipient-type').value;
+            const recipientTags = document.getElementById('flow-recipient-tags').value.split(',').map(t => t.trim()).filter(t => t);
+            const recipientPhones = document.getElementById('flow-recipient-phones').value.split(',').map(p => p.trim()).filter(p => p);
+
+            flowData.recipientConfig = {
+                audienceType: recipientType,
+                tags: recipientTags,
+                phones: recipientPhones
+            };
+
+            try {
+                let response;
+                if (currentFlowId) {
+                    // Update existing
+                    response = await fetch(`/api/advanced-flows/${currentFlowId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(flowData)
+                    });
+                } else {
+                    // Create new
+                    response = await fetch('/api/advanced-flows', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(flowData)
+                    });
+                }
+
+                if (response.ok) {
+                    const savedFlow = await response.json();
+                    currentFlowId = savedFlow._id;
+                    alert('Flow saved successfully!');
+                } else {
+                    throw new Error('Failed to save flow');
+                }
+            } catch (error) {
+                console.error('Error saving flow:', error);
+                alert('Failed to save flow');
+            }
+        }
+
+        // Delete flow
+        async function deleteAdvancedFlow(flowId) {
+            if (!confirm('Are you sure you want to delete this flow? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/advanced-flows/${flowId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadAdvancedFlows();
+                } else {
+                    alert('Failed to delete flow');
+                }
+            } catch (error) {
+                console.error('Error deleting flow:', error);
+                alert('Failed to delete flow');
+            }
+        }
+
+        // Toggle flow active status
+        async function toggleFlowActive(flowId) {
+            try {
+                const response = await fetch(`/api/advanced-flows/${flowId}/toggle`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    loadAdvancedFlows();
+                } else {
+                    alert('Failed to toggle flow status');
+                }
+            } catch (error) {
+                console.error('Error toggling flow:', error);
+            }
+        }
+
+        // Add node to canvas
+        function addNode(type) {
+            const nodeId = `node_${nodeIdCounter++}`;
+            const node = {
+                id: nodeId,
+                type,
+                position: {
+                    x: 100 + (currentFlowNodes.length * 60),
+                    y: 80 + (currentFlowNodes.length * 40)
+                },
+                data: getDefaultNodeData(type)
+            };
+
+            currentFlowNodes.push(node);
+            renderCanvas();
+            selectNode(nodeId);
+        }
+
+        // Get default data for node type
+        function getDefaultNodeData(type) {
+            const defaults = {
+                start: { text: 'Flow Start' },
+                message: { text: 'Hello! How can I help you?' },
+                buttons: {
+                    text: 'Choose an option:',
+                    buttons: [{ id: 'btn1', text: 'Option 1', type: 'reply', value: 'option1' }]
+                },
+                list: {
+                    text: 'Select from list:',
+                    listItems: [{ id: 'item1', title: 'Item 1', description: 'Description' }]
+                },
+                image: { mediaUrl: '', caption: '' },
+                video: { mediaUrl: '', caption: '' },
+                document: { mediaUrl: '', caption: '', filename: 'document.pdf' },
+                delay: { delaySeconds: 2 },
+                condition: { variable: 'lastResponse', condition: 'contains:yes' }
+            };
+            return defaults[type] || {};
+        }
+
+        // Render entire canvas
+        function renderCanvas() {
+            const canvas = document.getElementById('flow-canvas');
+            const placeholder = document.getElementById('canvas-placeholder');
+
+            if (currentFlowNodes.length === 0) {
+                placeholder.style.display = 'block';
+                return;
+            }
+
+            placeholder.style.display = 'none';
+
+            // Clear existing nodes (keep SVG)
+            const existingNodes = canvas.querySelectorAll('.flow-node');
+            existingNodes.forEach(n => n.remove());
+
+            // Render nodes
+            currentFlowNodes.forEach(node => {
+                const nodeElement = createNodeElement(node);
+                canvas.appendChild(nodeElement);
+            });
+
+            // Render connections
+            renderConnections();
+        }
+
+        // Create node DOM element with drag-and-drop
+        function createNodeElement(node) {
+            const div = document.createElement('div');
+            div.className = 'flow-node';
+            if (selectedNodeId === node.id) {
+                div.classList.add('selected');
+            }
+            div.id = node.id;
+            div.style.left = `${node.position.x}px`;
+            div.style.top = `${node.position.y}px`;
+
+            const icons = {
+                start: 'bi-play-fill',
+                message: 'bi-chat-text',
+                buttons: 'bi-ui-checks',
+                list: 'bi-list-ul',
+                image: 'bi-image',
+                video: 'bi-play-btn',
+                document: 'bi-file-earmark-pdf',
+                delay: 'bi-clock',
+                condition: 'bi-shuffle'
+            };
+
+            const colors = {
+                start: '#4caf50',
+                message: '#2196f3',
+                buttons: '#00a884',
+                list: '#9c27b0',
+                image: '#ff9800',
+                video: '#e91e63',
+                document: '#00bcd4',
+                delay: '#607d8b',
+                condition: '#f44336'
+            };
+
+            div.innerHTML = `
+                <div class="node-header">
+                    <div class="node-type" style="color: ${colors[node.type]};">
+                        <i class="bi ${icons[node.type]}"></i>
+                        <span>${node.type.charAt(0).toUpperCase() + node.type.slice(1)}</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeNode('${node.id}'); event.stopPropagation();" style="padding: 2px 8px;">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div class="node-content">
+                    ${getNodePreview(node)}
+                </div>
+                <div class="connection-point input" data-node="${node.id}" data-type="input"></div>
+                <div class="connection-point output" data-node="${node.id}" data-type="output"></div>
+            `;
+
+            // Drag events
+            div.addEventListener('mousedown', (e) => handleNodeMouseDown(e, node));
+            div.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectNode(node.id);
+            });
+
+            // Connection point events
+            const outputPoint = div.querySelector('.connection-point.output');
+            outputPoint.addEventListener('click', (e) => {
+                e.stopPropagation();
+                startConnection(node.id, outputPoint);
+            });
+
+            const inputPoint = div.querySelector('.connection-point.input');
+            inputPoint.addEventListener('click', (e) => {
+                e.stopPropagation();
+                endConnection(node.id, inputPoint);
+            });
+
+            return div;
+        }
+
+        // Get node preview content
+        function getNodePreview(node) {
+            if (node.type === 'message') {
+                return node.data.text || 'Empty message';
+            } else if (node.type === 'buttons') {
+                const count = node.data.buttons?.length || 0;
+                return `${node.data.text || 'Choose option'}<br><small>${count} button(s)</small>`;
+            } else if (node.type === 'list') {
+                const count = node.data.listItems?.length || 0;
+                return `${count} list item(s)`;
+            } else if (node.type === 'image') {
+                return node.data.caption || 'Image message';
+            } else if (node.type === 'video') {
+                return node.data.caption || 'Video message';
+            } else if (node.type === 'document') {
+                return node.data.filename || 'Document';
+            } else if (node.type === 'delay') {
+                return `Wait ${node.data.delaySeconds || 0} seconds`;
+            } else if (node.type === 'start') {
+                return 'Flow entry point';
+            } else if (node.type === 'condition') {
+                return `If ${node.data.variable}: ${node.data.condition}`;
+            }
+            return '';
+        }
+
+        // Handle node mouse down for dragging
+        function handleNodeMouseDown(e, node) {
+            if (e.target.closest('.connection-point') || e.target.closest('button')) {
+                return; // Don't drag if clicking connection points or buttons
+            }
+
+            isDragging = true;
+            draggedNode = node;
+
+            const canvas = document.getElementById('flow-canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const nodeElement = document.getElementById(node.id);
+
+            dragOffset = {
+                x: e.clientX - canvasRect.left - node.position.x - canvas.scrollLeft,
+                y: e.clientY - canvasRect.top - node.position.y - canvas.scrollTop
+            };
+
+            nodeElement.classList.add('dragging');
+            e.preventDefault();
+        }
+
+        // Optimized drag with requestAnimationFrame for smooth performance
+        let dragAnimationFrame = null;
+        let lastMousePosition = { x: 0, y: 0 };
+
+        // Global mouse move for dragging - optimized
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !draggedNode) return;
+
+            // Store mouse position
+            lastMousePosition.x = e.clientX;
+            lastMousePosition.y = e.clientY;
+
+            // Cancel previous animation frame if exists
+            if (dragAnimationFrame) {
+                cancelAnimationFrame(dragAnimationFrame);
+            }
+
+            // Use requestAnimationFrame for smooth updates
+            dragAnimationFrame = requestAnimationFrame(() => {
+                const canvas = document.getElementById('flow-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+
+                const newX = lastMousePosition.x - canvasRect.left - dragOffset.x + canvas.scrollLeft;
+                const newY = lastMousePosition.y - canvasRect.top - dragOffset.y + canvas.scrollTop;
+
+                draggedNode.position.x = Math.max(0, newX);
+                draggedNode.position.y = Math.max(0, newY);
+
+                const nodeElement = document.getElementById(draggedNode.id);
+                if (nodeElement) {
+                    nodeElement.style.left = `${draggedNode.position.x}px`;
+                    nodeElement.style.top = `${draggedNode.position.y}px`;
+                }
+
+                // Only update connections every few frames for better performance
+                renderConnections();
+            });
+        });
+
+        // Global mouse up to stop dragging
+        document.addEventListener('mouseup', () => {
+            if (isDragging && draggedNode) {
+                const nodeElement = document.getElementById(draggedNode.id);
+                nodeElement.classList.remove('dragging');
+            }
+            isDragging = false;
+            draggedNode = null;
+
+            // Cancel any pending animation frame
+            if (dragAnimationFrame) {
+                cancelAnimationFrame(dragAnimationFrame);
+                dragAnimationFrame = null;
+            }
+        });
+
+        // Start creating a connection
+        function startConnection(nodeId, element) {
+            if (isConnecting) {
+                // If already connecting, cancel
+                isConnecting = false;
+                connectionStart = null;
+                document.querySelectorAll('.connection-point.connecting').forEach(el => {
+                    el.classList.remove('connecting');
+                });
+                return;
+            }
+
+            isConnecting = true;
+            connectionStart = nodeId;
+            element.classList.add('connecting');
+            console.log('Connection started from:', nodeId);
+        }
+
+        // End creating a connection
+        function endConnection(nodeId, element) {
+            if (!isConnecting || !connectionStart) return;
+
+            if (connectionStart === nodeId) {
+                // Can't connect to self
+                isConnecting = false;
+                connectionStart = null;
+                document.querySelectorAll('.connection-point.connecting').forEach(el => {
+                    el.classList.remove('connecting');
+                });
+                return;
+            }
+
+            // Check if connection already exists
+            const exists = currentFlowConnections.find(c =>
+                c.source === connectionStart && c.target === nodeId
+            );
+
+            if (!exists) {
+                currentFlowConnections.push({
+                    id: `conn_${currentFlowConnections.length}`,
+                    source: connectionStart,
+                    target: nodeId
+                });
+                renderConnections();
+                console.log('Connection created:', connectionStart, '->', nodeId);
+            }
+
+            isConnecting = false;
+            connectionStart = null;
+            document.querySelectorAll('.connection-point.connecting').forEach(el => {
+                el.classList.remove('connecting');
+            });
+        }
+
+        // Render SVG connections
+        function renderConnections() {
+            const svg = document.getElementById('connections-svg');
+
+            // Clear existing paths
+            const existingPaths = svg.querySelectorAll('path');
+            existingPaths.forEach(p => p.remove());
+
+            currentFlowConnections.forEach(conn => {
+                const sourceNode = currentFlowNodes.find(n => n.id === conn.source);
+                const targetNode = currentFlowNodes.find(n => n.id === conn.target);
+
+                if (!sourceNode || !targetNode) return;
+
+                const sourceEl = document.getElementById(sourceNode.id);
+                const targetEl = document.getElementById(targetNode.id);
+
+                if (!sourceEl || !targetEl) return;
+
+                const sourceRect = sourceEl.getBoundingClientRect();
+                const targetRect = targetEl.getBoundingClientRect();
+                const canvas = document.getElementById('flow-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+
+                // Calculate connection points (center bottom of source, center top of target)
+                const x1 = sourceNode.position.x + (sourceRect.width / 2);
+                const y1 = sourceNode.position.y + sourceRect.height;
+                const x2 = targetNode.position.x + (targetRect.width / 2);
+                const y2 = targetNode.position.y;
+
+                // Create curved path
+                const controlPointOffset = 50;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${x1} ${y1} C ${x1} ${y1 + controlPointOffset}, ${x2} ${y2 - controlPointOffset}, ${x2} ${y2}`;
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'connection-line');
+                path.style.cursor = 'pointer';
+
+                // Make path clickable for deletion
+                path.onclick = (e) => {
+                    if (confirm('Delete this connection?')) {
+                        currentFlowConnections = currentFlowConnections.filter(c => c.id !== conn.id);
+                        renderConnections();
+                    }
+                };
+
+                svg.appendChild(path);
+            });
+        }
+
+        // Select node
+        function selectNode(nodeId) {
+            selectedNodeId = nodeId;
+            const node = currentFlowNodes.find(n => n.id === nodeId);
+            if (node) {
+                showNodeProperties(node);
+                renderCanvas();
+            }
+        }
+
+        // Show node properties editor
+        function showNodeProperties(node) {
+            const panel = document.getElementById('node-properties');
+            panel.innerHTML = '';
+
+            if (node.type === 'message') {
+                panel.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Message Text</label>
+                        <textarea class="form-control" id="node-prop-text" rows="4">${node.data.text || ''}</textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('text')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+            } else if (node.type === 'buttons') {
+                let buttonsHtml = (node.data.buttons || []).map((btn, idx) => `
+                    <div class="border rounded p-2 mb-2">
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm mb-1" value="${btn.text}" 
+                                id="btn-text-${idx}" placeholder="Button text">
+                            <select class="form-select form-select-sm mb-1" id="btn-type-${idx}">
+                                <option value="reply" ${btn.type === 'reply' ? 'selected' : ''}>Quick Reply</option>
+                                <option value="url" ${btn.type === 'url' ? 'selected' : ''}>URL (CTA)</option>
+                                <option value="call" ${btn.type === 'call' ? 'selected' : ''}>Call</option>
+                            </select>
+                            <input type="text" class="form-control form-control-sm" value="${btn.value || ''}"
+                                id="btn-value-${idx}" placeholder="${btn.type === 'url' ? 'https://...' : btn.type === 'call' ? '+1234567890' : 'Reply value'}">
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger w-100" onclick="removeButton(${idx})">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                `).join('');
+
+                panel.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Message Text</label>
+                        <textarea class="form-control form-control-sm" id="node-prop-text" rows="2">${node.data.text || ''}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Buttons</label>
+                        <div id="buttons-container">
+                            ${buttonsHtml}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="addButton()">
+                            <i class="bi bi-plus"></i> Add Button
+                        </button>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('buttons')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+            } else if (node.type === 'image') {
+                panel.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Image URL</label>
+                        <input type="url" class="form-control" id="node-prop-mediaUrl" value="${node.data.mediaUrl || ''}" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Caption</label>
+                        <textarea class="form-control" id="node-prop-caption" rows="2">${node.data.caption || ''}</textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('image')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+            } else if (node.type === 'delay') {
+                panel.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Delay (seconds)</label>
+                        <input type="number" class="form-control" id="node-prop-delaySeconds" value="${node.data.delaySeconds || 2}" min="1" max="60">
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="updateNodeProperty('delay')">
+                        <i class="bi bi-check"></i> Update
+                    </button>
+                `;
+            } else {
+                panel.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-info-circle" style="font-size: 2rem;"></i>
+                        <p class="mt-2 small">No editable properties for this node type</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Update node property
+        function updateNodeProperty(type) {
+            const node = currentFlowNodes.find(n => n.id === selectedNodeId);
+            if (!node) return;
+
+            if (type === 'text') {
+                node.data.text = document.getElementById('node-prop-text').value;
+            } else if (type === 'buttons') {
+                node.data.text = document.getElementById('node-prop-text').value;
+                const buttons = [];
+                let idx = 0;
+                while (document.getElementById(`btn-text-${idx}`)) {
+                    buttons.push({
+                        id: `btn${idx + 1}`,
+                        text: document.getElementById(`btn-text-${idx}`).value,
+                        type: document.getElementById(`btn-type-${idx}`).value,
+                        value: document.getElementById(`btn-value-${idx}`).value
+                    });
+                    idx++;
+                }
+                node.data.buttons = buttons;
+            } else if (type === 'image') {
+                node.data.mediaUrl = document.getElementById('node-prop-mediaUrl').value;
+                node.data.caption = document.getElementById('node-prop-caption').value;
+            } else if (type === 'delay') {
+                node.data.delaySeconds = parseInt(document.getElementById('node-prop-delaySeconds').value);
+            }
+
+            renderCanvas();
+            showNodeProperties(node);
+        }
+
+        // Add button to buttons node
+        function addButton() {
+            const node = currentFlowNodes.find(n => n.id === selectedNodeId);
+            if (!node || node.type !== 'buttons') return;
+
+            if (!node.data.buttons) node.data.buttons = [];
+            node.data.buttons.push({
+                id: `btn${node.data.buttons.length + 1}`,
+                text: 'New Button',
+                type: 'reply',
+                value: ''
+            });
+
+            showNodeProperties(node);
+        }
+
+        // Remove button
+        function removeButton(idx) {
+            const node = currentFlowNodes.find(n => n.id === selectedNodeId);
+            if (!node || !node.data.buttons) return;
+
+            node.data.buttons.splice(idx, 1);
+            showNodeProperties(node);
+        }
+
+        // Remove node
+        function removeNode(nodeId) {
+            currentFlowNodes = currentFlowNodes.filter(n => n.id !== nodeId);
+            selectedNodeId = null;
+            document.getElementById('node-properties').innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <p class="mt-2 small">Select a node to edit its properties</p>
+                </div>
+            `;
+            renderCanvas();
+        }
+
+        // Clear canvas
+        function clearCanvas() {
+            if (currentFlowNodes.length > 0 && !confirm('Clear all nodes?')) return;
+            currentFlowNodes = [];
+            currentFlowConnections = [];
+            selectedNodeId = null;
+            renderCanvas();
+            document.getElementById('node-properties').innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <p class="mt-2 small">Select a node to edit its properties</p>
+                </div>
+            `;
+        }
+
+        // Test flow (placeholder)
+        function testCurrentFlow() {
+            alert('Flow testing feature coming soon! This will let you simulate the flow with test messages.');
+        }
+
+        // Toggle sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // Toggle schedule fields visibility
+        function toggleScheduleFields() {
+            const triggerType = document.getElementById('flow-trigger-type').value;
+            const scheduleFields = document.getElementById('schedule-fields');
+            const triggerInput = document.getElementById('flow-trigger');
+
+            if (triggerType === 'scheduled') {
+                scheduleFields.style.display = 'block';
+                triggerInput.disabled = true;
+                triggerInput.value = 'scheduled';
+                triggerInput.placeholder = 'Auto-set for scheduled flows';
+            } else {
+                scheduleFields.style.display = 'none';
+                triggerInput.disabled = false;
+                if (triggerInput.value === 'scheduled') {
+                    triggerInput.value = '';
+                }
+                triggerInput.placeholder = 'e.g., hello';
+            }
+        }
+
+        // Toggle recipient fields visibility
+        function toggleRecipientFields() {
+            const type = document.getElementById('flow-recipient-type').value;
+            document.getElementById('recipient-fields-tags').style.display = type === 'tags' ? 'block' : 'none';
+            document.getElementById('recipient-fields-specific').style.display = type === 'specific' ? 'block' : 'none';
+        }
+
+        // Load flows when tab is shown
+        const originalShowContentFB = showContent;
+        showContent = function (contentId) {
+            originalShowContentFB(contentId);
+            if (contentId === 'flow-builder') {
+                loadAdvancedFlows();
+            }
+            if (contentId === 'bulk-messaging' && allLeadsForBulk.length === 0) {
+                loadBulkRecipients();
+            }
+            if (contentId === 'flows') {
+                fetchFlows();
+            }
+        };
+
+        // ========================================
+        // END FLOW BUILDER FUNCTIONALITY
         // ========================================
 
         fetchFlows();
