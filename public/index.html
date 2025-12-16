@@ -521,8 +521,8 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="nav-link" onclick="showContent('automation')">
-                    <i class="bi bi-robot"></i> <span>Automation</span>
+                <a href="#" class="nav-link" onclick="showContent('bulk-messaging')">
+                    <i class="bi bi-broadcast"></i> <span>Bulk Messaging</span>
                 </a>
             </li>
             <li class="mt-auto">
@@ -626,63 +626,6 @@
             </div>
         </div>
 
-        <!-- Automation -->
-        <div id="automation" class="page-content" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1>Button Automation</h1>
-                    <p class="text-muted">Set up instant replies for specific buttons.</p>
-                </div>
-                <button class="btn btn-primary" onclick="openAutomationModal()">
-                    <i class="bi bi-plus-lg"></i> Add Rule
-                </button>
-            </div>
-
-            <div class="card card-table">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Button ID / Text</th>
-                            <th>Reply Message</th>
-                            <th>Created</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rulesTableBody"></tbody>
-                </table>
-                <div id="emptyAutomationState" class="text-center p-5 text-muted" style="display: none;">
-                    No automation rules yet. Click "Add Rule" to start.
-                </div>
-            </div>
-
-            <!-- Automation Modal -->
-            <div class="modal fade" id="automationModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Add Automation Rule</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="automationForm" onsubmit="saveAutomationRule(event)">
-                                <div class="mb-3">
-                                    <label class="form-label">Trigger (Button ID / Text)</label>
-                                    <input type="text" id="autoTriggerId" class="form-control" required
-                                        placeholder="e.g. btn_yes">
-                                    <div class="form-text">Must match exactly what is sent by the button.</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Reply Message</label>
-                                    <textarea id="autoResponseText" class="form-control" rows="3" required
-                                        placeholder="The message to send back..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">Save Rule</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Flow Builder -->
         <div id="flow-builder" class="page-content-fluid" style="display: none;">
@@ -2182,12 +2125,12 @@
                 message: { text: 'Hello! How can I help you?' },
                 buttons: {
                     text: 'Choose an option:',
-                    buttons: [{ id: 'btn1', text: 'Option 1', type: 'reply', value: 'option1' }]
+                    buttons: [{ text: 'Option 1', type: 'reply', value: 'option1' }]
                 },
                 list: {
                     text: 'Select from list:',
                     title: 'Menu',
-                    listItems: [{ id: 'item1', title: 'Item 1', description: 'Description' }]
+                    listItems: [{ title: 'Item 1', description: 'Description' }]
                 },
                 image: { mediaUrl: '', caption: '' },
                 video: { mediaUrl: '', caption: '' },
@@ -2576,13 +2519,6 @@
                                         <small class="fw-bold">Button ${i + 1}</small>
                                         <button class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeButton(${i})">&times;</button>
                                     </div>
-                                    <div class="input-group input-group-sm mb-1">
-                                         <span class="input-group-text bg-white text-muted">ID</span>
-                                         <input type="text" class="form-control bg-white" id="btn-id-${i}" value="${btn.id}" readonly>
-                                         <button class="btn btn-outline-secondary" onclick="copyToClipboard('${btn.id}')" title="Copy ID">
-                                            <i class="bi bi-clipboard"></i>
-                                         </button>
-                                    </div>
                                     <input type="text" class="form-control form-control-sm mb-1" id="btn-text-${i}" value="${btn.text}" placeholder="Label">
                                     <select class="form-select form-select-sm mb-1" id="btn-type-${i}">
                                         <option value="reply" ${btn.type === 'reply' ? 'selected' : ''}>Quick Reply</option>
@@ -2706,7 +2642,7 @@
                 const btnCards = container.children;
                 for (let i = 0; i < btnCards.length; i++) {
                     btns.push({
-                        id: document.getElementById(`btn-id-${i}`).value,
+                        id: `btn_${Date.now()}_${i}`,
                         text: document.getElementById(`btn-text-${i}`).value,
                         type: document.getElementById(`btn-type-${i}`).value,
                         value: document.getElementById(`btn-value-${i}`).value
@@ -2810,95 +2746,9 @@
             if (contentId === 'flows') {
                 if (typeof fetchFlows === 'function') fetchFlows();
             }
-            if (contentId === 'automation') {
-                loadAutomationRules();
-            }
         };
 
-        // Automation Script
-        const AUTO_API_URL = '/api/button-responses';
-        let automationModal = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            automationModal = new bootstrap.Modal(document.getElementById('automationModal'));
-        });
-
-        function openAutomationModal() {
-            document.getElementById('automationForm').reset();
-            automationModal.show();
-        }
-
-        async function loadAutomationRules() {
-            try {
-                const res = await fetch(AUTO_API_URL);
-                const rules = await res.json();
-                renderAutomationRules(rules);
-            } catch (err) {
-                console.error('Failed to load rules:', err);
-            }
-        }
-
-        function renderAutomationRules(rules) {
-            const tbody = document.getElementById('rulesTableBody');
-            const emptyState = document.getElementById('emptyAutomationState');
-            tbody.innerHTML = '';
-
-            if (rules.length === 0) {
-                emptyState.style.display = 'block';
-                return;
-            }
-            emptyState.style.display = 'none';
-
-            rules.forEach(rule => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><code>${rule.triggerId}</code></td>
-                    <td class="text-truncate" style="max-width: 300px;">${rule.responseText}</td>
-                    <td class="text-muted small">${new Date(rule.createdAt).toLocaleDateString()}</td>
-                    <td class="text-end">
-                        <button onclick="deleteAutomationRule('${rule._id}')" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        async function saveAutomationRule(e) {
-            e.preventDefault();
-            const triggerId = document.getElementById('autoTriggerId').value.trim();
-            const responseText = document.getElementById('autoResponseText').value.trim();
-
-            if (!triggerId || !responseText) return;
-
-            try {
-                const res = await fetch(AUTO_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ triggerId, responseText })
-                });
-
-                if (res.ok) {
-                    automationModal.hide();
-                    loadAutomationRules();
-                } else {
-                    alert('Failed to save rule');
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function deleteAutomationRule(id) {
-            if (!confirm('Are you sure you want to delete this rule?')) return;
-            try {
-                await fetch(`${AUTO_API_URL}/${id}`, { method: 'DELETE' });
-                loadAutomationRules();
-            } catch (err) {
-                console.error(err);
-            }
-        }
         fetchFlows();
     </script>
 </body>
