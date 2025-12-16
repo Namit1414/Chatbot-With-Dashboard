@@ -13,6 +13,15 @@ const questions = [
   { key: "preferred_time", text: "⏰ What's your *preferred time* to call you?" }
 ];
 
+const TIME_RANGES = [
+  { id: "slot_10_12", title: "10:00 AM - 12:00 PM" },
+  { id: "slot_12_02", title: "12:00 PM - 02:00 PM" },
+  { id: "slot_02_04", title: "02:00 PM - 04:00 PM" },
+  { id: "slot_04_06", title: "04:00 PM - 06:00 PM" },
+  { id: "slot_06_08", title: "06:00 PM - 08:00 PM" },
+  { id: "slot_08_10", title: "08:00 PM - 10:00 PM" }
+];
+
 // In-memory session state (still fine for short term, but Redis is better for production)
 const userStates = {};
 
@@ -42,6 +51,15 @@ export function startLeadFlow(phone) {
 export async function handleLeadFlow(phone, message) {
   const state = userStates[phone];
   const currentKey = questions[state.step].key;
+
+  // Normalize Time Slot Selection (ID -> Title)
+  // If user clicked a list option, we get the ID (e.g. 'slot_10_12'). We want to save the Title.
+  if (currentKey === "preferred_time") {
+    const selectedRange = TIME_RANGES.find(r => r.id === message);
+    if (selectedRange) {
+      message = selectedRange.title;
+    }
+  }
 
   // Check if the PREVIOUS answer (currentKey) needs validation
   if (currentKey === "preferred_date") {
@@ -143,18 +161,7 @@ function isValidTime(input) {
 
   // 1. Check if it matches one of our ranges (Simple string match)
   if (timeStr.includes('-') && (timeStr.includes('AM') || timeStr.includes('PM'))) {
-    // Assume valid if it looks like our range format "10:00 AM - 12:00 PM"
-    // Strict check:
-    const ranges = [
-      "10:00 AM - 12:00 PM",
-      "12:00 PM - 02:00 PM",
-      "02:00 PM - 04:00 PM",
-      "04:00 PM - 06:00 PM",
-      "06:00 PM - 08:00 PM",
-      "08:00 PM - 10:00 PM"
-    ];
-    // Allow fuzzy match or exact? Let's do exact or startsWith
-    // If user picked from list, it sends exact.
+    const ranges = TIME_RANGES.map(r => r.title);
     if (ranges.includes(timeStr)) return true;
   }
 
@@ -195,21 +202,10 @@ function isValidTime(input) {
 
 // Helper to generate Time Range List
 function generateTimeListMessage(text) {
-  // 2-hour slots to fit within 10-item limit (10AM to 10PM = 12 hours)
-  // 10-12, 12-2, 2-4, 4-6, 6-8, 8-10 -> 6 slots. Perfect.
-  const ranges = [
-    { id: "slot_10_12", title: "10:00 AM - 12:00 PM" },
-    { id: "slot_12_02", title: "12:00 PM - 02:00 PM" },
-    { id: "slot_02_04", title: "02:00 PM - 04:00 PM" },
-    { id: "slot_04_06", title: "04:00 PM - 06:00 PM" },
-    { id: "slot_06_08", title: "06:00 PM - 08:00 PM" },
-    { id: "slot_08_10", title: "08:00 PM - 10:00 PM" }
-  ];
-
   return {
     messageType: 'list',
     content: text,
-    items: ranges.map(r => ({
+    items: TIME_RANGES.map(r => ({
       id: r.id,
       title: r.title,
       description: "Select this slot"
