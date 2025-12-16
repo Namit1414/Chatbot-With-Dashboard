@@ -1,5 +1,7 @@
 import AdvancedFlow from "./models/AdvancedFlow.js";
+
 import Lead from "./models/Lead.js";
+import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 // Session management for multi-step flows
 const flowSessions = new Map(); // phoneNumber -> { flowId, currentNodeId, variables }
@@ -515,7 +517,27 @@ async function executeScheduledFlow(flow) {
     for (const recipient of recipients) {
         try {
             // Initiate flow
-            await startFlow(recipient.phone, flow);
+            const result = await startFlow(recipient.phone, flow);
+
+            if (result) {
+                // Determine message format
+                let msgToSend = result;
+
+                // Map 'type' to 'messageType' if needed for API helper
+                if (result.type && !result.messageType) {
+                    // For text messages, we can just send the content string if we want, 
+                    // or keep object but ensure messageType is set.
+                    // The API helper checks messageType.
+                    msgToSend = { ...result, messageType: result.type };
+                }
+
+                await sendWhatsAppBusinessMessage(
+                    recipient.phone,
+                    msgToSend,
+                    process.env.WHATSAPP_TOKEN,
+                    process.env.PHONE_NUMBER_ID
+                );
+            }
         } catch (err) {
             console.error(`Failed to start flow for ${recipient.phone}:`, err);
         }
