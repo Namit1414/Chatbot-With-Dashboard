@@ -177,146 +177,265 @@
             color: var(--text-main);
         }
 
-        /* Chat Interface */
-        .chat-layout {
+        /* Premium Live Chat Styles */
+        .chat-tab-container {
             display: flex;
-            flex-direction: column;
-            background-color: var(--chat-bg);
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-blend-mode: overlay;
-            height: calc(100vh - 60px);
-            /* Adjust based on padding */
+            background: var(--sidebar-bg);
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            height: calc(100vh - 100px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            margin-top: -10px;
         }
 
-        .chat-header {
-            background-color: var(--surface-bg);
+        .chat-sidebar {
+            width: 350px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            background: var(--sidebar-bg);
+            position: relative;
+            z-index: 10;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #0b141a;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-repeat: repeat;
+            background-size: 400px;
+            opacity: 1;
+            position: relative;
+        }
+
+        .chat-main::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #0b141a;
+            opacity: 0.92;
+            z-index: 1;
+        }
+
+        .chat-header-v2,
+        #chat-container,
+        .chat-input-wrapper {
+            position: relative;
+            z-index: 2;
+        }
+
+        .chat-list-item {
             padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            cursor: pointer !important;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            z-index: 11;
+            pointer-events: auto !important;
+        }
+
+        .chat-list-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .chat-list-item.active {
+            background: rgba(0, 168, 132, 0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .chat-bubble {
+            max-width: 65%;
+            padding: 8px 12px 6px 12px;
+            margin-bottom: 8px;
+            position: relative;
+            font-size: 0.92rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.2);
+            width: fit-content;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-bubble.sent {
+            align-self: flex-end;
+            background-color: #005c4b;
+            color: #e9edef;
+            border-radius: 8px 0 8px 8px;
+            margin-left: 60px;
+        }
+
+        .chat-bubble.sent::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: -8px;
+            width: 10px;
+            height: 15px;
+            background-color: #005c4b;
+            clip-path: polygon(0 0, 0 100%, 100% 0);
+        }
+
+        .chat-bubble.received {
+            align-self: flex-start;
+            background-color: #202c33;
+            color: #e9edef;
+            border-radius: 0 8px 8px 8px;
+            margin-right: 60px;
+        }
+
+        .chat-bubble.received::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -8px;
+            width: 10px;
+            height: 15px;
+            background-color: #202c33;
+            clip-path: polygon(0 0, 100% 100%, 100% 0);
+        }
+
+        .chat-bubble.ai {
+            align-self: flex-end;
+            background-color: #1b3d36;
+            /* Distinctive deep forest green/teal */
+            color: #e9edef;
+            border-radius: 8px 0 8px 8px;
+            margin-left: 60px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-bubble.ai::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: -8px;
+            width: 10px;
+            height: 15px;
+            background-color: #1b3d36;
+            clip-path: polygon(0 0, 0 100%, 100% 0);
+        }
+
+        .chat-time {
+            font-size: 0.65rem;
+            opacity: 0.5;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 3px;
+        }
+
+        .chat-date-divider {
+            align-self: center;
+            background: rgba(32, 44, 51, 0.8);
+            color: #8696a0;
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            z-index: 5;
+        }
+
+        /* Emoji Picker */
+        .emoji-picker-container {
+            position: absolute;
+            bottom: 80px;
+            left: 25px;
+            background: #233138;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            width: 280px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.2s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .emoji-picker-container span {
+            cursor: pointer;
+            font-size: 1.4rem;
+            transition: transform 0.1s;
+            user-select: none;
+        }
+
+        .emoji-picker-container span:hover {
+            transform: scale(1.3);
+        }
+
+        .chat-input-wrapper {
+            background: var(--surface-bg);
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-wrapper button {
+            cursor: pointer;
+        }
+
+        .chat-input-field {
+            flex: 1;
+            background: #2a3942;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: #fff;
+            outline: none;
+        }
+
+        .chat-header-v2 {
+            background: var(--surface-bg);
+            padding: 15px 25px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            z-index: 10;
         }
 
-        .chat-header h4 {
-            margin: 0;
-            font-size: 1rem;
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        #chat-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .message {
-            max-width: 65%;
-            padding: 8px 12px;
-            border-radius: 7.5px;
-            position: relative;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
-        }
-
-        .message.sent {
-            align-self: flex-end;
-            background-color: var(--message-out);
-            border-top-right-radius: 0;
-        }
-
-        .message.received {
-            align-self: flex-start;
-            background-color: var(--message-in);
-            border-top-left-radius: 0;
-        }
-
-        .message-meta {
-            display: block;
-            font-size: 0.7rem;
-            color: #667781;
-            margin-top: 4px;
-            text-align: right;
-        }
-
-        .message strong {
-            display: block;
-            font-size: 0.8rem;
-            margin-bottom: 2px;
-            color: var(--primary-dark);
-        }
-
-        .input-area {
-            background-color: var(--surface-bg);
-            padding: 15px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        #message-input {
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-        }
-
-        #message-input:focus {
-            box-shadow: none;
-            outline: none;
-        }
-
-        #send-button {
-            background-color: var(--primary-color);
-            border: none;
-            width: 45px;
-            height: 45px;
+        .presence-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background 0.2s;
+            display: inline-block;
+            margin-right: 5px;
         }
 
-        #send-button:hover {
-            background-color: var(--primary-dark);
-        }
-
-        #send-button i {
-            font-size: 1.2rem;
-            margin-left: 2px;
-            /* Visual correction */
-        }
-
-        /* Badges */
-        .unread-indicator {
-            background-color: #25d366;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .btn-chat {
-            background-color: transparent;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .btn-chat:hover {
-            background-color: var(--primary-color);
-            color: white;
+        .presence-online {
+            background: #25d366;
+            box-shadow: 0 0 10px #25d366;
         }
 
         /* Enhanced Flow Builder Styles */
@@ -464,6 +583,152 @@
             pointer-events: none;
         }
 
+        /* Premium Flow Builder Styles */
+        .flow-builder-header {
+            background: linear-gradient(135deg, rgba(33, 37, 41, 0.5) 0%, rgba(11, 20, 26, 0.5) 100%);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flow-builder-card {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 20px;
+            height: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow-builder-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .flow-builder-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 168, 132, 0.3);
+        }
+
+        .flow-builder-card:hover::before {
+            opacity: 1;
+        }
+
+        .flow-status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(0, 168, 132, 0.1);
+            color: #00e676;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.1);
+        }
+
+        .status-inactive {
+            background: rgba(255, 255, 255, 0.05);
+            color: #b1b3b5;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .flow-stat-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .flow-stat-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: block;
+            color: var(--text-main);
+        }
+
+        .flow-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .flow-trigger-pill {
+            background: rgba(0, 168, 132, 0.1);
+            color: var(--primary-color);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid rgba(0, 168, 132, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .empty-flows-placeholder {
+            padding: 5rem 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 24px;
+            border: 2px dashed rgba(255, 255, 255, 0.05);
+        }
+
+        /* Editor Palette Improvements */
+        .palette-node-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .palette-node-btn:hover {
+            background: rgba(0, 168, 132, 0.1);
+            border-color: var(--primary-color);
+            transform: scale(1.02);
+        }
+
+        .palette-node-btn i {
+            font-size: 1.1rem;
+        }
+
+        #flow-canvas {
+            background-color: #0b141a;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            border-radius: 16px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Sidebar collapsed fix */
         #sidebar.collapsed {
             width: 70px;
         }
@@ -496,6 +761,203 @@
         .toggle-btn:hover {
             color: white;
         }
+
+        /* Premium Lead Management Styles */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .lead-card {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .lead-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            transform: scale(1.005);
+        }
+
+        .lead-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .lead-info-chip {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        #lead-search {
+            padding-left: 45px;
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            height: 48px;
+        }
+
+        #lead-search:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.1);
+        }
+
+        /* Premium Flow Cards */
+        .flow-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            height: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .flow-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary-color);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .flow-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), #00d2ff);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .flow-card:hover::before {
+            opacity: 1;
+        }
+
+        .flow-icon-wrapper {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 168, 132, 0.1);
+            color: var(--primary-color);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .flow-trigger-badge {
+            background: rgba(0, 168, 132, 0.15);
+            color: var(--primary-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+        }
+
+        .flow-response-preview {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            flex-grow: 1;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .flow-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-modern {
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .empty-flows-state {
+            padding: 80px 20px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px dashed rgba(255, 255, 255, 0.05);
+            border-radius: 30px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 
@@ -504,10 +966,10 @@
         <div class="sidebar-header">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-whatsapp text-success" style="font-size: 1.8rem;"></i>
-                <h2>Bot Admin</h2>
+                <h2>BodyfyStudio</h2>
             </div>
             <button class="toggle-btn" onclick="toggleSidebar()">
-                <i class="bi bi-list fs-4"></i>
+                <i class="bi bi-list fs-3"></i>
             </button>
         </div>
         <ul class="nav nav-pills flex-column mb-auto">
@@ -549,88 +1011,345 @@
     </div>
 
     <div id="content">
-        <!-- Lead Management -->
-        <div id="leads" class="page-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Lead Management</h1>
-                <button class="btn btn-outline-secondary btn-sm" onclick="fetchLeads()"><i
-                        class="bi bi-arrow-clockwise"></i> Refresh</button>
+        <div id="leads" class="page-content-fluid">
+            <!-- Stats Header -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h6 class="text-secondary small text-uppercase fw-bold mb-1">Total Leads</h6>
+                        <h3 class="mb-0 fw-bold" id="stat-total-leads">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                        <h6 class="text-secondary small text-uppercase fw-bold mb-1">Completed</h6>
+                        <h3 class="mb-0 fw-bold" id="stat-completed-leads">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <h6 class="text-secondary small text-uppercase fw-bold mb-1">In Progress</h6>
+                        <h3 class="mb-0 fw-bold" id="stat-pending-leads">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-chat-left-dots-fill"></i>
+                        </div>
+                        <h6 class="text-secondary small text-uppercase fw-bold mb-1">Unread Messages</h6>
+                        <h3 class="mb-0 fw-bold" id="stat-unread-leads">0</h3>
+                    </div>
+                </div>
             </div>
 
-            <div class="card card-table">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Status</th>
-                            <th>Unread</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leads-table-body"></tbody>
-                </table>
+            <!-- Toolbar -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 px-2">
+                <div class="search-wrapper flex-grow-1" style="max-width: 400px;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="lead-search" class="form-control" placeholder="Search by name or phone..."
+                        oninput="filterLeadCards()">
+                </div>
+                <div class="d-flex gap-2">
+                    <select id="lead-filter-status" class="form-select border-0 shadow-sm"
+                        style="width: 160px; background-color: var(--surface-bg);" onchange="filterLeadCards()">
+                        <option value="all">All Status</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">In Progress</option>
+                    </select>
+                    <button class="btn btn-primary px-4 rounded-pill" data-bs-toggle="modal"
+                        data-bs-target="#addLeadModal">
+                        <i class="bi bi-plus-lg me-2"></i> Add Lead
+                    </button>
+                    <button class="btn btn-outline-secondary px-3 rounded-pill" onclick="fetchLeads()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lead Cards Container -->
+            <div id="lead-cards-container" class="pe-2">
+                <!-- Premium cards will be injected here -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Live Chat -->
-        <div id="live-chat" class="page-content" style="display: none; height: 100%;">
-            <div class="chat-layout h-100">
-                <div class="chat-header">
-                    <div>
-                        <h4 id="chat-title">Select a lead to chat</h4>
-                        <small class="text-secondary" id="chat-subtitle">No active chat</small>
+        <!-- Add Lead Modal -->
+        <div class="modal fade" id="addLeadModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Lead Manually</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="add-lead-form">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="lead-name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone (with country code, e.g. 911234567890)</label>
+                                    <input type="text" class="form-control" id="lead-phone" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Age</label>
+                                    <input type="number" class="form-control" id="lead-age">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Weight (kg)</label>
+                                    <input type="number" class="form-control" id="lead-weight">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Height (cm)</label>
+                                    <input type="number" class="form-control" id="lead-height">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Gender</label>
+                                    <select class="form-select" id="lead-gender">
+                                        <option value="">Select...</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Place/Locality</label>
+                                    <input type="text" class="form-control" id="lead-place">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Health Issues</label>
+                                    <textarea class="form-control" id="lead-health" rows="2"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Preferred Date</label>
+                                    <input type="date" class="form-control" id="lead-pref-date">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Preferred Time Slot</label>
+                                    <select class="form-select" id="lead-pref-time">
+                                        <option value="">Select...</option>
+                                        <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                                        <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                                        <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
+                                        <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
+                                        <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                                        <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+                                        <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
+                                        <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
+                                        <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
+                                        <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary w-100">Save Lead</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div id="chat-container">
-                    <div class="d-flex justify-content-center align-items-center h-100 text-muted">
-                        <div class="text-center">
-                            <i class="bi bi-chat-square-text" style="font-size: 3rem; opacity: 0.3;"></i>
-                            <p class="mt-2">Select a lead from Lead Management to start chatting</p>
+            </div>
+        </div>
+
+        <!-- Schedule Call Modal -->
+        <div class="modal fade" id="scheduleCallModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content"
+                    style="background: var(--surface-bg); border: 1px solid var(--border-color);">
+                    <div class="modal-header border-bottom border-light border-opacity-10">
+                        <h5 class="modal-title fw-bold">Schedule Follow-up Call</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form id="schedule-call-form">
+                            <input type="hidden" id="schedule-lead-phone">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary small text-uppercase"
+                                    style="letter-spacing: 1px;">Preferred Date</label>
+                                <input type="date" class="form-control bg-dark border-0 text-white p-3"
+                                    id="schedule-date" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary small text-uppercase"
+                                    style="letter-spacing: 1px;">Preferred Time Slot</label>
+                                <select class="form-select bg-dark border-0 text-white p-3" id="schedule-time" required>
+                                    <option value="">Select...</option>
+                                    <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                                    <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                                    <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
+                                    <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
+                                    <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                                    <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+                                    <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
+                                    <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
+                                    <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
+                                    <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
+                                <i class="bi bi-calendar-check me-2"></i> Update Schedule
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="live-chat" class="page-content-fluid" style="display: none; height: 100%;">
+            <div class="chat-tab-container">
+                <!-- Chat Sidebar (Leads List) -->
+                <div class="chat-sidebar">
+                    <div
+                        class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0 fw-bold">Chats</h4>
+                        <button class="btn btn-sm btn-outline-secondary border-0" onclick="setPublicUrl()"
+                            title="Set Public URL for Media">
+                            <i class="bi bi-gear"></i>
+                        </button>
+                    </div>
+                    <div class="px-3 py-2 bg-warning bg-opacity-10 small text-warning" id="url-warning"
+                        style="display:none;">
+                        <i class="bi bi-exclamation-triangle"></i> Localhost detected. Media may not send.
+                    </div>
+                    <div class="p-3 border-bottom border-light border-opacity-10">
+                        <div class="search-wrapper">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="chat-sidebar-search" class="form-control"
+                                placeholder="Search chats..." oninput="filterChatSidebar()">
                         </div>
                     </div>
+                    <div id="chat-sidebar-list" class="overflow-auto flex-grow-1">
+                        <!-- Leads will be injected here -->
+                    </div>
                 </div>
-                <div class="input-area">
-                    <input type="text" id="message-input" class="form-control" placeholder="Type a message..." disabled>
-                    <button id="send-button" class="btn btn-primary" disabled><i class="bi bi-send-fill"></i></button>
+
+                <!-- Chat Main Window -->
+                <div class="chat-main">
+                    <div class="chat-header-v2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="active-chat-avatar" class="lead-avatar"
+                                style="width: 45px; height: 45px; font-size: 1rem; background: var(--border-color);">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold text-main" id="chat-title">Select a chat</h5>
+                                <small class="text-secondary" id="chat-subtitle">No active conversation</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 text-secondary fs-5">
+                            <i class="bi bi-search cursor-pointer"></i>
+                            <i class="bi bi-three-dots-vertical cursor-pointer"></i>
+                        </div>
+                    </div>
+
+                    <div id="chat-container" class="d-flex flex-column p-4 overflow-auto flex-grow-1">
+                        <!-- Welcome Placeholder -->
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center opacity-50 px-5"
+                            id="chat-welcome-screen">
+
+                            <i class="bi bi-whatsapp text-primary-color" style="font-size: 4rem;"></i>
+
+                            <h3 class="fw-bold">WhatsApp Live Chat</h3>
+                            <p>Select a lead from the left to view messages and reply in real-time. Your messages are
+                                delivered instantly via the API.</p>
+                            <div class="badge bg-dark border border-secondary p-2 mt-3">
+                                <i class="bi bi-shield-lock me-2"></i> End-to-end connected
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="emoji-picker" class="emoji-picker-container" style="display: none;">
+                        <span>😀</span><span>😂</span><span>😍</span><span>🤣</span><span>😊</span><span>🙏</span><span>👍</span><span>❤️</span><span>🔥</span><span>✨</span><span>🎉</span><span>😎</span><span>🤔</span><span>😢</span><span>💯</span><span>✅</span><span>🚀</span><span>👋</span>
+                    </div>
+                    <div class="chat-input-wrapper" id="chat-input-area" style="display: none;">
+                        <button class="btn btn-link text-secondary p-0 fs-4" id="emoji-btn"><i
+                                class="bi bi-emoji-smile"></i></button>
+                        <button class="btn btn-link text-secondary p-0 fs-4" id="attach-btn"><i
+                                class="bi bi-paperclip"></i></button>
+                        <input type="file" id="chat-file-input" style="display: none;">
+                        <input type="text" id="message-input" class="chat-input-field" placeholder="Type a message...">
+                        <button id="send-button"
+                            class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 45px; height: 45px;">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Flows -->
         <div id="flows" class="page-content" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Flows & Templates</h1>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newFlowModal">
-                    <i class="bi bi-plus-lg"></i> New Flow
+            <div class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h1 class="mb-1">Flows & Templates</h1>
+                    <p class="text-secondary mb-0">Manage your automated keyword responses and message templates.</p>
+                </div>
+                <button class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+                    data-bs-target="#newFlowModal">
+                    <i class="bi bi-plus-lg me-2"></i> Create New Flow
                 </button>
             </div>
 
-            <div class="row" id="flows-container">
-                <!-- Flows will be loaded here -->
+            <div class="row g-4" id="flows-container">
+                <!-- Premium flows will be loaded here -->
             </div>
 
             <!-- New Flow Modal -->
             <div class="modal fade" id="newFlowModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Create New Flow</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg"
+                        style="background: var(--surface-bg); border-radius: 20px;">
+                        <div class="modal-header border-bottom border-light border-opacity-10 p-4">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-magic me-2 text-primary"></i> Create
+                                Automation Flow</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body p-4">
                             <form id="create-flow-form">
-                                <div class="mb-3">
-                                    <label class="form-label">Trigger Keyword</label>
-                                    <input type="text" class="form-control" id="flow-trigger"
-                                        placeholder="e.g. price, hello, help" required>
-                                    <div class="form-text">If user sends this text, the bot will reply.</div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary small text-uppercase"
+                                        style="letter-spacing: 1px;">Trigger Keyword</label>
+                                    <div class="input-group shadow-sm">
+                                        <span class="input-group-text bg-dark border-0 text-primary"><i
+                                                class="bi bi-lightning-fill"></i></span>
+                                        <input type="text" class="form-control bg-dark border-0 text-white p-3"
+                                            id="flow-trigger" placeholder="e.g. price, hello, help" required>
+                                    </div>
+                                    <div class="form-text text-muted mt-2">The bot will trigger this flow when a user
+                                        sends this exact word.</div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Response Message</label>
-                                    <textarea class="form-control" id="flow-response" rows="3" required></textarea>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary small text-uppercase"
+                                        style="letter-spacing: 1px;">Response Message</label>
+                                    <textarea class="form-control bg-dark border-0 text-white p-3 shadow-sm"
+                                        id="flow-response" rows="4" placeholder="What should the bot say in return?"
+                                        required></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100">Create Flow</button>
+                                <div class="p-3 bg-primary bg-opacity-10 rounded-3 mb-4">
+                                    <div class="d-flex gap-3">
+                                        <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+                                        <small class="text-secondary">This is a simple automation. For complex
+                                            multi-step journeys, use the <strong>Flow Builder</strong> tab.</small>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Activate Flow
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -641,22 +1360,26 @@
 
         <!-- Flow Builder -->
         <div id="flow-builder" class="page-content-fluid" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1><i class="bi bi-diagram-3-fill"></i> Flow Builder</h1>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary" onclick="loadAdvancedFlows()">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh
+            <div class="flow-builder-header mb-5">
+                <div>
+                    <h1 class="mb-1"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Advanced Flow Builder</h1>
+                    <p class="text-secondary mb-0">Design complex multi-step customer journeys with our visual builder.
+                    </p>
+                </div>
+                <div class="d-flex gap-3">
+                    <button class="btn btn-outline-secondary rounded-pill px-4" onclick="loadAdvancedFlows()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh
                     </button>
-                    <button class="btn btn-primary" onclick="createNewFlow()">
-                        <i class="bi bi-plus-lg"></i> Create New Flow
+                    <button class="btn btn-primary rounded-pill px-4 shadow-sm" onclick="createNewFlow()">
+                        <i class="bi bi-plus-lg me-2"></i>Create New Flow
                     </button>
                 </div>
             </div>
 
             <!-- Flow List View -->
             <div id="flow-list-view">
-                <div class="row g-3" id="advanced-flows-container">
-                    <!-- Flows will be loaded here -->
+                <div class="row g-4" id="advanced-flows-container">
+                    <!-- Flows will be loaded here via renderAdvancedFlows -->
                 </div>
             </div>
 
@@ -719,51 +1442,43 @@
                             <div class="card-body p-2">
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <button class="btn btn-outline-primary btn-sm w-100 text-start"
-                                            onclick="addNode('message')">
-                                            <i class="bi bi-chat-text"></i> Text
+                                        <button class="palette-node-btn" onclick="addNode('message')">
+                                            <i class="bi bi-chat-text text-primary"></i><span>Text</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-success btn-sm w-100 text-start"
-                                            onclick="addNode('buttons')">
-                                            <i class="bi bi-ui-checks"></i> Buttons
+                                        <button class="palette-node-btn" onclick="addNode('buttons')">
+                                            <i class="bi bi-ui-checks text-success"></i><span>Buttons</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-info btn-sm w-100 text-start"
-                                            onclick="addNode('list')">
-                                            <i class="bi bi-list-ul"></i> List
+                                        <button class="palette-node-btn" onclick="addNode('list')">
+                                            <i class="bi bi-list-ul text-info"></i><span>List</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-warning btn-sm w-100 text-start"
-                                            onclick="addNode('image')">
-                                            <i class="bi bi-image"></i> Image
+                                        <button class="palette-node-btn" onclick="addNode('image')">
+                                            <i class="bi bi-image text-warning"></i><span>Image</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-danger btn-sm w-100 text-start"
-                                            onclick="addNode('video')">
-                                            <i class="bi bi-play-btn"></i> Video
+                                        <button class="palette-node-btn" onclick="addNode('video')">
+                                            <i class="bi bi-play-btn text-danger"></i><span>Video</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-info btn-sm w-100 text-start"
-                                            onclick="addNode('document')">
-                                            <i class="bi bi-file-earmark-pdf"></i> Doc
+                                        <button class="palette-node-btn" onclick="addNode('document')">
+                                            <i class="bi bi-file-earmark-pdf text-info"></i><span>Doc</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-secondary btn-sm w-100 text-start"
-                                            onclick="addNode('delay')">
-                                            <i class="bi bi-clock"></i> Delay
+                                        <button class="palette-node-btn" onclick="addNode('delay')">
+                                            <i class="bi bi-clock text-secondary"></i><span>Delay</span>
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-outline-dark btn-sm w-100 text-start"
-                                            onclick="addNode('condition')">
-                                            <i class="bi bi-shuffle"></i> If/Else
+                                        <button class="palette-node-btn" onclick="addNode('condition')">
+                                            <i class="bi bi-shuffle text-dark"></i><span>If/Else</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1153,45 +1868,380 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let currentLeadPhone = null;
+        let lastMessageDate = null;
+        let editingFlowId = null;
+
+        function getFormattedDate(date) {
+            const now = new Date();
+            const messageDate = new Date(date);
+
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const checkDate = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+
+            if (checkDate.getTime() === today.getTime()) {
+                return "Today";
+            } else if (checkDate.getTime() === yesterday.getTime()) {
+                return "Yesterday";
+            } else {
+                return messageDate.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+            }
+        }
 
         function showContent(contentId) {
             document.querySelectorAll('.page-content, .page-content-fluid').forEach(content => {
                 content.style.display = 'none';
             });
             const selected = document.getElementById(contentId);
-            selected.style.display = contentId === 'live-chat' ? 'flex' : 'block';
-            if (contentId === 'live-chat') {
-                // Adjust layout if needed for flex container
-                selected.classList.add('flex-column');
+            if (selected) {
+                selected.style.display = contentId === 'live-chat' ? 'flex' : 'block';
+                if (contentId === 'live-chat') {
+                    selected.classList.add('flex-column');
+                }
             }
 
             document.querySelectorAll('#sidebar .nav-link').forEach(link => {
                 link.classList.remove('active');
             });
-            document.querySelector(`#sidebar .nav-link[onclick*="${contentId}"]`).classList.add('active');
+            const activeLink = document.querySelector(`#sidebar .nav-link[onclick*="${contentId}"]`);
+            if (activeLink) activeLink.classList.add('active');
         }
+
+        let allLeads = [];
 
         async function fetchLeads() {
             try {
                 const response = await fetch('/api/leads');
-                const leads = await response.json();
-                const tableBody = document.getElementById('leads-table-body');
-                tableBody.innerHTML = '';
-                leads.forEach(lead => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><i class="bi bi-person-circle text-secondary me-2"></i> ${lead.name || 'Unknown'}</td>
-                        <td>${formatPhone(lead.phone)}</td>
-                        <td>${lead.completed ? '<span class="badge bg-success-subtle text-success border border-success">Completed</span>' : '<span class="badge bg-warning-subtle text-warning border border-warning">In Progress</span>'}</td>
-                        <td>${lead.unreadMessages > 0 ? `<span class="unread-indicator">${lead.unreadMessages}</span>` : ''}</td>
-                        <td class="text-end"><button class="btn btn-chat btn-sm" onclick="openChat('${lead.phone}', '${lead.name || 'Unknown'}')"><i class="bi bi-chat-quote"></i> Chat</button></td>
-                    `;
-                    tableBody.appendChild(row);
-                });
+                allLeads = await response.json();
+                updateLeadStats();
+                renderLeadCards(allLeads);
+                renderChatSidebar(allLeads);
             } catch (error) {
                 console.error('Error fetching leads:', error);
             }
         }
+
+        function renderChatSidebar(leads) {
+            const container = document.getElementById('chat-sidebar-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            leads.sort((a, b) => (b.unreadMessages || 0) - (a.unreadMessages || 0));
+
+            leads.forEach(lead => {
+                const isActive = currentLeadPhone === lead.phone;
+                const initials = (lead.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const unreadBadge = (lead.unreadMessages || 0) > 0 ? `<span class="badge rounded-pill bg-success ms-auto">${lead.unreadMessages}</span>` : '';
+
+                const item = document.createElement('div');
+                item.className = `chat-list-item ${isActive ? 'active' : ''}`;
+                item.setAttribute('data-phone', lead.phone);
+                item.setAttribute('data-name', lead.name || 'Unknown');
+                item.style.cursor = 'pointer';
+
+                item.innerHTML = `
+                    <div class="lead-avatar" style="width: 48px; height: 48px; font-size: 0.9rem; background: ${stringToGradient(lead.phone)}">${initials}</div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-main text-truncate">${lead.name || 'Unknown'}</h6>
+                            <small class="text-secondary" style="font-size: 0.7rem;">${lead.updatedAt ? new Date(lead.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-1 mt-1">
+                            <small class="text-secondary text-truncate" style="font-size: 0.75rem;">+${lead.phone}</small>
+                            ${unreadBadge}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Global event delegation for chat sidebar items
+        document.addEventListener('click', (e) => {
+            const item = e.target.closest('.chat-list-item');
+            if (item) {
+                const phone = item.getAttribute('data-phone');
+                const name = item.getAttribute('data-name');
+                if (phone) openChat(phone, name);
+            }
+        });
+
+        function filterChatSidebar() {
+            const term = document.getElementById('chat-sidebar-search').value.toLowerCase();
+            const filtered = allLeads.filter(l => (l.name || '').toLowerCase().includes(term) || l.phone.includes(term));
+            renderChatSidebar(filtered);
+        }
+
+        function stringToGradient(str) {
+            const gradients = [
+                'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)'
+            ];
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            return gradients[Math.abs(hash) % gradients.length];
+        }
+
+        function updateLeadStats() {
+            if (!document.getElementById('stat-total-leads')) return;
+            document.getElementById('stat-total-leads').textContent = allLeads.length;
+            document.getElementById('stat-completed-leads').textContent = allLeads.filter(l => l.completed).length;
+            document.getElementById('stat-pending-leads').textContent = allLeads.filter(l => !l.completed).length;
+            document.getElementById('stat-unread-leads').textContent = allLeads.reduce((acc, l) => acc + (l.unreadMessages || 0), 0);
+        }
+
+        function renderLeadCards(leads) {
+            const container = document.getElementById('lead-cards-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (leads.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 opacity-50">
+                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                        <p class="mt-3">No leads found matching your criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const gradients = [
+                'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)',
+                'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
+            ];
+
+            leads.forEach((lead, index) => {
+                const card = document.createElement('div');
+                card.className = 'lead-card';
+
+                const gradient = gradients[index % gradients.length];
+                const genderIcon = (lead.gender || '').trim().toLowerCase() === 'male' ? 'bi-gender-male' : (lead.gender || '').trim().toLowerCase() === 'female' ? 'bi-gender-female' : 'bi-gender-ambiguous';
+                const initials = (lead.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const unreadBadge = (lead.unreadMessages || 0) > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="z-index: 10;">${lead.unreadMessages}</span>` : '';
+
+                card.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="position-relative">
+                                <div class="lead-avatar" style="background: ${gradient}">${initials}</div>
+                                ${unreadBadge}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h5 class="mb-1 fw-bold text-main">${lead.name || 'Unknown User'}</h5>
+                            <div class="d-flex gap-2">
+                                <span class="lead-info-chip"><i class="bi bi-whatsapp"></i> ${formatPhone(lead.phone)}</span>
+                                <span class="lead-info-chip"><i class="bi bi-tag"></i> ID: ${lead.phone.slice(-4)}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="lead-info-chip border border-primary-subtle"><i class="bi ${genderIcon}"></i> ${lead.gender || 'N/A'}</span>
+                                <span class="lead-info-chip border border-info-subtle"><i class="bi bi-calendar"></i> ${lead.age || '??'} yrs</span>
+                            </div>
+                            <div class="d-flex gap-3 small text-secondary">
+                                <span><i class="bi bi-speedometer2 me-1"></i> ${lead.weight || '-'}kg</span>
+                                <span><i class="bi bi-rulers me-1"></i> ${lead.height || '-'}cm</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small mb-1"><i class="bi bi-geo-alt text-danger me-2"></i> ${lead.place || 'Location not set'}</div>
+                            <div class="small text-truncate" style="max-width: 250px;"><i class="bi bi-heart-pulse text-info me-2"></i> ${lead.health_issues || 'No health issues reported'}</div>
+                        </div>
+                        <div class="col text-end">
+                            <div class="mb-2">
+                                ${lead.completed
+                        ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="bi bi-check-all me-1"></i> Verified Lead</span>'
+                        : '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill"><i class="bi bi-clock-history me-1"></i> In Pipeline</span>'}
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="openChat('${lead.phone}', '${lead.name || 'Unknown'}')">
+                                    <i class="bi bi-chat-quote-fill me-1"></i> Open Chat
+                                </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-dark btn-sm rounded-circle" data-bs-toggle="dropdown" style="width: 32px; height: 32px; padding: 0;">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0">
+                                        <li><a class="dropdown-item" href="#" onclick="editLead('${lead._id}')"><i class="bi bi-pencil me-2"></i> Edit Lead</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="scheduleCall('${lead._id}')"><i class="bi bi-calendar-plus me-2"></i> Reschedule Call</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="archiveLead('${lead._id}')"><i class="bi bi-trash me-2"></i> Delete Lead</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-top border-light opacity-50 d-flex justify-content-between align-items-center small">
+                        <span><i class="bi bi-calendar-check me-2"></i> Preferred Call: On <strong>${lead.preferred_date || 'Today'}</strong> Between <strong>${lead.preferred_time || 'Anytime'}</strong></span>
+                        <span>Created ${new Date(lead.createdAt || Date.now()).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterLeadCards() {
+            const searchTerm = (document.getElementById('lead-search')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('lead-filter-status')?.value || 'all';
+
+            const filtered = allLeads.filter(lead => {
+                const matchesSearch = (lead.name || '').toLowerCase().includes(searchTerm) || lead.phone.includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' ||
+                    (statusFilter === 'completed' && lead.completed) ||
+                    (statusFilter === 'pending' && !lead.completed);
+                return matchesSearch && matchesStatus;
+            });
+
+            renderLeadCards(filtered);
+        }
+
+        // --- Lead Management Actions ---
+        let isEditingLead = false;
+        let editingLeadId = null;
+
+        function editLead(id) {
+            const lead = allLeads.find(l => l._id === id);
+            if (!lead) return;
+
+            isEditingLead = true;
+            editingLeadId = id;
+            document.querySelector('#addLeadModal .modal-title').innerText = 'Edit Lead Details';
+            document.querySelector('#addLeadModal button[type="submit"]').innerText = 'Update Lead';
+
+            document.getElementById('lead-name').value = lead.name || '';
+            document.getElementById('lead-phone').value = lead.phone || '';
+            // document.getElementById('lead-phone').readOnly = true; 
+            document.getElementById('lead-age').value = lead.age || '';
+            document.getElementById('lead-weight').value = lead.weight || '';
+            document.getElementById('lead-height').value = lead.height || '';
+            document.getElementById('lead-gender').value = lead.gender || '';
+            document.getElementById('lead-place').value = lead.place || '';
+            document.getElementById('lead-health').value = lead.health_issues || '';
+            document.getElementById('lead-pref-date').value = lead.preferred_date || '';
+            document.getElementById('lead-pref-time').value = lead.preferred_time || '';
+
+            const modal = new bootstrap.Modal(document.getElementById('addLeadModal'));
+            modal.show();
+        }
+
+        // Reset modal on close or when adding
+        document.getElementById('addLeadModal').addEventListener('hidden.bs.modal', () => {
+            isEditingLead = false;
+            editingLeadId = null;
+            document.querySelector('#addLeadModal .modal-title').innerText = 'Add New Lead Manually';
+            document.querySelector('#addLeadModal button[type="submit"]').innerText = 'Save Lead';
+            document.getElementById('lead-phone').readOnly = false;
+            document.getElementById('add-lead-form').reset();
+        });
+
+        async function archiveLead(id) {
+            const lead = allLeads.find(l => l._id === id);
+            if (!lead) return;
+            if (!confirm(`Are you sure you want to archive lead ${lead.name || lead.phone}? This will permanently remove them from the dashboard.`)) return;
+
+            try {
+                const res = await fetch(`/api/leads/id/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    fetchLeads();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert("Failed to archive lead: " + (err.error || res.statusText || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Error archiving lead:", err);
+                alert("Network error while archiving lead. Is the server running?");
+            }
+        }
+
+
+        function scheduleCall(id) {
+            document.getElementById('schedule-lead-phone').value = id; // reuse for id
+            const lead = allLeads.find(l => l._id === id);
+            if (lead) {
+                document.getElementById('schedule-date').value = lead.preferred_date || '';
+                document.getElementById('schedule-time').value = lead.preferred_time || '';
+            }
+            const modal = new bootstrap.Modal(document.getElementById('scheduleCallModal'));
+            modal.show();
+        }
+
+        document.getElementById('schedule-call-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('schedule-lead-phone').value;
+            const data = {
+                preferred_date: document.getElementById('schedule-date').value,
+                preferred_time: document.getElementById('schedule-time').value
+            };
+
+            try {
+                const res = await fetch(`/api/leads/id/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    fetchLeads();
+                    bootstrap.Modal.getInstance(document.getElementById('scheduleCallModal')).hide();
+                } else {
+                    alert("Failed to update schedule");
+                }
+            } catch (err) {
+                console.error("Error updating schedule:", err);
+            }
+        });
+
+        document.getElementById('add-lead-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('lead-phone').value.replace(/\D/g, '');
+            const leadData = {
+                name: document.getElementById('lead-name').value,
+                phone: phone,
+                age: document.getElementById('lead-age').value,
+                weight: document.getElementById('lead-weight').value,
+                height: document.getElementById('lead-height').value,
+                gender: document.getElementById('lead-gender').value,
+                place: document.getElementById('lead-place').value,
+                health_issues: document.getElementById('lead-health').value,
+                preferred_date: document.getElementById('lead-pref-date').value,
+                preferred_time: document.getElementById('lead-pref-time').value,
+                completed: true
+            };
+
+            const url = isEditingLead ? `/api/leads/id/${editingLeadId}` : '/api/leads';
+            const method = isEditingLead ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(leadData)
+                });
+
+                if (res.ok) {
+                    fetchLeads();
+                    const modalEl = document.getElementById('addLeadModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.hide();
+                    document.getElementById('add-lead-form').reset();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + (err.error || "Failed to save lead"));
+                }
+            } catch (err) {
+                console.error("Error saving lead", err);
+                alert("Failed to save lead");
+            }
+        });
+
 
         function formatPhone(phone) {
             // Basic formatting (assumed string)
@@ -1199,94 +2249,267 @@
         }
 
         async function openChat(phone, name) {
-            currentLeadPhone = phone;
-            showContent('live-chat');
+            if (!phone) return;
+            const targetPhone = String(phone);
 
-            // Enable inputs
-            document.getElementById('message-input').disabled = false;
-            document.getElementById('send-button').disabled = false;
-            document.getElementById('message-input').focus();
+            try {
+                currentLeadPhone = targetPhone;
 
-            // Update Header
-            document.getElementById('chat-title').innerText = name;
-            document.getElementById('chat-subtitle').innerText = `+${phone}`;
+                // Switch to live chat tab
+                showContent('live-chat');
 
-            await fetch(`/api/leads/${phone}/read`, { method: 'POST' });
+                // Ensure UI elements are visible
+                const welcome = document.getElementById('chat-welcome-screen');
+                const inputArea = document.getElementById('chat-input-area');
+                if (welcome) welcome.style.display = 'none';
+                if (inputArea) inputArea.style.display = 'flex';
 
-            const response = await fetch(`/api/messages/${phone}`);
-            const messages = await response.json();
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.innerHTML = '';
+                // Update sidebar highlight immediately
+                document.querySelectorAll('.chat-list-item').forEach(item => {
+                    const itemPhone = item.getAttribute('data-phone');
+                    item.classList.toggle('active', itemPhone === targetPhone);
+                });
 
-            if (messages.length === 0) {
-                chatContainer.innerHTML = '<div class="text-center text-muted mt-5"><small>No messages yet. Start the conversation!</small></div>';
+                // Update Header info
+                const chatTitle = document.getElementById('chat-title');
+                const chatSubtitle = document.getElementById('chat-subtitle');
+                if (chatTitle) chatTitle.innerText = name || 'Unknown';
+                if (chatSubtitle) chatSubtitle.innerHTML = `<span class="presence-dot presence-online"></span> Active now on +${targetPhone}`;
+
+                // Update Avatar
+                const initials = (name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U';
+                const avatar = document.getElementById('active-chat-avatar');
+                if (avatar) {
+                    avatar.innerText = initials;
+                    avatar.style.background = stringToGradient(targetPhone);
+                }
+
+                // Fetch and display messages
+                const response = await fetch(`/api/messages/${targetPhone}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const messages = await response.json();
+
+                // Clear and render
+                const chatContainer = document.getElementById('chat-container');
+                if (chatContainer) {
+                    chatContainer.innerHTML = '';
+                    lastMessageDate = null;
+                    messages.forEach(msg => displayMessage(msg));
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+
+                // Mark as read (background task)
+                fetch(`/api/leads/${targetPhone}/read`, { method: 'POST' })
+                    .then(() => fetchLeads())
+                    .catch(err => console.error("Error marking as read:", err));
+
+                const msgInput = document.getElementById('message-input');
+                if (msgInput) msgInput.focus();
+
+            } catch (error) {
+                console.error('Error switching chats:', error);
             }
-
-            messages.forEach(message => {
-                displayMessage(message);
-            });
-
-            fetchLeads(); // Update unread counts
         }
 
         function displayMessage(message) {
             const chatContainer = document.getElementById('chat-container');
+            if (!chatContainer) return;
 
-            // Clear placeholder if it exists
-            if (chatContainer.querySelector('.text-muted.mt-5') || chatContainer.querySelector('.bi-chat-square-text')) {
-                chatContainer.innerHTML = '';
+            const msgDate = new Date(message.timestamp || message.createdAt || Date.now());
+            const dateStr = msgDate.toDateString();
+
+            if (dateStr !== lastMessageDate) {
+                const divider = document.createElement('div');
+                divider.className = 'chat-date-divider';
+                divider.innerText = getFormattedDate(msgDate);
+                chatContainer.appendChild(divider);
+                lastMessageDate = dateStr;
             }
 
             const messageElement = document.createElement('div');
-            messageElement.classList.add('message');
 
-            const fromDashboard = message.from === 'dashboard';
-            const fromLead = message.from === currentLeadPhone;
+            const mFrom = String(message.from || '').replace(/\D/g, '');
+            const targetPhone = String(currentLeadPhone || '').replace(/\D/g, '');
 
-            // Logic to determine sender
-            if (fromDashboard) {
-                messageElement.classList.add('sent');
-                messageElement.innerHTML = `${message.text}`;
-            } else if (fromLead) {
-                messageElement.classList.add('received');
-                messageElement.innerHTML = `${message.text}`;
-            } else {
-                // Probably AI or System
-                messageElement.classList.add('sent');
-                messageElement.innerHTML = `<strong><i class="bi bi-robot"></i> AI</strong> ${message.text}`;
-                messageElement.style.border = "1px solid #ffd700";
+            const isFromDashboard = message.from === 'dashboard';
+            const isFromLead = mFrom === targetPhone;
+            const time = new Date(message.timestamp || message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            let contentHtml = `<div class="message-text">${message.text}</div>`;
+
+            // Check if it's a media message (simple detection based on text starting with [type])
+            const mediaRegex = /^\[(image|video|document)\]\s*(.*)$/;
+            const match = message.text.match(mediaRegex);
+
+            if (match) {
+                const type = match[1];
+                const parts = match[2].split(' ');
+                const url = parts.find(p => p.startsWith('/uploads/'));
+                const caption = match[2].replace(url, '').trim();
+
+                if (url) {
+                    if (type === 'image') {
+                        contentHtml = `<div class="message-media mb-2"><img src="${url}" style="max-width: 100%; border-radius: 8px; cursor: pointer;" onclick="window.open('${url}')"></div>`;
+                    } else if (type === 'video') {
+                        contentHtml = `<div class="message-media mb-2"><video src="${url}" controls style="max-width: 100%; border-radius: 8px;"></video></div>`;
+                    } else if (type === 'document') {
+                        contentHtml = `<div class="message-media mb-2"><div class="p-2 rounded bg-dark bg-opacity-25 d-flex align-items-center gap-2"><i class="bi bi-file-earmark-text fs-4"></i> <a href="${url}" target="_blank" class="text-white text-decoration-none small text-truncate" style="max-width: 150px;">Document</a></div></div>`;
+                    }
+                    if (caption) contentHtml += `<div class="message-text">${caption}</div>`;
+                }
             }
 
-            // Add Timestamp (mocking current time if not in msg object, usually simpler to just omit if not robust)
-            // const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            // messageElement.innerHTML += `<span class="message-meta">${time}</span>`;
+            if (isFromDashboard) {
+                messageElement.className = 'chat-bubble sent';
+                messageElement.innerHTML = `
+                    ${contentHtml}
+                    <div class="chat-time">${time} <i class="bi bi-check2-all" style="color: #53bdeb; font-size: 0.8rem;"></i></div>
+                `;
+            } else if (isFromLead) {
+                messageElement.className = 'chat-bubble received';
+                messageElement.innerHTML = `
+                    ${contentHtml}
+                    <div class="chat-time">${time}</div>
+                `;
+            } else {
+                // AI Response or System Message
+                messageElement.className = 'chat-bubble ai';
+                messageElement.innerHTML = `
+                    <div class="message-text">
+                        <small style="color: #00e676; font-size: 0.7rem; font-weight: bold; display: block; margin-bottom: 2px;">
+                            <i class="bi bi-robot"></i> AI ASSISTANT
+                        </small>
+                        ${message.text}
+                    </div>
+                    <div class="chat-time">${time}</div>
+                `;
+            }
 
             chatContainer.appendChild(messageElement);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+
+        function setPublicUrl() {
+            const current = localStorage.getItem('chat_public_url') || window.location.origin;
+            const url = prompt("Enter your public URL (e.g. from ngrok) for media to work on WhatsApp:\n(Meta's servers cannot access localhost)", current);
+            if (url !== null) {
+                localStorage.setItem('chat_public_url', url.endsWith('/') ? url.slice(0, -1) : url);
+                checkUrlWarning();
+            }
+        }
+
+        function checkUrlWarning() {
+            const warning = document.getElementById('url-warning');
+            const base = localStorage.getItem('chat_public_url') || window.location.origin;
+            if (base.includes('localhost') || base.includes('127.0.0.1')) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        // Check on load
+        window.addEventListener('load', checkUrlWarning);
 
         document.getElementById('send-button').addEventListener('click', sendMessage);
         document.getElementById('message-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
 
-        async function sendMessage() {
+        // Emoji & Attachments Logic
+        const emojiBtn = document.getElementById('emoji-btn');
+        const emojiPicker = document.getElementById('emoji-picker');
+        const attachBtn = document.getElementById('attach-btn');
+        const fileInput = document.getElementById('chat-file-input');
+        const msgInput = document.getElementById('message-input');
+
+        if (emojiBtn && emojiPicker) {
+            emojiBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'flex' : 'none';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                    emojiPicker.style.display = 'none';
+                }
+            });
+
+            emojiPicker.querySelectorAll('span').forEach(span => {
+                span.addEventListener('click', () => {
+                    msgInput.value += span.innerText;
+                    msgInput.focus();
+                    emojiPicker.style.display = 'none';
+                });
+            });
+        }
+
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            let type = 'document';
+                            if (file.type.startsWith('image/')) type = 'image';
+                            else if (file.type.startsWith('video/')) type = 'video';
+
+                            const text = prompt('Enter a caption (optional):');
+                            await sendMessage(data.url, type, file.name, text);
+                        } else {
+                            alert('Upload failed: ' + data.error);
+                        }
+                    } catch (err) {
+                        console.error('Upload Error:', err);
+                        alert('Upload failed.');
+                    }
+                    fileInput.value = ''; // Reset
+                }
+            });
+        }
+
+        async function sendMessage(mediaUrl = null, messageType = null, originalName = null, caption = null) {
             const messageInput = document.getElementById('message-input');
-            const text = messageInput.value;
-            if (text && currentLeadPhone) {
+            const text = caption || messageInput.value;
+            if ((text || mediaUrl) && currentLeadPhone) {
                 try {
+                    const body = {
+                        to: currentLeadPhone,
+                        text: text
+                    };
+                    if (mediaUrl) {
+                        const publicUrl = localStorage.getItem('chat_public_url');
+                        const base = publicUrl || window.location.origin;
+                        if (base.includes('localhost')) {
+                            console.warn("⚠️ Sending a localhost URL to WhatsApp. Meta servers cannot access localhost. Please use a tunnel like ngrok.");
+                        }
+                        body.mediaUrl = base + mediaUrl;
+                        body.messageType = messageType;
+                        body.filename = originalName;
+                    }
+
                     await fetch('/api/send', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ to: currentLeadPhone, text })
+                        body: JSON.stringify(body)
                     });
                 } catch (e) {
                     console.error("Send failed", e);
                 }
 
-                messageInput.value = '';
+                if (!mediaUrl) messageInput.value = '';
             }
         }
 
@@ -1329,9 +2552,15 @@
 
                 if (flows.length === 0) {
                     container.innerHTML = `
-                        <div class="col-12 text-center text-muted py-5">
-                            <i class="bi bi-diagram-2" style="font-size: 3rem;"></i>
-                            <p class="mt-3">No flows created yet.</p>
+                        <div class="col-12">
+                            <div class="empty-flows-state">
+                                <i class="bi bi-robot text-primary mb-3" style="font-size: 4rem;"></i>
+                                <h3 class="fw-bold">No automation flows yet</h3>
+                                <p class="text-secondary mx-auto" style="max-width: 400px;">Create your first automated response to handle common customer queries instantly without manual intervention.</p>
+                                <button class="btn btn-primary rounded-pill px-4 mt-2" data-bs-toggle="modal" data-bs-target="#newFlowModal">
+                                    <i class="bi bi-plus-lg me-2"></i> Create First Flow
+                                </button>
+                            </div>
                         </div>
                      `;
                     return;
@@ -1339,16 +2568,45 @@
 
                 flows.forEach(flow => {
                     const card = document.createElement('div');
-                    card.className = 'col-md-4 mb-3';
+                    card.className = 'col-md-4';
                     card.innerHTML = `
-                        <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
-                            <div class="card-body">
-                                <h5 class="card-title text-primary"><i class="bi bi-lightning-fill"></i> ${flow.trigger}</h5>
-                                <p class="card-text text-muted small">Reponds with:</p>
-                                <p class="card-text bg-body p-2 rounded">${flow.response}</p>
+                        <div class="flow-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flow-icon-wrapper">
+                                    <i class="bi bi-cpu"></i>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-secondary p-0" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical fs-5"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li><a class="dropdown-item" href="#" onclick="editSimpleFlow('${flow._id}', '${flow.trigger.replace(/'/g, "\\'")}', '${flow.response.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')"><i class="bi bi-pencil me-2"></i> Edit Flow</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteFlow('${flow._id}')"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <div class="card-footer bg-transparent border-0 text-end">
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteFlow('${flow._id}')">
+                            
+                            <div>
+                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Trigger Keyword</small>
+                                <div class="flow-trigger-badge mt-1">
+                                    <i class="bi bi-lightning-fill"></i>
+                                    ${flow.trigger}
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column gap-1">
+                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Bot Response</small>
+                                <div class="flow-response-preview mt-1">
+                                    ${flow.response}
+                                </div>
+                            </div>
+
+                            <div class="flow-actions">
+                                <button class="btn btn-modern btn-outline-secondary flex-grow-1" onclick="copyToClipboard('${flow.trigger}')">
+                                    <i class="bi bi-files"></i> Copy
+                                </button>
+                                <button class="btn btn-modern btn-primary text-white" onclick="deleteFlow('${flow._id}')">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
                             </div>
@@ -1363,25 +2621,70 @@
 
         document.getElementById('create-flow-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const trigger = document.getElementById('flow-trigger').value;
-            const response = document.getElementById('flow-response').value;
+            const trigger = document.getElementById('flow-trigger').value.trim();
+            const response = document.getElementById('flow-response').value.trim();
+
+            console.log('Attempting to save simple flow:', { editingFlowId, trigger, response });
 
             try {
-                const res = await fetch('/api/flows', {
-                    method: 'POST',
+                const url = editingFlowId ? `/api/flows/${editingFlowId}` : '/api/flows';
+                const method = editingFlowId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ trigger, response })
                 });
 
                 if (res.ok) {
+                    const result = await res.json();
+                    console.log('Simple flow saved successfully:', result);
+
                     fetchFlows();
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('newFlowModal'));
+                    const modalEl = document.getElementById('newFlowModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                     modal.hide();
+
                     document.getElementById('create-flow-form').reset();
+                    editingFlowId = null;
+
+                    alert('Automation Flow saved successfully! 🚀');
+                } else {
+                    const statusText = res.statusText || 'Error';
+                    try {
+                        const err = await res.json();
+                        console.error('Error response:', err);
+                        alert(`Failed to save flow (${res.status} ${statusText}): ` + (err.error || err.message || 'Unknown error'));
+                    } catch (e) {
+                        alert(`Failed to save flow (${res.status} ${statusText})`);
+                    }
                 }
             } catch (err) {
-                console.error("Error creating flow", err);
+                console.error("Network or Runtime error saving flow:", err);
+                alert('An error occurred while saving: ' + err.message + '\n\nPlease check the console (F12) for details.');
             }
+        });
+
+        function editSimpleFlow(id, trigger, response) {
+            console.log('Editing simple flow with ID:', id, 'Type:', typeof id);
+            editingFlowId = id;
+            document.getElementById('flow-trigger').value = trigger;
+            document.getElementById('flow-response').value = response;
+
+            // Update modal title
+            const modalTitle = document.querySelector('#newFlowModal .modal-title');
+            if (modalTitle) modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i> Edit Automation Flow';
+
+            const modal = new bootstrap.Modal(document.getElementById('newFlowModal'));
+            modal.show();
+        }
+
+        // Add handler for when modal is hidden to reset state
+        document.getElementById('newFlowModal').addEventListener('hidden.bs.modal', function () {
+            editingFlowId = null;
+            document.getElementById('create-flow-form').reset();
+            const modalTitle = document.querySelector('#newFlowModal .modal-title');
+            if (modalTitle) modalTitle.innerHTML = '<i class="bi bi-magic me-2 text-primary"></i> Create Automation Flow';
         });
 
         async function deleteFlow(id) {
@@ -1962,9 +3265,18 @@
 
             if (flows.length === 0) {
                 container.innerHTML = `
-                    <div class="col-12 text-center text-muted py-5">
-                        <i class="bi bi-diagram-3" style="font-size: 4rem; opacity: 0.3;"></i>
-                        <p class="mt-3">No flows created yet. Create your first flow!</p>
+                    <div class="col-12">
+                        <div class="empty-flows-placeholder">
+                            <i class="bi bi-diagram-3" style="font-size: 5rem; opacity: 0.2; color: var(--primary-color);"></i>
+                            <h3 class="fw-bold mt-4">No Advanced Flows Found</h3>
+                            <p class="text-secondary mx-auto mb-4" style="max-width: 500px;">
+                                You haven't created any complex automation journeys yet. 
+                                Build multi-step workflows with buttons, lists, and conditions to automate your customer interactions efficiently.
+                            </p>
+                            <button class="btn btn-primary rounded-pill px-5 py-3 shadow" onclick="createNewFlow()">
+                                <i class="bi bi-magic me-2"></i>Create Your First Journey
+                            </button>
+                        </div>
                     </div>
                 `;
                 return;
@@ -1976,56 +3288,59 @@
                 const deliveryRate = flow.stats.sent > 0 ? ((flow.stats.delivered / flow.stats.sent) * 100).toFixed(1) : '0.0';
 
                 card.innerHTML = `
-                    <div class="card h-100 border-0 shadow-sm hover-shadow bg-body-tertiary" style="transition: all 0.2s; cursor: pointer;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">
-                                    <i class="bi bi-diagram-3-fill text-primary"></i> ${flow.name}
-                                </h5>
-                                <span class="badge ${flow.active ? 'bg-success' : 'bg-secondary'}">${flow.active ? 'Active' : 'Inactive'}</span>
+                    <div class="flow-builder-card" onclick="editFlow('${flow._id}')">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-primary bg-opacity-10 p-3 rounded-4">
+                                    <i class="bi bi-diagram-3-fill text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1 fw-bold">${flow.name}</h5>
+                                    <span class="flow-trigger-pill">
+                                        <i class="bi bi-lightning-charge-fill"></i> ${flow.trigger}
+                                    </span>
+                                </div>
                             </div>
-                            <p class="card-text text-muted small mb-2">${flow.description || 'No description'}</p>
-                            <div class="mb-3">
-                                <span class="badge bg-primary-subtle text-primary border border-primary">
-                                    <i class="bi bi-key"></i> ${flow.trigger}
-                                </span>
-                                <span class="badge bg-info-subtle text-info border border-info ms-1">
-                                    ${flow.triggerType}
-                                </span>
+                            <span class="flow-status-badge ${flow.active ? 'status-active' : 'status-inactive'}">
+                                ${flow.active ? 'Active' : 'Paused'}
+                            </span>
+                        </div>
+                        
+                        <p class="text-secondary small mb-4" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 40px;">
+                            ${flow.description || 'No description provided for this automation flow.'}
+                        </p>
+                        
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="flow-stat-pill">
+                                    <span class="flow-stat-value">${flow.stats.sent || 0}</span>
+                                    <span class="flow-stat-label">Sent</span>
+                                </div>
                             </div>
-                            
-                            <!-- Analytics -->
-                            <div class="row text-center small mb-3">
-                                <div class="col-3">
-                                    <div class="text-muted">Sent</div>
-                                    <div class="fw-bold">${flow.stats.sent || 0}</div>
+                            <div class="col-4">
+                                <div class="flow-stat-pill">
+                                    <span class="flow-stat-value">${deliveryRate}%</span>
+                                    <span class="flow-stat-label">Rate</span>
                                 </div>
-                                <div class="col-3">
-                                    <div class="text-muted">Rate</div>
-                                    <div class="fw-bold text-success">${deliveryRate}%</div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="text-muted">Clicks</div>
-                                    <div class="fw-bold text-info">${flow.stats.clicked || 0}</div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="text-muted">Nodes</div>
-                                    <div class="fw-bold">${flow.nodes?.length || 0}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="flow-stat-pill">
+                                    <span class="flow-stat-value">${flow.stats.clicked || 0}</span>
+                                    <span class="flow-stat-label">Clicks</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-primary flex-fill" onclick="editFlow('${flow._id}')">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-outline-${flow.active ? 'warning' : 'success'}" onclick="toggleFlowActive('${flow._id}')">
-                                    <i class="bi bi-${flow.active ? 'pause' : 'play'}-fill"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteAdvancedFlow('${flow._id}')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm rounded-pill flex-grow-1 py-2" onclick="event.stopPropagation(); editFlow('${flow._id}')">
+                                <i class="bi bi-pencil-square me-1"></i> Edit
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm rounded-circle" style="width: 36px; height: 36px;" onclick="event.stopPropagation(); toggleFlowActive('${flow._id}')" title="${flow.active ? 'Pause' : 'Resume'}">
+                                <i class="bi bi-${flow.active ? 'pause' : 'play'}-fill"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm rounded-circle" style="width: 36px; height: 36px;" onclick="event.stopPropagation(); deleteAdvancedFlow('${flow._id}')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                     </div>
                 `;
