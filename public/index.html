@@ -2938,16 +2938,13 @@
                 const btnCards = container.children;
 
                 for (let i = 0; i < btnCards.length; i++) {
-                    const buttonData = {
+                    Buttons.push({
                         text: document.getElementById(`btn-text-${i}`).value,
                         reply: document.getElementById(`btn-reply-${i}`).value,
                         type: document.getElementById(`btn-type-${i}`).value
-                    };
-                    console.log(`Button ${i} data:`, buttonData);
-                    Buttons.push(buttonData);
+                    });
                 }
                 node.data.buttons = Buttons;
-                console.log('Updated node buttons:', node.data.buttons);
             } else if (type === 'list') {
                 node.data.text = document.getElementById('prop-text').value;
                 node.data.title = document.getElementById('prop-title').value;
