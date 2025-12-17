@@ -201,26 +201,15 @@ async function continueFlow(phone, message) {
             // Track button click
             await updateFlowStats(flow._id, 'clicked');
 
-            // 1. Send the "button reply" message (feedback) immediately
+            // Define reply message for fallback return (if flow ends here)
             const replyText = clickedButton.reply || clickedButton.value || clickedButton.text;
             const replyMessage = {
                 type: 'text',
                 content: personalizeMessage(replyText, phone, session)
             };
 
-            // Helper to send async feedback message
-            if (process.env.WHATSAPP_TOKEN && process.env.PHONE_NUMBER_ID) {
-                // Dynamically import to avoid circular dependency issues at top level if any
-                const { sendWhatsAppBusinessMessage } = await import('./whatsappBusinessAPI.js');
-                await sendWhatsAppBusinessMessage(
-                    phone,
-                    { ...replyMessage, messageType: 'text' },
-                    process.env.WHATSAPP_TOKEN,
-                    process.env.PHONE_NUMBER_ID
-                );
-            } else {
-                console.log(`[MockSend] Feedback message: "${replyMessage.content}"`);
-            }
+            // Note: We used to send an immediate feedback message here, but it caused double messaging 
+            // (feedback + next node). We removed it so only the next node content functions as the reply.
 
             // 2. Determine connection based on button label
             // We need to look for a connection where label matches button text OR ID
