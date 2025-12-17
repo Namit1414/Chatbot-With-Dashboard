@@ -14,6 +14,7 @@ import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
+import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone } from "./googleSheet.js";
@@ -148,6 +149,53 @@ app.post("/api/bulk-send", async (req, res) => {
   } catch (error) {
     console.error('Error in bulk send:', error);
     res.status(500).json({ error: 'Failed to send message', details: error.message });
+  }
+});
+
+// Schedule bulk message
+app.post("/api/bulk-messages/schedule", async (req, res) => {
+  try {
+    const { message, recipients, scheduledTime, personalize, addDelay } = req.body;
+
+    if (!message || !recipients || !scheduledTime) {
+      return res.status(400).json({ error: 'Missing required fields: message, recipients, scheduledTime' });
+    }
+
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ error: 'Recipients must be a non-empty array' });
+    }
+
+    const scheduledMessage = new ScheduledBulkMessage({
+      message,
+      recipients,
+      scheduledTime: new Date(scheduledTime),
+      personalize: personalize || false,
+      addDelay: addDelay !== undefined ? addDelay : true
+    });
+
+    await scheduledMessage.save();
+    console.log(`📅 Bulk message scheduled for ${scheduledTime} to ${recipients.length} recipients`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Bulk message scheduled successfully',
+      scheduledMessage
+    });
+  } catch (error) {
+    console.error('Error scheduling bulk message:', error);
+    res.status(500).json({ error: 'Failed to schedule message', details: error.message });
+  }
+});
+
+// Get all scheduled bulk messages (optional - for future UI)
+app.get("/api/bulk-messages/scheduled", async (req, res) => {
+  try {
+    const scheduledMessages = await ScheduledBulkMessage.find({ status: 'pending' })
+      .sort({ scheduledTime: 1 });
+    res.json(scheduledMessages);
+  } catch (error) {
+    console.error('Error fetching scheduled messages:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
