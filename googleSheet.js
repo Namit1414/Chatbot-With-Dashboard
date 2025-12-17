@@ -40,12 +40,17 @@ async function getSheet() {
 
 export async function saveLead(lead) {
   try {
-    const sheet = await getSheet();
-    const sanitizedPhone = String(lead.phone || "").replace(/@s\.whatsapp\.net/g, "");
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
+      console.warn("⚠️ Google Sheets credentials missing. Skipping cloud sync.");
+      return;
+    }
 
-    await sheet.addRow({
+    const sheet = await getSheet();
+    const sanitizedPhone = String(lead.phone || "").replace(/@s\.whatsapp\.net/g, "").replace(/\D/g, "");
+
+    const rowData = {
       phone: sanitizedPhone,
-      name: lead.name || "",
+      name: lead.name || "N/A",
       age: lead.age || "",
       weight: lead.weight || "",
       height: lead.height || "",
@@ -54,12 +59,13 @@ export async function saveLead(lead) {
       health_issues: lead.health_issues || "",
       preferred_date: lead.preferred_date || "",
       preferred_time: lead.preferred_time || "",
-      createdAt: new Date().toISOString()
-    });
+      createdAt: lead.createdAt || new Date().toISOString()
+    };
 
-    console.log(`Saved lead to Google Sheet: ${sanitizedPhone}`);
+    await sheet.addRow(rowData);
+    console.log(`✅ [GoogleSheet] Row successfully added for ${sanitizedPhone}`);
   } catch (error) {
-    console.error("Error saving lead to Google Sheet:", error);
+    console.error(`❌ [GoogleSheet] Failed to add row for ${lead.phone}:`, error.message);
     throw error;
   }
 }
