@@ -14,12 +14,16 @@ const questions = [
 ];
 
 const TIME_RANGES = [
-  { id: "slot_10_12", title: "10:00 AM - 12:00 PM" },
-  { id: "slot_12_02", title: "12:00 PM - 02:00 PM" },
-  { id: "slot_02_04", title: "02:00 PM - 04:00 PM" },
-  { id: "slot_04_06", title: "04:00 PM - 06:00 PM" },
-  { id: "slot_06_08", title: "06:00 PM - 08:00 PM" },
-  { id: "slot_08_10", title: "08:00 PM - 10:00 PM" }
+  { id: "slot_10_11", title: "10:00 AM - 11:00 AM" },
+  { id: "slot_11_12", title: "11:00 AM - 12:00 PM" },
+  { id: "slot_12_01", title: "12:00 PM - 01:00 PM" },
+  { id: "slot_01_02", title: "01:00 PM - 02:00 PM" },
+  { id: "slot_02_03", title: "02:00 PM - 03:00 PM" },
+  { id: "slot_03_04", title: "03:00 PM - 04:00 PM" },
+  { id: "slot_04_05", title: "04:00 PM - 05:00 PM" },
+  { id: "slot_05_06", title: "05:00 PM - 06:00 PM" },
+  { id: "slot_06_07", title: "06:00 PM - 07:00 PM" },
+  { id: "slot_07_08", title: "07:00 PM - 08:00 PM" }
 ];
 
 const GENDER_OPTIONS = [
@@ -86,7 +90,7 @@ export async function handleLeadFlow(phone, message) {
   // Validate Time
   if (currentKey === "preferred_time") {
     if (!isValidTime(message)) {
-      return "⚠️ Please select a valid time range from the list OR type a time between 10:00 AM and 10:00 PM.";
+      return "⚠️ Please select a valid time range from the list OR type a time between 10:00 AM and 08:00 PM.";
     }
   }
 
@@ -213,8 +217,8 @@ function isValidTime(input) {
     // Calculate total minutes
     const totalMinutes = hours * 60 + minutes;
 
-    // Range: 10:00 AM (600 min) to 10:00 PM (1320 min)
-    if (totalMinutes >= 600 && totalMinutes <= 1320) {
+    // Range: 10:00 AM (600 min) to 08:00 PM (1200 min)
+    if (totalMinutes >= 600 && totalMinutes <= 1200) {
       return true;
     }
   } catch (e) {
