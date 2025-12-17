@@ -310,6 +310,43 @@
             border-color: white;
         }
 
+        /* Larger Hit Area for Ports */
+        .node-port::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            z-index: 10;
+            border-radius: 50%;
+        }
+
+        /* Connecting State Feedback */
+        #canvas-container.dragging-connection .port-in {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+            transform: scale(1.2);
+            background: var(--primary);
+            border-color: white;
+            animation: pulse-port 1.5s infinite;
+        }
+
+        @keyframes pulse-port {
+            0% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+        }
+
         /* Connections */
         .connection-path {
             fill: none;
@@ -388,6 +425,12 @@
             </div>
             <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'delay')">
                 <i class="bi bi-clock" style="color: #64748b;"></i> Delay
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'cta')">
+                <i class="bi bi-link-45deg" style="color: #06b6d4;"></i> CTA Url
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'list')">
+                <i class="bi bi-list-ul" style="color: #ec4899;"></i> List Message
             </div>
         </div>
 
@@ -485,87 +528,51 @@
             // 1. Transform Canvas
             canvas.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
 
-            // 2. Render Nodes
-            // Remove existing DOM nodes to redraw (simple approach)
-            document.querySelectorAll('.flow-node').forEach(n => n.remove());
+            // 2. Render Nodes (Differential)
+            const existingNodeEls = new Set();
+            document.querySelectorAll('.flow-node').forEach(el => existingNodeEls.add(el.dataset.id));
 
             state.nodes.forEach(node => {
-                const el = document.createElement('div');
-                el.className = `flow-node ${state.selectedNodeId === node.id ? 'selected' : ''}`;
+                let el = document.querySelector(`.flow-node[data-id="${node.id}"]`);
+                const isNew = !el;
+
+                if (isNew) {
+                    el = document.createElement('div');
+                    el.className = 'flow-node';
+                    el.style.position = 'absolute';
+                    el.dataset.id = node.id;
+                    el.onmousedown = (e) => handleNodeDown(e, node);
+                    canvas.appendChild(el);
+                }
+
+                // Update Position & State
                 el.style.left = node.x + 'px';
                 el.style.top = node.y + 'px';
-                el.style.position = 'absolute'; // Ensure positioning
-                el.dataset.id = node.id;
+                el.className = `flow-node ${state.selectedNodeId === node.id ? 'selected' : ''}`;
 
-                // Drag start
-                el.onmousedown = (e) => handleNodeDown(e, node);
-
-                // Header
-                const header = document.createElement('div');
-                header.className = `node-header ${node.type}`;
-                // Determine Icon
-                let iconClass = 'bi-circle-fill';
-                let iconStyle = 'margin-right:8px; font-size: 1rem;';
-
-                if (node.type === 'start') { iconClass = 'bi-play-circle-fill'; iconStyle += 'color: #10b981;'; }
-                else if (node.type === 'message') { iconClass = 'bi-chat-text'; iconStyle += 'color: var(--primary);'; }
-                else if (node.type === 'buttons') { iconClass = 'bi-ui-checks'; iconStyle += 'color: #10b981;'; }
-                else if (['image', 'video', 'document'].includes(node.type)) { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
-                else if (node.type === 'condition') { iconClass = 'bi-shuffle'; iconStyle += 'color: #8b5cf6;'; }
-                else if (node.type === 'delay') { iconClass = 'bi-clock'; iconStyle += 'color: #64748b;'; }
-
-                header.innerHTML = `
-                    <i class="bi ${iconClass}" style="${iconStyle}"></i>
-                    <span style="flex-grow:1; font-weight:600;">${capitalize(node.type)}</span>
-                    ${node.type !== 'start' ? `<i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>` : ''}
-                `;
-                el.appendChild(header);
-
-                // Body
-                const body = document.createElement('div');
-                body.className = 'node-body';
-                if (node.type === 'start') {
-                    body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">Trigger: ${node.data.trigger || 'keyword'}</div>`;
-                } else if (node.type === 'message') {
-                    body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
-                } else if (node.type === 'buttons') {
-                    body.innerText = node.data.text || '(Question)';
-                } else if (['image', 'video', 'document'].includes(node.type)) {
-                    body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark"></i> <span>${node.type}</span></div>`;
-                }
-                el.appendChild(body);
-
-                // Input Port (Everyone except Start)
-                if (node.type !== 'start') {
-                    // createPort(nodeId, type, handleId, idx, count)
-                    el.appendChild(createPort(node.id, 'input', 'in'));
-                }
-
-                // Output Ports
-                if (node.type === 'buttons' && node.data.buttons) {
-                    node.data.buttons.forEach((btn, idx) => {
-                        const count = node.data.buttons.length;
-                        const p = createPort(node.id, 'output', btn.id, idx, count);
-                        // Label
-                        const lbl = document.createElement('span');
-                        lbl.innerText = btn.text.length > 10 ? btn.text.substring(0, 8) + '..' : btn.text;
-                        lbl.className = 'port-label';
-                        lbl.style.position = 'absolute';
-                        lbl.style.bottom = '-20px'; // below port
-                        lbl.style.left = '50%';
-                        lbl.style.transform = 'translateX(-50%)';
-                        lbl.style.fontSize = '0.7em';
-                        lbl.style.whiteSpace = 'nowrap';
-                        lbl.style.color = '#ccc';
-                        p.appendChild(lbl);
-                        el.appendChild(p);
-                    });
+                // Update Content only if new (simple approach) or if we wanted full sync
+                // For now, let's redraw content to ensure ports etc are correct, 
+                // but we could optimize this further if needed. 
+                // CRITICAL: We only redraw innerHTML if it's new or if we really need to, 
+                // but let's do it for now to keep logic simple, the key is the ELEMENT remains stable.
+                if (isNew) {
+                    renderNodeContent(el, node);
                 } else {
-                    // Single Output (default)
-                    el.appendChild(createPort(node.id, 'output', 'out'));
+                    // Just update labels if needed? Actually, let's keep it simple: 
+                    // If not dragging a connection, we can full sync. 
+                    // If dragging, ONLY update position.
+                    if (!isConnecting) {
+                        renderNodeContent(el, node);
+                    }
                 }
 
-                canvas.appendChild(el);
+                existingNodeEls.delete(node.id);
+            });
+
+            // Remove nodes that are gone
+            existingNodeEls.forEach(id => {
+                const el = document.querySelector(`.flow-node[data-id="${id}"]`);
+                if (el) el.remove();
             });
 
             // 3. Clear SVG Lines
@@ -587,26 +594,15 @@
                 const tgtPortEl = document.querySelector(`[data-port-id="${conn.target}:in"]`);
 
                 if (srcPortEl && tgtPortEl) {
-                    // We need coordinates relative to #canvas-setup (scale:1, origin 0,0)
-                    // portEl.getBoundingClientRect gives screen coords.
-                    // canvas.getBoundingClientRect gives screen coords of container (transformed)
-                    // But we want internal coords.
-
-                    // Simple offset calc:
-                    // For Target:
-                    // It's a child of node, so offsetLeft is relative to Node.
-                    // Correct: Node.x + Port.offsetLeft
-                    x1 = srcNode.x + srcPortEl.offsetLeft + 6; // +6 for center of 12px port
-                    y1 = srcNode.y + srcPortEl.offsetTop + 6;
-
                     x2 = tgtNode.x + tgtPortEl.offsetLeft + 6;
                     y2 = tgtNode.y + tgtPortEl.offsetTop + 6;
+
+                    x1 = srcNode.x + srcPortEl.offsetLeft + 6;
+                    y1 = srcNode.y + srcPortEl.offsetTop + 6;
                 }
 
                 else {
                     // Fallback if ports not found (shouldn't happen if nodes are rendered)
-                    // This part is largely from the original thought process and can be simplified
-                    // if port elements are guaranteed to exist.
                     x2 = tgtNode.x + 140; // Approx center of node
                     y2 = tgtNode.y - 6; // Approx top center
 
@@ -614,10 +610,24 @@
                         x1 = srcNode.x + 140;
                         y1 = srcNode.y + 100; // Approx bottom center
                     }
-
+                    else if (srcNode.type === 'list') {
+                        // List Handle Fallback
+                        let allRows = [];
+                        if (srcNode.data.sections) srcNode.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const rowIdx = allRows.findIndex(r => r.id === conn.sourceHandle);
+                        if (rowIdx >= 0) {
+                            const count = allRows.length;
+                            const step = 280 / (count + 1);
+                            x1 = srcNode.x + (step * (rowIdx + 1));
+                            y1 = srcNode.y + 100;
+                        } else {
+                            x1 = srcNode.x + 140;
+                            y1 = srcNode.y + 100;
+                        }
+                    }
                     else {
                         // Button Handle - approximate if port element not found
-                        const btnIdx = srcNode.data.buttons.findIndex(b => b.id === conn.sourceHandle);
+                        const btnIdx = srcNode.data.buttons ? srcNode.data.buttons.findIndex(b => b.id === conn.sourceHandle) : -1;
 
                         if (btnIdx >= 0) {
                             const count = srcNode.data.buttons.length;
@@ -681,6 +691,89 @@
             }
         }
 
+        function renderNodeContent(el, node) {
+            el.innerHTML = ''; // Clear to redraw internal structure
+
+            // Header
+            const header = document.createElement('div');
+            header.className = `node-header ${node.type}`;
+
+            let iconClass = 'bi-circle-fill';
+            let iconStyle = 'margin-right:8px; font-size: 1rem;';
+
+            if (node.type === 'start') { iconClass = 'bi-play-circle-fill'; iconStyle += 'color: #10b981;'; }
+            else if (node.type === 'message') { iconClass = 'bi-chat-text'; iconStyle += 'color: var(--primary);'; }
+            else if (node.type === 'buttons') { iconClass = 'bi-ui-checks'; iconStyle += 'color: #10b981;'; }
+            else if (['image', 'video', 'document'].includes(node.type)) { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
+            else if (node.type === 'condition') { iconClass = 'bi-shuffle'; iconStyle += 'color: #8b5cf6;'; }
+            else if (node.type === 'delay') { iconClass = 'bi-clock'; iconStyle += 'color: #64748b;'; }
+            else if (node.type === 'cta') { iconClass = 'bi-link-45deg'; iconStyle += 'color: #06b6d4;'; }
+            else if (node.type === 'list') { iconClass = 'bi-list-ul'; iconStyle += 'color: #ec4899;'; }
+
+            header.innerHTML = `
+                <i class="bi ${iconClass}" style="${iconStyle}"></i>
+                <span style="flex-grow:1; font-weight:600;">${capitalize(node.type)}</span>
+                ${node.type !== 'start' ? `<i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>` : ''}
+            `;
+            el.appendChild(header);
+
+            // Body
+            const body = document.createElement('div');
+            body.className = 'node-body';
+            if (node.type === 'start') {
+                body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">Trigger: ${node.data.trigger || 'keyword'}</div>`;
+            } else if (node.type === 'message') {
+                body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
+            } else if (node.type === 'buttons') {
+                body.innerText = node.data.text || '(Question)';
+            } else if (['image', 'video', 'document'].includes(node.type)) {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark"></i> <span>${node.type}</span></div>`;
+            } else if (node.type === 'cta') {
+                body.innerText = `CTA: ${node.data.buttonText || 'Link'}`;
+            } else if (node.type === 'list') {
+                const rowCount = node.data.sections ? node.data.sections.reduce((acc, s) => acc + s.rows.length, 0) : 0;
+                body.innerText = `${rowCount} Options`;
+            }
+            el.appendChild(body);
+
+            // Input Port
+            if (node.type !== 'start') {
+                el.appendChild(createPort(node.id, 'input', 'in'));
+            }
+
+            // Output Ports
+            if (node.type === 'buttons' && node.data.buttons) {
+                node.data.buttons.forEach((btn, idx) => {
+                    const count = node.data.buttons.length;
+                    const p = createPort(node.id, 'output', btn.id, idx, count);
+                    const lbl = document.createElement('span');
+                    lbl.innerText = btn.text.length > 10 ? btn.text.substring(0, 8) + '..' : btn.text;
+                    lbl.className = 'port-label';
+                    lbl.style.position = 'absolute';
+                    lbl.style.bottom = '-20px';
+                    lbl.style.left = '50%';
+                    lbl.style.transform = 'translateX(-50%)';
+                    lbl.style.fontSize = '0.7em';
+                    lbl.style.whiteSpace = 'nowrap';
+                    lbl.style.color = '#ccc';
+                    p.appendChild(lbl);
+                    el.appendChild(p);
+                });
+            } else if (node.type === 'list' && node.data.sections) {
+                let allRows = [];
+                node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                allRows.forEach((row, idx) => {
+                    const count = allRows.length;
+                    el.appendChild(createPort(node.id, 'output', row.id, idx, count));
+                });
+                if (allRows.length === 0) {
+                    el.appendChild(createPort(node.id, 'output', 'out'));
+                }
+            } else {
+                el.appendChild(createPort(node.id, 'output', 'out'));
+            }
+        }
+
         function getNodePreview(node) {
             if (node.type === 'message') return node.data.text;
 
@@ -688,6 +781,8 @@
 
             if (node.type === 'condition') return `If ${node.data.variable} ${node.data.condition} ${node.data.value}`;
             if (node.type === 'start') return 'Entry Point';
+            if (node.type === 'cta') return `CTA: ${node.data.buttonText}`;
+            if (node.type === 'list') return `List: ${node.data.text}`;
             return node.type;
         }
 
@@ -705,7 +800,7 @@
                 if (handleId === 'out') {
                     // default center
                 } else {
-                    // Button distribution
+                    // Button/List distribution
                     const step = 100 / (count + 1);
 
                     el.style.left = `${step * (idx + 1)}%`;
@@ -715,7 +810,7 @@
             }
 
             el.onmousedown = (e) => startConnection(e, nodeId, handleId, type);
-            el.onmouseup = (e) => endConnection(e, nodeId, handleId, type);
+            // el.onmouseup = (e) => endConnection(e, nodeId, handleId, type); // Removed: Handled globally
             return el;
         }
 
@@ -730,86 +825,116 @@
 
         function startConnection(e, nodeId, handle, type) {
             e.stopPropagation();
-            if (type !== 'output') return; // Only drag from Output
+            if (type !== 'output') return;
 
             isConnecting = true;
-
             startPort = {
                 nodeId,
                 handle,
                 type
             };
 
-            // Initial mouse pos
-            const rect = canvas.getBoundingClientRect();
-
+            // Initial mouse pos using robust container-relative math
+            const rect = container.getBoundingClientRect();
             currentMousePos = {
-                x: (e.clientX - rect.left) / state.scale,
-                y: (e.clientY - rect.top) / state.scale
+                x: (e.clientX - rect.left - state.pan.x) / state.scale,
+                y: (e.clientY - rect.top - state.pan.y) / state.scale
             };
 
             document.addEventListener('mousemove', handleConnectionMove);
             document.addEventListener('mouseup', handleGlobalMouseUp);
+            container.classList.add('dragging-connection');
         }
 
         function handleConnectionMove(e) {
-            const rect = canvas.getBoundingClientRect();
+            // Robust math: Mouse (Screen) -> Container (Screen) -> Remove Pan -> Scale
+            const rect = container.getBoundingClientRect();
 
             currentMousePos = {
-                x: (e.clientX - rect.left) / state.scale,
-                y: (e.clientY - rect.top) / state.scale
+                x: (e.clientX - rect.left - state.pan.x) / state.scale,
+                y: (e.clientY - rect.top - state.pan.y) / state.scale
             };
             render();
         }
 
         function handleGlobalMouseUp(e) {
 
-            // If we mouseup anywhere not on a port, cancel connection
-            if (!e.target.closest('.node-port')) {
-                isConnecting = false;
-                startPort = null;
-                document.removeEventListener('mousemove', handleConnectionMove);
-                document.removeEventListener('mouseup', handleGlobalMouseUp);
-                render();
-            }
-        }
-
-        function endConnection(e, nodeId, handle, type) {
-            e.stopPropagation();
-            // Stop global listeners first
-            document.removeEventListener('mousemove', handleConnectionMove);
-            document.removeEventListener('mouseup', handleGlobalMouseUp);
-
-            if (!isConnecting || !startPort) return;
-
-            if (type !== 'input') {
-                isConnecting = false;
-                startPort = null;
-                render();
+            if (!isConnecting || !startPort) {
+                cleanupDrag();
                 return;
             }
 
-            if (startPort.nodeId === nodeId) {
-                isConnecting = false;
-                startPort = null;
-                render();
-                return; // Self loop
+            let targetNodeId = null;
+            let targetHandle = 'in';
+
+            // 1. Standard DOM Hit Test
+            const portHit = e.target.closest('.node-port');
+            const nodeHit = e.target.closest('.flow-node');
+
+            if (portHit) {
+                const portId = portHit.dataset.portId;
+                const [nId, hId] = portId.split(':');
+                if (portHit.classList.contains('port-in')) {
+                    targetNodeId = nId;
+                    targetHandle = hId;
+                }
+            } else if (nodeHit) {
+                targetNodeId = nodeHit.dataset.id;
             }
 
-            // Create Connection
-            state.connections.push({
-                id: `c_${Date.now()}`,
-                source: startPort.nodeId,
-                sourceHandle: startPort.handle,
-                target: nodeId,
-                targetHandle: 'in'
-            });
+            // 2. Fallback: Manual Geometric Hit Test
+            if (!targetNodeId) {
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
 
-            isConnecting = false;
-            startPort = null;
+                const renderedNodes = document.querySelectorAll('.flow-node');
+                for (const el of renderedNodes) {
+                    const rect = el.getBoundingClientRect();
+                    // Check if mouse is within this node's box
+                    if (mouseX >= rect.left && mouseX <= rect.right &&
+                        mouseY >= rect.top && mouseY <= rect.bottom) {
+
+                        targetNodeId = el.dataset.id;
+                        targetHandle = 'in';
+                        break;
+                    }
+                }
+            }
+
+            // 3. Perform Connection
+            if (targetNodeId) {
+                const targetNode = state.nodes.find(n => n.id === targetNodeId);
+
+                if (targetNodeId !== startPort.nodeId && targetNode && targetNode.type !== 'start') {
+
+                    state.connections.push({
+                        id: `c_${Date.now()}`,
+                        source: startPort.nodeId,
+                        sourceHandle: startPort.handle,
+                        target: targetNodeId,
+                        targetHandle: targetHandle
+                    });
+
+                    cleanupDrag();
+                    render();
+                    return;
+                }
+            }
+
+            // Cancel if nothing valid hit
+            cleanupDrag();
             render();
         }
 
+        function cleanupDrag() {
+            isConnecting = false;
+            startPort = null;
+            document.removeEventListener('mousemove', handleConnectionMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+            container.classList.remove('dragging-connection');
+        }
+
+        // Removed endConnection as it is now handled globally
         function removeConnection(id) {
             state.connections = state.connections.filter(c => c.id !== id);
             render();
@@ -870,6 +995,48 @@
 
             if (node.type === 'condition') {
                 content += ` <div class="mb-3"><label class="form-label">Variable</label><input type="text" class="form-control-glass" value="${node.data.variable || 'lastResponse'}" oninput="updateNodeProperty('${node.id}', 'variable', this.value)"></div><div class="mb-3"><label class="form-label">Condition</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'condition', this.value)"><option value="equals"${node.data.condition === 'equals' ? ' selected' : ''}>Equals</option><option value="contains"${node.data.condition === 'contains' ? ' selected' : ''}>Contains</option><option value="regex"${node.data.condition === 'regex' ? ' selected' : ''}>Regex</option><option value="exists"${node.data.condition === 'exists' ? ' selected' : ''}>Exists</option></select></div><div class="mb-3"><label class="form-label">Value</label><input type="text" class="form-control-glass" value="${node.data.value || ''}" oninput="updateNodeProperty('${node.id}', 'value', this.value)"></div>`;
+            }
+
+            // CTA
+            if (node.type === 'cta') {
+                content += `
+                    <div class="mb-3"><label class="form-label">Body Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>
+                    <div class="mb-3"><label class="form-label">Button Text</label><input type="text" class="form-control-glass" value="${node.data.buttonText || ''}" oninput="updateNodeProperty('${node.id}', 'buttonText', this.value)"></div>
+                    <div class="mb-3"><label class="form-label">Action Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'ctaType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="url"${node.data.ctaType === 'url' ? ' selected' : ''}>Open URL</option><option value="phone"${node.data.ctaType === 'phone' ? ' selected' : ''}>Call Phone</option></select></div>
+                 `;
+                if (node.data.ctaType === 'url') {
+                    content += `<div class="mb-3"><label class="form-label">URL</label><input type="text" class="form-control-glass" value="${node.data.url || ''}" placeholder="https://..." oninput="updateNodeProperty('${node.id}', 'url', this.value)"></div>`;
+                } else {
+                    content += `<div class="mb-3"><label class="form-label">Phone Number</label><input type="text" class="form-control-glass" value="${node.data.phoneNumber || ''}" placeholder="+1234..." oninput="updateNodeProperty('${node.id}', 'phoneNumber', this.value)"></div>`;
+                }
+                content += `<div class="mb-3"><label class="form-label">Footer (Optional)</label><input type="text" class="form-control-glass" value="${node.data.footer || ''}" oninput="updateNodeProperty('${node.id}', 'footer', this.value)"></div>`;
+            }
+
+            // LIST
+            if (node.type === 'list') {
+                content += `
+                    <div class="mb-3"><label class="form-label">Body Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>
+                    <div class="mb-3"><label class="form-label">Menu Button Text</label><input type="text" class="form-control-glass" value="${node.data.buttonText || ''}" oninput="updateNodeProperty('${node.id}', 'buttonText', this.value)"></div>
+                    <div class="mb-3"><label class="form-label">Title (Header)</label><input type="text" class="form-control-glass" value="${node.data.header || ''}" placeholder="Optional Header" oninput="updateNodeProperty('${node.id}', 'header', this.value)"></div>
+                    <div class="mb-3"><label class="form-label">List Items</label>
+                 `;
+
+                const sections = node.data.sections || [];
+                sections.forEach((sec, sIdx) => {
+                    // Simple implementation: Just one section for now or user can edit title.
+                    // Render Rows
+                    content += `<div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-control-glass form-control-sm mb-2" value="${sec.title}" placeholder="Section Title" oninput="updateListSection('${node.id}', ${sIdx}, 'title', this.value)" style="font-weight: 600;">
+                        <div id="list-rows-${node.id}-${sIdx}">`;
+
+                    sec.rows.forEach((row, rIdx) => {
+                        content += `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${row.title}" placeholder="Item Title" oninput="updateListRow('${node.id}', ${sIdx}, ${rIdx}, 'title', this.value)"><button class="btn-glass" onclick="removeListRow('${node.id}', ${sIdx}, ${rIdx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`;
+                    });
+
+                    content += `</div><button class="btn-glass w-100 mt-2" onclick="addListRow('${node.id}', ${sIdx})"><i class="bi bi-plus"></i> Add Item</button></div>`;
+                });
+
+                content += `</div>`; // Close List Items
             }
 
             // Media Types
@@ -1022,11 +1189,19 @@
                     ;
 
                 if (c.sourceHandle && c.sourceHandle !== 'out') {
+                    // Find the button or list text corresponding to this handle
                     const node = state.nodes.find(n => n.id === c.source);
 
                     if (node && node.data.buttons) {
                         const btn = node.data.buttons.find(b => b.id === c.sourceHandle);
                         if (btn) connOffset.label = btn.text;
+                    }
+                    if (node && node.data.sections) {
+                        // List
+                        let allRows = [];
+                        node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const row = allRows.find(r => r.id === c.sourceHandle);
+                        if (row) connOffset.label = row.title;
                     }
                 }
 
@@ -1190,6 +1365,29 @@
                 node.data = { url: '', caption: '' };
             } else if (type === 'delay') {
                 node.data = { delay: 3 };
+            } else if (type === 'cta') {
+                node.data = {
+                    text: 'Visit our website for more info.',
+                    ctaType: 'url',
+                    url: 'https://example.com',
+                    buttonText: 'Visit Now',
+                    footer: ''
+                };
+            } else if (type === 'list') {
+                node.data = {
+                    text: 'Please select an option from the menu.',
+                    buttonText: 'Show Menu',
+                    header: 'Menu',
+                    sections: [
+                        {
+                            title: 'Main Section',
+                            rows: [
+                                { id: 'row_' + Date.now() + '_1', title: 'Option 1', description: '' },
+                                { id: 'row_' + Date.now() + '_2', title: 'Option 2', description: '' }
+                            ]
+                        }
+                    ]
+                };
             }
 
             state.nodes.push(node);
@@ -1330,6 +1528,49 @@
 
                 showNodeProperties(node); // Update panel
                 render(); // Update canvas
+            }
+        }
+
+        function updateListSection(nodeId, sIdx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                node.data.sections[sIdx][key] = value;
+                render();
+            }
+        }
+
+        function updateListRow(nodeId, sIdx, rIdx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx] && node.data.sections[sIdx].rows[rIdx]) {
+                node.data.sections[sIdx].rows[rIdx][key] = value;
+                render(); // Update canvas (ports might move if we add/remove - but this corresponds to text)
+            }
+        }
+
+        function addListRow(nodeId, sIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                node.data.sections[sIdx].rows.push({
+                    id: 'row_' + Date.now(),
+                    title: 'New Option',
+                    description: ''
+                });
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        function removeListRow(nodeId, sIdx, rIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                const rowId = node.data.sections[sIdx].rows[rIdx].id;
+                node.data.sections[sIdx].rows.splice(rIdx, 1);
+
+                // Remove connections
+                state.connections = state.connections.filter(c => c.sourceHandle !== rowId);
+
+                showNodeProperties(node);
+                render();
             }
         }
 
