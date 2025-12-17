@@ -272,37 +272,97 @@
         </div>
     </div>
 
-    <!-- Flow Settings Modal -->
     <div class="modal fade" id="flowSettingsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Flow Settings</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-5"><i class="bi bi-gear-fill me-2"></i>Flow Configuration</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <form id="flowSettingsForm">
-                        <div class="mb-3">
-                            <label class="form-label">Flow Name</label>
-                            <input type="text" class="form-control" id="flow-name" value="New Flow">
+                        <!-- General Section -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                style="font-size: 0.75rem; letter-spacing: 1px;">General</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i
+                                        class="bi bi-tag text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="flow-name"
+                                    value="New Flow" placeholder="Name your flow...">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Trigger Keyword</label>
-                            <input type="text" class="form-control" id="flow-trigger" placeholder="e.g. promo2024">
+
+                        <!-- Schedule Section -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                style="font-size: 0.75rem; letter-spacing: 1px;">Scheduling</label>
+                            <div class="card bg-light border-0">
+                                <div class="card-body p-3">
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted mb-1">Start Time</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0"><i
+                                                    class="bi bi-calendar-event text-primary"></i></span>
+                                            <input type="datetime-local" class="form-control border-start-0 ps-0"
+                                                id="flow-schedule-time">
+                                        </div>
+                                    </div>
+                                    <div class="mb-0">
+                                        <label class="form-label small text-muted mb-1">Frequency</label>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="repeatOptions" id="repeat-once"
+                                                value="once" checked onclick="updateRepeatSelect('once')">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="repeat-once">Once</label>
+
+                                            <input type="radio" class="btn-check" name="repeatOptions" id="repeat-daily"
+                                                value="daily" onclick="updateRepeatSelect('daily')">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="repeat-daily">Daily</label>
+
+                                            <input type="radio" class="btn-check" name="repeatOptions"
+                                                id="repeat-weekly" value="weekly"
+                                                onclick="updateRepeatSelect('weekly')">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="repeat-weekly">Weekly</label>
+                                        </div>
+                                        <!-- Hidden select for compatibility -->
+                                        <select class="form-select d-none" id="flow-schedule-repeat">
+                                            <option value="once">Run Once</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Recipients</label>
-                            <select class="form-select" id="flow-recipients" multiple size="5">
-                                <option value="all">All Leads</option>
-                                <!-- Leads will be populated here -->
-                            </select>
-                            <div class="form-text">Hold Ctrl to select multiple specific leads (or 'All Leads')</div>
+
+                        <!-- Audience Section -->
+                        <div class="mb-0">
+                            <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                                style="font-size: 0.75rem; letter-spacing: 1px;">Target Audience</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 align-items-start pt-2"><i
+                                        class="bi bi-people text-muted"></i></span>
+                                <select class="form-select border-start-0 ps-0" id="flow-recipients" multiple size="4">
+                                    <option value="all">All Leads</option>
+                                    <!-- Leads will be populated here -->
+                                </select>
+                            </div>
+                            <div class="form-text small text-end mt-1 text-muted"><i
+                                    class="bi bi-info-circle me-1"></i>Hold Ctrl/Cmd to select multiple</div>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="saveFlowSettings()">Save Settings</button>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none"
+                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm"
+                        onclick="saveFlowSettings()">
+                        <i class="bi bi-check-lg me-1"></i> Apply
+                    </button>
                 </div>
             </div>
         </div>
@@ -894,6 +954,10 @@
                 modal.show();
             }
 
+            function updateRepeatSelect(value) {
+                document.getElementById('flow-schedule-repeat').value = value;
+            }
+
             function saveFlowSettings() {
                 // Just close the modal for now, verify fields
                 const modal = bootstrap.Modal.getInstance(document.getElementById('flowSettingsModal'));
@@ -909,7 +973,8 @@
 
                 // Get settings
                 const name = document.getElementById('flow-name').value || 'Untitled Flow';
-                const trigger = document.getElementById('flow-trigger').value || '';
+                const scheduleTime = document.getElementById('flow-schedule-time').value;
+                const scheduleRepeat = document.getElementById('flow-schedule-repeat').value || 'once';
                 const recipientSelect = document.getElementById('flow-recipients');
 
                 // Build Recipient Config
@@ -923,17 +988,21 @@
                     recipientConfig.phones = selectedOptions;
                 }
 
-                // Require trigger
-                if (!trigger) {
-                    alert('Please set a trigger keyword in Settings.');
+                // Require schedule time
+                if (!scheduleTime) {
+                    alert('Please set a Schedule Start Time in Settings.');
                     openFlowSettings();
                     return;
                 }
 
                 const flowData = {
                     name,
-                    trigger,
-                    triggerType: 'contains',
+                    trigger: 'Scheduled', // Required by schema, used as placeholder
+                    triggerType: 'scheduled',
+                    schedule: {
+                        nextRun: new Date(scheduleTime), // Use nextRun for the scheduler
+                        repeat: scheduleRepeat
+                    },
                     nodes,
                     connections,
                     recipientConfig,
@@ -970,7 +1039,7 @@
                 const flowData = {
                     nodes,
                     connections,
-                    trigger: document.getElementById('flow-trigger').value || 'test',
+                    trigger: 'test',
                 };
 
                 try {
