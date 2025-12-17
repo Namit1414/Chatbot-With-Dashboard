@@ -236,7 +236,8 @@ async function continueFlow(phone, message) {
                 nextNode = flow.nodes.find(n => n.id === buttonConnection.target);
             } else {
                 // Fallback to default next node logic
-                nextNode = findNextNode(flow, currentNode.id);
+                // Pass session for smart routing!
+                nextNode = findNextNode(flow, currentNode.id, message, session);
             }
 
             if (nextNode) {
@@ -280,33 +281,7 @@ async function continueFlow(phone, message) {
 /**
  * Find the next node in the flow
  */
-function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
-    // Find connections from current node
-    const connections = flow.connections?.filter(c => c.source === currentNodeId) || [];
 
-    if (connections.length === 0) {
-        // No connections, check for sequential next node
-        const currentIndex = flow.nodes.findIndex(n => n.id === currentNodeId);
-        if (currentIndex >= 0 && currentIndex < flow.nodes.length - 1) {
-            return flow.nodes[currentIndex + 1];
-        }
-        return null;
-    }
-
-    // If there's a conditional connection, evaluate it
-    for (const connection of connections) {
-        if (connection.label) {
-            // Conditional branch - check if condition matches
-            if (evaluateCondition(connection.label, userMessage, session)) {
-                return flow.nodes.find(n => n.id === connection.target);
-            }
-        }
-    }
-
-    // Take first connection (default path)
-    const firstConnection = connections[0];
-    return flow.nodes.find(n => n.id === firstConnection.target);
-}
 
 /**
  * Evaluate conditional logic
@@ -531,52 +506,111 @@ async function executeDelayNode(phone, flow, node) {
 
 
 /**
+ * Helper to check if a condition node evaluates to true
+ */
+function isConditionMet(node, session) {
+    if (!node || node.type !== 'condition') return false;
+
+    const variable = node.data.variable || 'lastResponse';
+    const conditionType = node.data.condition || 'equals';
+    const targetValue = (node.data.value || '').toLowerCase().trim();
+
+    // Get actual value from session variables
+    const actualValue = (session?.variables[variable] || '').toLowerCase().trim();
+
+    // console.log(`[ConditionCheck] ${variable} ("${actualValue}") ${conditionType} "${targetValue}"`);
+
+    switch (conditionType) {
+        case 'equals':
+            return actualValue === targetValue;
+        case 'contains':
+            return actualValue.includes(targetValue);
+        case 'regex':
+            try {
+                const regex = new RegExp(targetValue, 'i');
+                return regex.test(actualValue);
+            } catch (e) {
+                console.error('Invalid Regex:', e);
+                return false;
+            }
+        default:
+            return actualValue === targetValue;
+    }
+}
+
+/**
  * Execute condition node
  */
 async function executeConditionNode(phone, flow, node) {
     console.log(`Executing Condition Node ${node.id}`);
-    const targetValue = (node.data.value || '').toLowerCase().trim();
 
-    // Use get() directly
+    // Check condition
     const session = flowSessions.get(phone);
+    const passed = isConditionMet(node, session);
 
-
-    // Get actual value from session variables
-    // Default to empty string to avoid crashes
-    const actualValue = (session?.variables[variable] || '').toLowerCase().trim();
-
-    console.log(`Condition Check: Variable=${variable}, Actual="${actualValue}" ${conditionType} Target="${targetValue}"`);
-
-    let isMatch = false;
-    if (conditionType === 'equals') {
-        isMatch = actualValue === targetValue;
-    } else if (conditionType === 'contains') {
-        isMatch = actualValue.includes(targetValue);
-    } else if (conditionType === 'regex') {
-        try {
-            const regex = new RegExp(targetValue, 'i');
-            isMatch = regex.test(actualValue);
-        } catch (e) {
-            console.error('Invalid Regex in condition:', e);
-        }
+    if (!passed) {
+        console.log('Condition Failed. Stopping flow path.');
+        return { type: 'no_reply' };
     }
 
-    if (!isMatch) {
-        console.log('Condition Failed: Stopping flow or taking false branch (not impl).');
-        return { type: 'no_reply' }; // Stop flow gracefully (no AI fallback)
-    }
+    console.log('Condition Passed. Proceeding.');
 
-    console.log('Condition Passed: Proceeding to next node.');
-
-    // Evaluate condition and find appropriate next node
-    // Pass null/empty for label matching since we handled logic here
-    const nextNode = findNextNode(flow, node.id);
+    // Find next node (pass null/empty session to avoid recursive condition check if not needed, 
+    // but here we just want the linear next node after the condition)
+    const nextNode = findNextNode(flow, node.id, null, session);
 
     if (nextNode) {
         return await executeNode(phone, flow, nextNode);
     }
 
     return { type: 'no_reply' };
+}
+
+/**
+ * Find the next node in the flow
+ */
+function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
+    // Find connections from current node
+    const connections = flow.connections?.filter(c => c.source === currentNodeId) || [];
+
+    if (connections.length === 0) {
+        // No connections, check for sequential next node
+        const currentIndex = flow.nodes.findIndex(n => n.id === currentNodeId);
+        if (currentIndex >= 0 && currentIndex < flow.nodes.length - 1) {
+            return flow.nodes[currentIndex + 1];
+        }
+        return null;
+    }
+
+    // 1. Check for labeled connections (Explicit branching)
+    for (const connection of connections) {
+        if (connection.label && userMessage) {
+            // Check if label matches message
+            // Evaluate condition connection.label vs userMessage if needed
+            // Reuse evaluateCondition helper for connection labels
+            if (evaluateCondition(connection.label, userMessage, session)) {
+                return flow.nodes.find(n => n.id === connection.target);
+            }
+        }
+    }
+
+    // 2. Check for connections to Condition Nodes (Implicit branching by Condition)
+    // If we have connections to condition nodes, we should peek to see which one is true.
+    for (const connection of connections) {
+        const targetNode = flow.nodes.find(n => n.id === connection.target);
+        if (targetNode && targetNode.type === 'condition') {
+            // We need the session to evaluate
+            if (session && isConditionMet(targetNode, session)) {
+                console.log(`[SmartRoute] Route found via Condition Node: ${targetNode.id}`);
+                return targetNode;
+            }
+        }
+    }
+
+    // 3. Fallback: Take first connection (default path, e.g. "always continue")
+    // Use this if no specific condition matched
+    const firstConnection = connections[0];
+    return flow.nodes.find(n => n.id === firstConnection.target);
 }
 
 /**
