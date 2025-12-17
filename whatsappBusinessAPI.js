@@ -31,13 +31,28 @@ export async function sendWhatsAppBusinessMessage(to, messageData, token, phoneN
                 requestBody = buildListMessage(to, messageData);
                 break;
             case 'image':
-                requestBody = buildMediaMessage(to, 'image', messageData);
+                if (messageData.url) {
+                    requestBody = buildMediaMessage(to, 'image', messageData);
+                } else {
+                    requestBody.type = "text";
+                    requestBody.text = { body: messageData.caption || 'Image placeholder (No URL provided)' };
+                }
                 break;
             case 'video':
-                requestBody = buildMediaMessage(to, 'video', messageData);
+                if (messageData.url) {
+                    requestBody = buildMediaMessage(to, 'video', messageData);
+                } else {
+                    requestBody.type = "text";
+                    requestBody.text = { body: messageData.caption || 'Video placeholder (No URL provided)' };
+                }
                 break;
             case 'document':
-                requestBody = buildDocumentMessage(to, messageData);
+                if (messageData.url) {
+                    requestBody = buildDocumentMessage(to, messageData);
+                } else {
+                    requestBody.type = "text";
+                    requestBody.text = { body: messageData.caption || 'Document placeholder (No URL provided)' };
+                }
                 break;
             default:
                 // Fallback to text
@@ -168,8 +183,15 @@ function buildListMessage(to, messageData) {
                 text: messageData.content || 'Select an option'
             },
             action: {
-                button: "View Options",
-                sections: [
+                button: messageData.buttonText || "View Options",
+                sections: messageData.sections ? messageData.sections.map(sec => ({
+                    title: sec.title.substring(0, 24),
+                    rows: sec.rows.map(row => ({
+                        id: row.id,
+                        title: row.title.substring(0, 24),
+                        description: row.description ? row.description.substring(0, 72) : ''
+                    }))
+                })) : [
                     {
                         title: "Options",
                         rows: items.map((item, idx) => ({
