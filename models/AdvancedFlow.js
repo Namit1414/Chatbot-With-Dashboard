@@ -56,6 +56,7 @@ const advancedFlowSchema = new mongoose.Schema({
             buttons: [{
                 id: String,
                 text: String,
+                reply: String, // ✅ Added reply field
                 type: { type: String, enum: ['reply', 'url', 'call'] },
                 value: String // URL or phone number
             }],
