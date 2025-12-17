@@ -193,7 +193,6 @@ async function continueFlow(phone, message) {
 
         if (clickedButton) {
             console.log(`✓ Button clicked: "${clickedButton.text}"`);
-            console.log(`✓ Sending reply: "${clickedButton.reply || clickedButton.value || clickedButton.text}"`);
 
             // Store in session
             session.variables.lastButtonClicked = clickedButton.text;
@@ -202,28 +201,56 @@ async function continueFlow(phone, message) {
             // Track button click
             await updateFlowStats(flow._id, 'clicked');
 
-            // Send the preset reply message immediately
-            // Use reply field if available, fallback to value, then text
+            // 1. Send the "button reply" message (feedback) immediately
             const replyText = clickedButton.reply || clickedButton.value || clickedButton.text;
             const replyMessage = {
                 type: 'text',
                 content: personalizeMessage(replyText, phone, session)
             };
 
-            // Find next node to continue flow
-            const nextNode = findNextNode(flow, currentNode.id);
+            // Helper to send async feedback message
+            if (process.env.WHATSAPP_TOKEN && process.env.PHONE_NUMBER_ID) {
+                // Dynamically import to avoid circular dependency issues at top level if any
+                const { sendWhatsAppBusinessMessage } = await import('./whatsappBusinessAPI.js');
+                await sendWhatsAppBusinessMessage(
+                    phone,
+                    { ...replyMessage, messageType: 'text' },
+                    process.env.WHATSAPP_TOKEN,
+                    process.env.PHONE_NUMBER_ID
+                );
+            } else {
+                console.log(`[MockSend] Feedback message: "${replyMessage.content}"`);
+            }
+
+            // 2. Determine connection based on button label
+            // We need to look for a connection where label matches button text OR ID
+            let nextNode = null;
+
+            // First check for specific button connection
+            const buttonConnection = flow.connections?.find(c =>
+                c.source === currentNode.id &&
+                (c.label === clickedButton.text || c.label === clickedButton.id)
+            );
+
+            if (buttonConnection) {
+                nextNode = flow.nodes.find(n => n.id === buttonConnection.target);
+            } else {
+                // Fallback to default next node logic
+                nextNode = findNextNode(flow, currentNode.id);
+            }
 
             if (nextNode) {
                 // Update session to next node
                 session.currentNodeId = nextNode.id;
                 session.nodeHistory.push(nextNode.id);
 
-                // Return the reply message (next node will be executed on next user message)
-                return replyMessage;
+                // 3. EXECUTE NEXT NODE IMMEDIATELY
+                console.log(`[AutoFlow] Proceeding to next node: ${nextNode.id} (${nextNode.type})`);
+                return await executeNode(phone, flow, nextNode);
             } else {
                 // No next node - flow ends after this reply
                 endFlowSession(phone);
-                return replyMessage;
+                return replyMessage; // Return the feedback as the final result
             }
         } else {
             console.log('⚠️ No button matched. Treating as raw input.');
