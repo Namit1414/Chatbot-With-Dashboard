@@ -14,6 +14,16 @@ export async function runFlow(phone, message) {
 
   console.log(`[UnifiedHandler] runFlow called for ${phone} msg="${message}"`);
 
+  // 0️⃣ GLOBAL OVERRIDE: Check if this is a NEW USER
+  // If not in progress AND not already a lead, force start the lead flow
+  if (!isLeadInProgress(phone)) {
+    const isRegistered = await hasExistingLead(phone);
+    if (!isRegistered) {
+      console.log(`[UnifiedHandler] New user detected: ${phone}. Forcing Lead Capture Flow.`);
+      return startLeadFlow(phone);
+    }
+  }
+
   // 1️⃣ Check Advanced Flows FIRST (Visual Flow Builder flows)
   // This ensures active flow sessions take precedence over legacy lead capture
   const advancedFlowResult = await executeAdvancedFlow(phone, message);
@@ -40,15 +50,9 @@ export async function runFlow(phone, message) {
   const excel = getExcelReply(message);
   if (excel) {
 
-    // 🔒 Greeting intent
+    // 🔒 Greeting intent (Fallback for already registered users)
     if (excel.intent === "greeting") {
-      // ✅ Already registered user
-      if (await hasExistingLead(phone)) {
-        return "👋 Welcome back! How can I help you today?";
-      }
-
-      // 🆕 New user → start lead capture
-      return startLeadFlow(phone);
+      return "👋 Welcome back! How can I help you today?";
     }
 
     return excel.response;
