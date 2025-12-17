@@ -534,7 +534,7 @@ function isConditionMet(node, session) {
     // Get actual value from session variables
     const actualValue = (session?.variables[variable] || '').toLowerCase().trim();
 
-    // console.log(`[ConditionCheck] ${variable} ("${actualValue}") ${conditionType} "${targetValue}"`);
+    console.log(`[ConditionCheck] ${variable} ("${actualValue}") ${conditionType} "${targetValue}"`);
 
     switch (conditionType) {
         case 'equals':
@@ -611,10 +611,13 @@ function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
     }
 
     // 2. Check for connections to Condition Nodes (Implicit branching by Condition)
-    // If we have connections to condition nodes, we should peek to see which one is true.
+    // AND detection of condition mode to prevent fallback
+    let hasConditionConnections = false;
+
     for (const connection of connections) {
         const targetNode = flow.nodes.find(n => n.id === connection.target);
         if (targetNode && targetNode.type === 'condition') {
+            hasConditionConnections = true;
             // We need the session to evaluate
             if (session && isConditionMet(targetNode, session)) {
                 console.log(`[SmartRoute] Route found via Condition Node: ${targetNode.id}`);
@@ -623,8 +626,15 @@ function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
         }
     }
 
+    // If we checked condition nodes and none matched, we should STOP here.
+    // Do NOT fallback to the first connection, as that would execute the wrong branch.
+    if (hasConditionConnections) {
+        console.log('[SmartRoute] Condition nodes present but none matched. Stopping.');
+        return null;
+    }
+
     // 3. Fallback: Take first connection (default path, e.g. "always continue")
-    // Use this if no specific condition matched
+    // Use this only if no specific condition check was involved (e.g. linear flow)
     const firstConnection = connections[0];
     return flow.nodes.find(n => n.id === firstConnection.target);
 }
