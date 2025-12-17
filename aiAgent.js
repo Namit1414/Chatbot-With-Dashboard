@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import "dotenv/config";
-import Lead from "./models/Lead.js"; // Import the Lead model
+import Lead from "./models/Lead.js";
+import Message from "./models/Message.js";
 
 const { OPENROUTER_API_KEY } = process.env;
 
@@ -13,21 +14,18 @@ STRICT RULES:
 - DO NOT mention prices, plans, payments, refunds, or policies unless explicitly provided.
 - Keep replies conversational and short, like a real person texting.
 - When asked what you know about the user, you MUST use the user information provided below to answer.
-- When the user gives you the date and time, it is just for the call appointment with Bodyfystudio's executive, not for anything else.
-- If you are unsure, reply: "Sorry, I couldn’t help with that."
+- When the user gives you the date and time, it is just for the appointment with Bodyfystudio's executive, not for anything else.
+- If you are unsure, reply: "Sorry, I couldn't help with that."
 
 Use this info to answer:
-- BodyfyStudio's Address is D-260, Central Market, Shastri Nagar, Meerut-250004
-- We offer personalized online Health and Wellness coaching.
+- We offer personalized online fitness coaching.
 - We create custom workout and meal plans.
-- We have certified Health Coaches who provide 1-on-1 support.
+- We have certified trainers who provide 1-on-1 support.
 - We focus on sustainable results and building healthy habits.
 - IMPORTANT: If the user information below contains a Name, do NOT ask for their name again. Refer to them by name.
 `;
 
-// In-memory store for conversation histories
-const conversations = {};
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 30; // Number of recent messages to fetch from database
 
 // Utility to sanitize phone numbers
 function sanitizePhone(phone) {
@@ -72,21 +70,35 @@ Here is the FULL information about the user you are talking to:`;
 - Preferred Time: ${user.preferred_time}`;
     }
 
-    // 3. Get or create the user's conversation history
-    if (!conversations[sanitizedPhone]) {
-      conversations[sanitizedPhone] = [];
-    }
-    const userHistory = conversations[sanitizedPhone];
+    // 3. Fetch recent message history from database
+    const recentMessages = await Message.find({
+      $or: [
+        { from: sanitizedPhone },
+        { to: sanitizedPhone }
+      ]
+    })
+      .sort({ timestamp: -1 })
+      .limit(MAX_HISTORY);
 
-    // 4. Ensure the system message is always up-to-date with the latest persona
-    if (userHistory.length === 0 || userHistory[0].role !== "system") {
-      userHistory.unshift({ role: "system", content: currentPersona });
-    } else {
-      userHistory[0].content = currentPersona; // Update with latest data
-    }
+    // 4. Build conversation history from database messages
+    const userHistory = [{ role: "system", content: currentPersona }];
 
-    // 5. Add the new user message to the history
+    // Reverse to get chronological order (oldest to newest)
+    recentMessages.reverse().forEach(msg => {
+      // Messages FROM the user are 'user' role
+      if (msg.from === sanitizedPhone) {
+        userHistory.push({ role: "user", content: msg.text });
+      }
+      // Messages TO the user are 'assistant' role
+      else if (msg.to === sanitizedPhone) {
+        userHistory.push({ role: "assistant", content: msg.text });
+      }
+    });
+
+    // 5. Add the current user message to the history
     userHistory.push({ role: "user", content: message });
+
+    console.log(`📚 Using ${recentMessages.length} messages from history for ${sanitizedPhone}`);
 
     // 6. Make the API call
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -104,34 +116,22 @@ Here is the FULL information about the user you are talking to:`;
     if (!res.ok) {
       const errorData = await res.text();
       console.error("OpenRouter API Error:", res.status, errorData);
-      return "Sorry, I couldn’t help with that.";
+      return "Sorry, I couldn't help with that.";
     }
 
     const data = await res.json();
 
     if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
       console.error("Invalid response structure from OpenRouter API:", data);
-      return "Sorry, I couldn’t help with that.";
+      return "Sorry, I couldn't help with that.";
     }
 
     const aiMessage = data.choices[0].message.content;
     console.log("🤖 AI reply:", aiMessage);
 
-    // 7. Add AI's reply to history
-    userHistory.push({ role: "assistant", content: aiMessage });
-
-    // 8. Trim history to not exceed MAX_HISTORY
-    if (userHistory.length > MAX_HISTORY) {
-      const systemMessage = userHistory.shift(); // Keep the system message
-      while (userHistory.length >= MAX_HISTORY) {
-        userHistory.shift(); // Remove oldest messages
-      }
-      userHistory.unshift(systemMessage); // Add it back to the start
-    }
-
     return aiMessage;
   } catch (e) {
     console.error("Error in aiReply:", e);
-    return "Sorry, I couldn’t help with that.";
+    return "Sorry, I couldn't help with that.";
   }
 }
