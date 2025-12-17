@@ -165,7 +165,13 @@
             align-items: center;
             gap: 10px;
             font-size: 0.95rem;
+        }
 
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         .form-control-glass {
@@ -511,7 +517,7 @@
                 header.innerHTML = `
                     <i class="bi ${iconClass}" style="${iconStyle}"></i>
                     <span style="flex-grow:1; font-weight:600;">${capitalize(node.type)}</span>
-                    <i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>
+                    ${node.type !== 'start' ? `<i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>` : ''}
                 `;
                 el.appendChild(header);
 
@@ -821,7 +827,8 @@
             let content = '';
 
             // Common: ID (Read-only)
-            content += ` <div class="mb-3"><label class="form-label">Node ID</label><input type="text" class="form-control-glass" value="${node.id}" disabled style="opacity:0.7"></div>`;
+            // Common: ID (Read-only) - HIDDEN as per request
+            // content += ` <div class="mb-3"><label class="form-label">Node ID</label><input type="text" class="form-control-glass" value="${node.id}" disabled style="opacity:0.7"></div>`;
 
             // Type Specific
             if (node.type === 'start') {
