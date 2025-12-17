@@ -267,8 +267,8 @@ async function continueFlow(phone, message) {
         console.log('Flow ended (no next node).');
         logToFile(`[FlowEnd] No next node after ${currentNode.id}`);
         endFlowSession(phone);
-        // RETURN SPECIAL TYPE TO PREVENT AI FALLBACK
-        return { type: 'flow_complete' };
+        // Return null to allow fallback to AI if no more nodes in flow
+        return null;
     }
 
     // Execute next node
