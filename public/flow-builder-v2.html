@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Builder Pro</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Bootstrap grid only for layout helpers -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-dark-secondary: #1e293b;
+            --primary: #6366f1;
+            /* Indigo */
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+
+            --node-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            /* Canvas handles scroll */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Background Mesh Gradient */
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.15), transparent 25%);
+        }
+
+        /* --- UI OVERLAYS (Glassmorphism) --- */
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            pointer-events: none;
+            /* Pass clicks to canvas */
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "palette canvas properties";
+            grid-template-rows: 70px 1fr;
+            grid-template-columns: 260px 1fr 300px;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            pointer-events: auto;
+            /* Capture clicks */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .top-bar {
+            grid-area: header;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            /* Wider padding */
+            height: 80px;
+            /* Taller header */
+            gap: 20px;
+            /* Gap between children */
+            pointer-events: auto;
+        }
+
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            /* Space between Icon and Text */
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .app-title i {
+            color: var(--primary);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 10px var(--primary-glow));
+        }
+
+        .app-title span span {
+            /* "Pro" text style */
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.7em !important;
+            margin-left: 12px !important;
+            vertical-align: middle;
+            font-weight: 500 !important;
+            opacity: 0.9 !important;
+        }
+
+        .actions {
+            display: flex;
+            gap: 16px;
+            /* Space between buttons */
+            align-items: center;
+        }
+
+        /* ... existing btn-glass ... */
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.05);
+            /* Slightly more transparent */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 20px;
+            /* Larger click area */
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+
+        }
+
+        .form-control-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            padding: 10px 14px;
+            width: 100%;
+            margin-bottom: 1px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-control-glass:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .form-control-glass option {
+            background-color: var(--bg-dark-secondary);
+            color: white;
+        }
+
+        /* Dark Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Node Styling */
+        .flow-node {
+            width: var(--node-width);
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            z-index: 10;
+        }
+
+        .flow-node.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow), 0 20px 40px -5px rgba(0, 0, 0, 0.4);
+            z-index: 20;
+        }
+
+        .node-header {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            color: white;
+            border-radius: 12px 12px 0 0;
+            cursor: grab;
+        }
+
+        .node-header.start {
+            border-bottom-color: #10b981;
+        }
+
+        .node-header.message {
+            border-bottom-color: var(--primary);
+        }
+
+        .node-header.buttons {
+            border-bottom-color: #10b981;
+        }
+
+        .node-header.image {
+            border-bottom-color: #f59e0b;
+        }
+
+        .node-header.condition {
+            border-bottom-color: #8b5cf6;
+        }
+
+        .node-body {
+            padding: 16px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        /* Ports */
+        .node-port {
+            width: 14px;
+            height: 14px;
+            background: #0f172a;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            position: absolute;
+            z-index: 100;
+            cursor: crosshair;
+            transition: all 0.2s;
+        }
+
+        .node-port:hover {
+            background: var(--primary);
+            border-color: white;
+            transform: scale(1.3);
+        }
+
+        .port-in {
+            top: -8px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            border-color: #94a3b8;
+        }
+
+        .port-out {
+            bottom: -8px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            background: #334155;
+            border-color: white;
+        }
+
+        /* Connections */
+        .connection-path {
+            fill: none;
+            stroke: #64748b;
+            stroke-width: 2px;
+            transition: stroke 0.2s;
+            cursor: pointer;
+        }
+
+        .connection-path:hover {
+            stroke: var(--primary);
+            stroke-width: 3px;
+        }
+
+        .node-palette-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .node-palette-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-mesh"></div>
+
+    <div class="ui-layer">
+        <!-- Header -->
+        <div class="top-bar">
+            <div class="app-title">
+                <i class="bi bi-diagram-3-fill"></i>
+                <span>Flow Builder <span>Pro</span></span>
+            </div>
+            <div class="actions">
+                <button class="btn-glass" onclick="clearFlow()">
+                    <i class="bi bi-trash"></i> Clear
+                </button>
+                <button class="btn-glass" onclick="testFlow()">
+                    <i class="bi bi-play-fill"></i> Test
+                </button>
+                <button class="btn-glass" style="background: var(--primary); border-color: var(--primary);"
+                    onclick="saveFlow()">
+                    <i class="bi bi-save"></i> Save Flow
+                </button>
+            </div>
+        </div>
+
+        <!-- Palette -->
+        <div class="glass-panel" style="grid-area: palette; padding: 20px;">
+            <div
+                style="margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.8em; letter-spacing: 1px;">
+                NODES</div>
+
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'message')">
+                <i class="bi bi-chat-text text-primary"></i> Message
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'buttons')">
+                <i class="bi bi-ui-checks" style="color: #10b981;"></i> Buttons
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'image')">
+                <i class="bi bi-image" style="color: #f59e0b;"></i> Image/Video
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'condition')">
+                <i class="bi bi-shuffle" style="color: #8b5cf6;"></i> Condition
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'delay')">
+                <i class="bi bi-clock" style="color: #64748b;"></i> Delay
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div id="canvas-container" class="glass-panel"
+            style="grid-area: canvas; position: relative; overflow: hidden; padding: 0;"
+            onmousedown="handlePanStart(event)" ondrop="handleDrop(event)" ondragover="event.preventDefault()"
+            onwheel="handleZoom(event)">
+
+            <!-- Grid/Background -->
+            <div id="canvas-setup"
+                style="position: absolute; width: 100%; height: 100%; pointer-events: none; opacity: 0.3; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px;">
+            </div>
+
+            <div id="canvas-content" style="position: absolute; width: 100%; height: 100%; transform-origin: 0 0;">
+                <svg id="connections"
+                    style="position: absolute; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0;"></svg>
+                <!-- Nodes inserted here -->
+            </div>
+        </div>
+
+        <!-- Properties -->
+        <div class="glass-panel" style="grid-area: properties; padding: 20px; overflow-y: auto;">
+            <div
+                style="margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.8em; letter-spacing: 1px;">
+                PROPERTIES</div>
+            <div id="props-content">
+                <!-- Properties injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const canvas = document.getElementById('canvas-content');
+        const svgLineContainer = document.getElementById('connections');
+        const propsPanel = document.getElementById('props-content'); // Might serve as verifying it exists
+
+        let state = {
+            nodes: [],
+            connections: [],
+            scale: 1,
+            pan: { x: 0, y: 0 },
+            selectedNodeId: null,
+            nextNodeId: 1,
+            flowId: null,
+            leads: [] // Store system leads
+        };
+
+        function init() {
+            // Fetch leads for the recipient dropdown
+            fetchLeads();
+
+            // Check for flow ID
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if (id) {
+                // Fetch existing flow
+                fetch('/api/advanced-flows/' + id)
+                    .then(r => r.json())
+                    .then(flow => {
+                        state.flowId = flow._id;
+                        state.nodes = flow.nodes.map(n => ({
+                            ...n,
+                            x: n.position.x,
+                            y: n.position.y,
+                            data: n.data || {}
+                        }));
+                        state.connections = flow.connections || [];
+                        render();
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        alert('Failed to load flow');
+                    });
+            } else {
+                // New Flow
+                addNode('start', 150, 150);
+            }
+            render();
+        }
+
+        async function fetchLeads() {
+            try {
+                const res = await fetch('/api/leads');
+                if (res.ok) {
+                    state.leads = await res.json();
+                }
+            } catch (e) {
+                console.error("Failed to fetch leads", e);
+            }
+        }
+
+        function render() {
+            // 1. Transform Canvas
+            canvas.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
+
+            // 2. Render Nodes
+            // Remove existing DOM nodes to redraw (simple approach)
+            document.querySelectorAll('.flow-node').forEach(n => n.remove());
+
+            state.nodes.forEach(node => {
+                const el = document.createElement('div');
+                el.className = `flow-node ${state.selectedNodeId === node.id ? 'selected' : ''}`;
+                el.style.left = node.x + 'px';
+                el.style.top = node.y + 'px';
+                el.style.position = 'absolute'; // Ensure positioning
+                el.dataset.id = node.id;
+
+                // Drag start
+                el.onmousedown = (e) => handleNodeDown(e, node);
+
+                // Header
+                const header = document.createElement('div');
+                header.className = `node-header ${node.type}`;
+                // Determine Icon
+                let iconClass = 'bi-circle-fill';
+                let iconStyle = 'margin-right:8px; font-size: 1rem;';
+
+                if (node.type === 'start') { iconClass = 'bi-play-circle-fill'; iconStyle += 'color: #10b981;'; }
+                else if (node.type === 'message') { iconClass = 'bi-chat-text'; iconStyle += 'color: var(--primary);'; }
+                else if (node.type === 'buttons') { iconClass = 'bi-ui-checks'; iconStyle += 'color: #10b981;'; }
+                else if (['image', 'video', 'document'].includes(node.type)) { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
+                else if (node.type === 'condition') { iconClass = 'bi-shuffle'; iconStyle += 'color: #8b5cf6;'; }
+                else if (node.type === 'delay') { iconClass = 'bi-clock'; iconStyle += 'color: #64748b;'; }
+
+                header.innerHTML = `
+                    <i class="bi ${iconClass}" style="${iconStyle}"></i>
+                    <span style="flex-grow:1; font-weight:600;">${capitalize(node.type)}</span>
+                    <i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>
+                `;
+                el.appendChild(header);
+
+                // Body
+                const body = document.createElement('div');
+                body.className = 'node-body';
+                if (node.type === 'start') {
+                    body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">Trigger: ${node.data.trigger || 'keyword'}</div>`;
+                } else if (node.type === 'message') {
+                    body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
+                } else if (node.type === 'buttons') {
+                    body.innerText = node.data.text || '(Question)';
+                } else if (['image', 'video', 'document'].includes(node.type)) {
+                    body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark"></i> <span>${node.type}</span></div>`;
+                }
+                el.appendChild(body);
+
+                // Input Port (Everyone except Start)
+                if (node.type !== 'start') {
+                    // createPort(nodeId, type, handleId, idx, count)
+                    el.appendChild(createPort(node.id, 'input', 'in'));
+                }
+
+                // Output Ports
+                if (node.type === 'buttons' && node.data.buttons) {
+                    node.data.buttons.forEach((btn, idx) => {
+                        const count = node.data.buttons.length;
+                        const p = createPort(node.id, 'output', btn.id, idx, count);
+                        // Label
+                        const lbl = document.createElement('span');
+                        lbl.innerText = btn.text.length > 10 ? btn.text.substring(0, 8) + '..' : btn.text;
+                        lbl.className = 'port-label';
+                        lbl.style.position = 'absolute';
+                        lbl.style.bottom = '-20px'; // below port
+                        lbl.style.left = '50%';
+                        lbl.style.transform = 'translateX(-50%)';
+                        lbl.style.fontSize = '0.7em';
+                        lbl.style.whiteSpace = 'nowrap';
+                        lbl.style.color = '#ccc';
+                        p.appendChild(lbl);
+                        el.appendChild(p);
+                    });
+                } else {
+                    // Single Output (default)
+                    el.appendChild(createPort(node.id, 'output', 'out'));
+                }
+
+                canvas.appendChild(el);
+            });
+
+            // 3. Clear SVG Lines
+            while (svgLineContainer.firstChild) {
+                svgLineContainer.removeChild(svgLineContainer.firstChild);
+            }
+
+            // New Paths
+            state.connections.forEach(conn => {
+                const srcNode = state.nodes.find(n => n.id === conn.source);
+                const tgtNode = state.nodes.find(n => n.id === conn.target);
+                if (!srcNode || !tgtNode) return;
+
+                // Calculate Coords
+                let x1, y1, x2, y2;
+
+                // Manual DOM lookup for exactness if rendered?
+                const srcPortEl = document.querySelector(`[data-port-id="${conn.source}:${conn.sourceHandle}"]`);
+                const tgtPortEl = document.querySelector(`[data-port-id="${conn.target}:in"]`);
+
+                if (srcPortEl && tgtPortEl) {
+                    // We need coordinates relative to #canvas-setup (scale:1, origin 0,0)
+                    // portEl.getBoundingClientRect gives screen coords.
+                    // canvas.getBoundingClientRect gives screen coords of container (transformed)
+                    // But we want internal coords.
+
+                    // Simple offset calc:
+                    // For Target:
+                    // It's a child of node, so offsetLeft is relative to Node.
+                    // Correct: Node.x + Port.offsetLeft
+                    x1 = srcNode.x + srcPortEl.offsetLeft + 6; // +6 for center of 12px port
+                    y1 = srcNode.y + srcPortEl.offsetTop + 6;
+
+                    x2 = tgtNode.x + tgtPortEl.offsetLeft + 6;
+                    y2 = tgtNode.y + tgtPortEl.offsetTop + 6;
+                }
+
+                else {
+                    // Fallback if ports not found (shouldn't happen if nodes are rendered)
+                    // This part is largely from the original thought process and can be simplified
+                    // if port elements are guaranteed to exist.
+                    x2 = tgtNode.x + 140; // Approx center of node
+                    y2 = tgtNode.y - 6; // Approx top center
+
+                    if (conn.sourceHandle === 'out') {
+                        x1 = srcNode.x + 140;
+                        y1 = srcNode.y + 100; // Approx bottom center
+                    }
+
+                    else {
+                        // Button Handle - approximate if port element not found
+                        const btnIdx = srcNode.data.buttons.findIndex(b => b.id === conn.sourceHandle);
+
+                        if (btnIdx >= 0) {
+                            const count = srcNode.data.buttons.length;
+                            const step = 280 / (count + 1); // 280 is node width
+                            x1 = srcNode.x + (step * (btnIdx + 1));
+                            y1 = srcNode.y + 100; // Approx bottom
+                        }
+
+                        else {
+                            x1 = srcNode.x + 140;
+                            y1 = srcNode.y + 100;
+                        }
+                    }
+                }
+
+                const d = `M${x1} ${y1} C${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'connection-path');
+
+                path.onclick = (e) => {
+                    e.stopPropagation();
+                    removeConnection(conn.id);
+                };
+                svgLineContainer.appendChild(path);
+            });
+
+            // Drag Line
+            if (isConnecting && startPort) {
+                const srcNode = state.nodes.find(n => n.id === startPort.nodeId);
+
+                if (srcNode) {
+                    let x1,
+                        y1;
+
+                    // Same offset logic as drawn connections
+                    const srcPortEl = document.querySelector(`[data-port-id="${startPort.nodeId}:${startPort.handle}"]`);
+
+                    if (srcPortEl) {
+                        x1 = srcNode.x + srcPortEl.offsetLeft + 6;
+                        y1 = srcNode.y + srcPortEl.offsetTop + 6;
+                    } else {
+                        // Fallback
+                        x1 = srcNode.x + 140;
+                        y1 = srcNode.y + 100;
+                    }
+
+                    const x2 = currentMousePos.x;
+                    const y2 = currentMousePos.y;
+
+                    const d = `M${x1} ${y1} C${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'connection-path');
+                    path.style.strokeDasharray = "5,5"; // Dashed line for temporary
+                    path.style.pointerEvents = "none";
+                    svgLineContainer.appendChild(path);
+                }
+            }
+        }
+
+        function getNodePreview(node) {
+            if (node.type === 'message') return node.data.text;
+
+            if (node.type === 'buttons') return `${node.data.buttons.length} Buttons`;
+
+            if (node.type === 'condition') return `If ${node.data.variable} ${node.data.condition} ${node.data.value}`;
+            if (node.type === 'start') return 'Entry Point';
+            return node.type;
+        }
+
+        function createPort(nodeId, type, handleId, idx = 0, count = 1) {
+            const el = document.createElement('div');
+
+            el.className = `node-port port-${type === 'input' ? 'in' : 'out'}`;
+
+            el.dataset.portId = `${nodeId}:${handleId}`;
+
+            if (type === 'output' && count > 0) {
+
+                // Distribute horizontally
+                // If generic 'out', center.
+                if (handleId === 'out') {
+                    // default center
+                } else {
+                    // Button distribution
+                    const step = 100 / (count + 1);
+
+                    el.style.left = `${step * (idx + 1)}%`;
+                    el.style.bottom = '-8px';
+                    el.style.transform = 'translate(-50%, 0)';
+                }
+            }
+
+            el.onmousedown = (e) => startConnection(e, nodeId, handleId, type);
+            el.onmouseup = (e) => endConnection(e, nodeId, handleId, type);
+            return el;
+        }
+
+        // --- CONNECTION LOGIC ---
+        let isConnecting = false;
+        let startPort = null; // { nodeId, handle, type }
+
+        let currentMousePos = {
+            x: 0,
+            y: 0
+        };
+
+        function startConnection(e, nodeId, handle, type) {
+            e.stopPropagation();
+            if (type !== 'output') return; // Only drag from Output
+
+            isConnecting = true;
+
+            startPort = {
+                nodeId,
+                handle,
+                type
+            };
+
+            // Initial mouse pos
+            const rect = canvas.getBoundingClientRect();
+
+            currentMousePos = {
+                x: (e.clientX - rect.left) / state.scale,
+                y: (e.clientY - rect.top) / state.scale
+            };
+
+            document.addEventListener('mousemove', handleConnectionMove);
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+        }
+
+        function handleConnectionMove(e) {
+            const rect = canvas.getBoundingClientRect();
+
+            currentMousePos = {
+                x: (e.clientX - rect.left) / state.scale,
+                y: (e.clientY - rect.top) / state.scale
+            };
+            render();
+        }
+
+        function handleGlobalMouseUp(e) {
+
+            // If we mouseup anywhere not on a port, cancel connection
+            if (!e.target.closest('.node-port')) {
+                isConnecting = false;
+                startPort = null;
+                document.removeEventListener('mousemove', handleConnectionMove);
+                document.removeEventListener('mouseup', handleGlobalMouseUp);
+                render();
+            }
+        }
+
+        function endConnection(e, nodeId, handle, type) {
+            e.stopPropagation();
+            // Stop global listeners first
+            document.removeEventListener('mousemove', handleConnectionMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+
+            if (!isConnecting || !startPort) return;
+
+            if (type !== 'input') {
+                isConnecting = false;
+                startPort = null;
+                render();
+                return;
+            }
+
+            if (startPort.nodeId === nodeId) {
+                isConnecting = false;
+                startPort = null;
+                render();
+                return; // Self loop
+            }
+
+            // Create Connection
+            state.connections.push({
+                id: `c_${Date.now()}`,
+                source: startPort.nodeId,
+                sourceHandle: startPort.handle,
+                target: nodeId,
+                targetHandle: 'in'
+            });
+
+            isConnecting = false;
+            startPort = null;
+            render();
+        }
+
+        function removeConnection(id) {
+            state.connections = state.connections.filter(c => c.id !== id);
+            render();
+        }
+
+        // --- PROPERTIES PANEL ---
+        function showNodeProperties(node) {
+            const panel = document.getElementById('props-content');
+
+            if (!node) {
+                panel.innerHTML = ` <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;"><i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.5;"></i><p style="margin-top: 16px;">Select a node to edit</p></div>`;
+                return;
+            }
+
+            let content = '';
+
+            // Common: ID (Read-only)
+            content += ` <div class="mb-3"><label class="form-label">Node ID</label><input type="text" class="form-control-glass" value="${node.id}" disabled style="opacity:0.7"></div>`;
+
+            // Type Specific
+            if (node.type === 'start') {
+                const isScheduled = node.data.triggerType === 'scheduled';
+
+                content += ` <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);"><label class="form-label" style="color: var(--primary); font-weight: 600;">Trigger Settings</label><div class="mb-3"><label class="form-label">Trigger Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'triggerType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="keyword"${node.data.triggerType === 'keyword' ? ' selected' : ''}>Contains Keyword</option><option value="exact"${node.data.triggerType === 'exact' ? ' selected' : ''}>Exact Match</option><option value="scheduled"${isScheduled ? ' selected' : ''}>Scheduled</option></select></div>`;
+
+                if (isScheduled) {
+                    content += ` <div class="mb-3"><label class="form-label">Schedule Time</label><input type="datetime-local" class="form-control-glass" value="${node.data.scheduleTime || ''}" onchange="updateNodeProperty('${node.id}', 'scheduleTime', this.value)"></div><div class="mb-3"><label class="form-label">Recipients</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'audienceType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="all"${node.data.audienceType === 'all' ? ' selected' : ''}>All Leads</option><option value="tags"${node.data.audienceType === 'tags' ? ' selected' : ''}>By Tags</option><option value="individual"${node.data.audienceType === 'individual' ? ' selected' : ''}>Individual (System)</option><option value="manual"${node.data.audienceType === 'manual' ? ' selected' : ''}>Manual Number</option></select></div>`;
+
+                    if (node.data.audienceType === 'tags') {
+                        content += ` <div class="mb-3"><label class="form-label">Tags (comma separated)</label><input type="text" class="form-control-glass" value="${node.data.tags || ''}" placeholder="e.g. vip, new" oninput="updateNodeProperty('${node.id}', 'tags', this.value)"></div>`;
+                    } else if (node.data.audienceType === 'individual') {
+                        content += ` <div class="mb-3"><label class="form-label">Select Lead</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'recipientPhone', this.value)">`;
+                        content += `<option value="">-- Select Person --</option>`;
+                        content += `<option value="all_contacts"${node.data.recipientPhone === 'all_contacts' ? ' selected' : ''}>Select All (System)</option>`;
+                        state.leads.forEach(lead => {
+                            const selected = node.data.recipientPhone === lead.phone ? ' selected' : '';
+                            content += `<option value="${lead.phone}"${selected}>${lead.name || 'Unknown'} (${lead.phone})</option>`;
+                        });
+                        content += `</select></div>`;
+                    } else if (node.data.audienceType === 'manual') {
+                        content += ` <div class="mb-3"><label class="form-label">Phone Number (with Country Code)</label><input type="text" class="form-control-glass" value="${node.data.recipientPhone || ''}" placeholder="e.g. 919876543210" oninput="updateNodeProperty('${node.id}', 'recipientPhone', this.value)"></div>`;
+                    }
+                } else {
+                    content += ` <div class="mb-3"><label class="form-label">Trigger Keyword</label><input type="text" class="form-control-glass" value="${node.data.trigger || ''}" placeholder="e.g. hi, booking, help" oninput="updateNodeProperty('${node.id}', 'trigger', this.value)"><small style="color: var(--text-secondary); font-size: 0.8em;">Users sending this text will start the flow.</small></div>`;
+                }
+
+                content += `</div>`;
+            }
+
+            if (node.type === 'message') {
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea class="form-control-glass" rows="4" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>`;
+            }
+
+            if (node.type === 'buttons') {
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div><div class="mb-3"><label class="form-label">Buttons</label><div id="btn-list-${node.id}">${node.data.buttons.map((btn, idx) => `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${btn.text}" oninput="updateButton('${node.id}', ${idx}, 'text', this.value)"><button class="btn-glass" onclick="removeButton('${node.id}', ${idx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`).join('')}</div><button class="btn-glass w-100 mt-2" onclick="addButton('${node.id}')"><i class="bi bi-plus"></i>Add Button </button></div>`;
+            }
+
+            if (node.type === 'condition') {
+                content += ` <div class="mb-3"><label class="form-label">Variable</label><input type="text" class="form-control-glass" value="${node.data.variable || 'lastResponse'}" oninput="updateNodeProperty('${node.id}', 'variable', this.value)"></div><div class="mb-3"><label class="form-label">Condition</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'condition', this.value)"><option value="equals"${node.data.condition === 'equals' ? ' selected' : ''}>Equals</option><option value="contains"${node.data.condition === 'contains' ? ' selected' : ''}>Contains</option><option value="regex"${node.data.condition === 'regex' ? ' selected' : ''}>Regex</option><option value="exists"${node.data.condition === 'exists' ? ' selected' : ''}>Exists</option></select></div><div class="mb-3"><label class="form-label">Value</label><input type="text" class="form-control-glass" value="${node.data.value || ''}" oninput="updateNodeProperty('${node.id}', 'value', this.value)"></div>`;
+            }
+
+            // Media Types
+            if (['image', 'video', 'document'].includes(node.type)) {
+                content += ` <div class="mb-3"><label class="form-label">Media URL</label><input type="text" class="form-control-glass" value="${node.data.url || ''}" oninput="updateNodeProperty('${node.id}', 'url', this.value)"></div><div class="mb-3"><label class="form-label">Caption</label><input type="text" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)"></div>`;
+            }
+
+            if (node.type === 'delay') {
+                content += ` <div class="mb-3"><label class="form-label">Delay (seconds)</label><input type="number" class="form-control-glass" value="${node.data.delay || 1}" oninput="updateNodeProperty('${node.id}', 'delay', parseInt(this.value))"></div>`;
+            }
+
+            panel.innerHTML = content;
+        }
+
+        // --- ACTIONS ---
+        // --- ACTIONS ---
+        async function saveFlow() {
+
+            // Transform connections to backend format
+            // Backend expects: { source, target, label (optional) }
+            const backendConnections = state.connections.map(c => {
+                const connOffset = {
+                    source: c.source,
+                    target: c.target,
+                    id: c.id
+                };
+
+                // Map Handle to Label if it's a button ID
+                if (c.sourceHandle && c.sourceHandle !== 'out') {
+                    // Find the button text corresponding to this handle
+                    const node = state.nodes.find(n => n.id === c.source);
+
+                    if (node && node.data.buttons) {
+                        const btn = node.data.buttons.find(b => b.id === c.sourceHandle);
+
+                        if (btn) {
+                            connOffset.label = btn.text;
+                        }
+                    }
+                }
+
+                return connOffset;
+            });
+
+            // Extract Trigger from Start Node
+            // Extract Trigger from Start Node
+            const startNode = state.nodes.find(n => n.type === 'start');
+            const trigger = startNode ? (startNode.data.trigger || 'manual_v2') : 'manual_v2';
+            const triggerType = startNode ? (startNode.data.triggerType || 'keyword') : 'keyword';
+
+            const schedule = startNode && startNode.data.triggerType === 'scheduled' ? {
+                nextRun: startNode.data.scheduleTime
+            } :
+                null;
+
+            // Handle Audience Type
+            let audType = startNode && startNode.data.audienceType ? startNode.data.audienceType : 'all';
+            const recPhone = startNode && startNode.data.recipientPhone ? startNode.data.recipientPhone : null;
+
+            // SPECIAL CASE: If Individual + Select All, switch type to 'all'
+            if (audType === 'individual' && recPhone === 'all_contacts') {
+                audType = 'all';
+            }
+
+            const recipientConfig = startNode && startNode.data.triggerType === 'scheduled' ? {
+                type: audType,
+                tags: startNode.data.tags ? startNode.data.tags.split(',').map(t => t.trim()) : [],
+                recipientPhone: recPhone
+            } :
+                null;
+
+            // Map Frontend Nodes (flat x,y) to Backend Nodes (nested position)
+            const backendNodes = state.nodes.map(n => ({
+
+                ...n,
+                position: {
+                    x: n.x,
+                    y: n.y
+                }
+            }));
+
+            const flowData = {
+                nodes: backendNodes,
+                connections: backendConnections,
+                trigger: trigger,
+                triggerType: triggerType,
+                schedule: schedule,
+                recipientConfig: recipientConfig
+            };
+
+            let method = 'POST';
+            let url = '/api/advanced-flows';
+
+            if (state.flowId) {
+                // Update existing
+                method = 'PUT';
+
+                url = `/api/advanced-flows/${state.flowId}`;
+                // Keep existing name if not prompted
+            } else {
+                // Create New
+                const name = prompt("Enter Flow Name:", "New Pro Flow");
+                if (!name) return;
+                flowData.name = name;
+            }
+
+            try {
+                const res = await fetch(url, {
+
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(flowData)
+                });
+
+                if (res.ok) {
+                    const savedFlow = await res.json();
+                    state.flowId = savedFlow._id; // Update state with ID
+
+                    // Update URL without reload if it's a new flow
+                    if (method === 'POST') {
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.set('id', savedFlow._id);
+
+                        window.history.pushState({}, '', newUrl);
+                    }
+
+                    alert('Flow Saved Successfully!');
+                } else {
+                    const err = await res.json();
+                    alert('Error saving: ' + err.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Save failed');
+            }
+        }
+
+        async function testFlow() {
+            const phone = prompt("Enter phone number for test:");
+            if (!phone) return;
+
+            // Same map logic as save
+            const backendConnections = state.connections.map(c => {
+                const connOffset = {
+                    source: c.source, target: c.target
+                }
+
+                    ;
+
+                if (c.sourceHandle && c.sourceHandle !== 'out') {
+                    const node = state.nodes.find(n => n.id === c.source);
+
+                    if (node && node.data.buttons) {
+                        const btn = node.data.buttons.find(b => b.id === c.sourceHandle);
+                        if (btn) connOffset.label = btn.text;
+                    }
+                }
+
+                return connOffset;
+            });
+
+            const flowData = {
+                nodes: state.nodes,
+                connections: backendConnections,
+                trigger: 'test'
+            }
+
+                ;
+
+            try {
+                await fetch('/api/test-flow', {
+
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+
+                    ,
+                    body: JSON.stringify({
+                        phone, flowData
+                    })
+                });
+                alert('Test Initiated!');
+            }
+
+            catch (e) {
+                alert('Test failed');
+            }
+        }
+
+        function clearFlow() {
+            if (confirm('Clear all?')) {
+                state.nodes = [];
+                state.connections = [];
+                state.nextNodeId = 1;
+                addNode('start', 300, 100);
+                render();
+            }
+        }
+
+        // --- INTERACTION HANDLERS ---
+
+        // Zoom
+        // Zoom
+        function handleZoom(e) {
+            e.preventDefault();
+            const zoomSensitivity = 0.001;
+            const delta = -e.deltaY * zoomSensitivity;
+            const oldScale = state.scale;
+            const newScale = Math.min(Math.max(0.1, state.scale + delta), 5);
+
+            // Calculate mouse position relative to canvas (unscaled)
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Calculate point on canvas under mouse
+            const canvasX = (mouseX - state.pan.x) / oldScale;
+            const canvasY = (mouseY - state.pan.y) / oldScale;
+
+            // Calculate new pan to keep that point under mouse
+            state.pan.x = mouseX - canvasX * newScale;
+            state.pan.y = mouseY - canvasY * newScale;
+            state.scale = newScale;
+
+            render();
+        }
+
+        // Panning
+        let isPanning = false;
+
+        let panStart = {
+            x: 0, y: 0
+        }
+
+            ;
+
+        function handlePanStart(e) {
+            if (e.target !== container && e.target !== canvas && e.target.id !== 'canvas-setup') return;
+            // Allow panning if clicking on background
+            isPanning = true;
+
+            panStart = {
+                x: e.clientX - state.pan.x, y: e.clientY - state.pan.y
+            }
+
+                ;
+            canvas.classList.add('panning');
+            document.addEventListener('mousemove', handlePanMove);
+            document.addEventListener('mouseup', handlePanEnd);
+        }
+
+        function handlePanMove(e) {
+            if (!isPanning) return;
+            state.pan.x = e.clientX - panStart.x;
+            state.pan.y = e.clientY - panStart.y;
+            render();
+        }
+
+        function handlePanEnd() {
+            isPanning = false;
+            canvas.classList.remove('panning');
+            document.removeEventListener('mousemove', handlePanMove);
+            document.removeEventListener('mouseup', handlePanEnd);
+        }
+
+        // Drag & Drop (Palette)
+        function onDragStart(e, type) {
+            e.dataTransfer.setData('nodeType', type);
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('nodeType');
+            if (!type) return;
+
+            // Calculate drop position relative to canvas
+            // Account for pan and scale
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / state.scale;
+            const y = (e.clientY - rect.top) / state.scale;
+
+            const node = addNode(type, x, y);
+
+            // Auto-select
+            state.selectedNodeId = node.id;
+            showNodeProperties(node);
+            render();
+        }
+
+        function addNode(type, x, y) {
+            const id = 'node_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const node = {
+                id: id,
+                type: type,
+                x: x,
+                y: y,
+                data: {}
+            };
+
+            if (type === 'start') {
+                node.data = { trigger: 'hello', triggerType: 'keyword' };
+            } else if (type === 'message') {
+                node.data = { text: 'Hello, how can I help?' };
+            } else if (type === 'buttons') {
+                node.data = {
+                    text: 'Please choose an option:',
+                    buttons: [
+                        { id: 'btn_' + Date.now() + '_1', text: 'Yes', type: 'reply' },
+                        { id: 'btn_' + Date.now() + '_2', text: 'No', type: 'reply' }
+                    ]
+                };
+            } else if (type === 'condition') {
+                node.data = { variable: 'lastResponse', condition: 'equals', value: 'yes' };
+            } else if (type === 'image' || type === 'video' || type === 'document') {
+                node.data = { url: '', caption: '' };
+            } else if (type === 'delay') {
+                node.data = { delay: 3 };
+            }
+
+            state.nodes.push(node);
+            render();
+            return node;
+        }
+
+        // Node Dragging
+        let isDraggingNode = false;
+        let dragNodeId = null;
+
+        let dragOffset = {
+            x: 0, y: 0
+        }
+
+            ;
+
+        function handleNodeDown(e, node) {
+            if (e.target.closest('.node-port') || e.target.closest('.bi-x')) return; // Don't drag if clicking port or close
+
+            e.stopPropagation();
+            state.selectedNodeId = node.id;
+
+            // Show Properties
+            showNodeProperties(node);
+
+            isDraggingNode = true;
+            dragNodeId = node.id;
+
+            // Calculate offset from node top-left
+            // node.x is transformed pos. e.clientX is screen.
+            // We need to work in transformed space.
+            // BUT, since we update node.x directly, we can just track delta or relative pos.
+            // Let's rely on standard drag logic:
+
+            // get mouse pos in canvas space
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / state.scale;
+            const mouseY = (e.clientY - rect.top) / state.scale;
+
+            dragOffset = {
+                x: mouseX - node.x,
+                y: mouseY - node.y
+            }
+
+                ;
+
+            document.addEventListener('mousemove', handleNodeMove);
+            document.addEventListener('mouseup', handleNodeUp);
+            render(); // Update selection
+        }
+
+        function handleNodeMove(e) {
+            if (!isDraggingNode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / state.scale;
+            const mouseY = (e.clientY - rect.top) / state.scale;
+
+            const node = state.nodes.find(n => n.id === dragNodeId);
+
+            if (node) {
+                node.x = mouseX - dragOffset.x;
+                node.y = mouseY - dragOffset.y;
+                render();
+            }
+        }
+
+        function handleNodeUp() {
+            isDraggingNode = false;
+            dragNodeId = null;
+            document.removeEventListener('mousemove', handleNodeMove);
+            document.removeEventListener('mouseup', handleNodeUp);
+        }
+
+        // --- HELPERS (Restored) ---
+        function capitalize(s) {
+            if (!s) return '';
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function removeNode(id) {
+            state.nodes = state.nodes.filter(n => n.id !== id);
+            // Also remove connections
+            state.connections = state.connections.filter(c => c.source !== id && c.target !== id);
+
+            if (state.selectedNodeId === id) {
+                state.selectedNodeId = null;
+                showNodeProperties(null);
+            }
+
+            render();
+        }
+
+
+
+        function updateNodeProperty(id, key, value) {
+            const node = state.nodes.find(n => n.id === id);
+
+            if (node) {
+                node.data[key] = value;
+                render(); // Re-render canvas (node preview might change)
+            }
+        }
+
+        function updateButton(nodeId, idx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node && node.data.buttons[idx]) {
+                node.data.buttons[idx][key] = value;
+                render(); // Update canvas ports/labels
+            }
+        }
+
+        function addButton(nodeId) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node) {
+                const newId = `btn_${Date.now()}`;
+
+                node.data.buttons.push({
+                    id: newId, text: 'Option', type: 'reply'
+                });
+                showNodeProperties(node); // Update panel
+                render(); // Update canvas
+            }
+        }
+
+        function removeButton(nodeId, idx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node) {
+                const btnId = node.data.buttons[idx].id;
+                node.data.buttons.splice(idx, 1);
+
+                // Remove associated connections
+                state.connections = state.connections.filter(c => c.sourceHandle !== btnId);
+
+                showNodeProperties(node); // Update panel
+                render(); // Update canvas
+            }
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedNodeId) {
+                if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+                removeNode(state.selectedNodeId);
+            }
+            if (e.key === 'Escape') {
+                if (isConnecting) {
+                    isConnecting = false;
+                    startPort = null;
+                    render(); // clear drag line
+                } else if (state.selectedNodeId) {
+                    state.selectedNodeId = null;
+                    showNodeProperties(null);
+                    render();
+                }
+            }
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>
