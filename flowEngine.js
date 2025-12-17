@@ -18,11 +18,6 @@ export async function runFlow(phone, message) {
   // This ensures active flow sessions take precedence over legacy lead capture
   const advancedFlowResult = await executeAdvancedFlow(phone, message);
   if (advancedFlowResult) {
-    // If flow is complete (handled but ended), we stop here and return nothing (null)
-    // so the AI doesn't pick it up.
-    if (advancedFlowResult.type === 'flow_complete') {
-      return null;
-    }
     // Format response based on type
     return formatAdvancedFlowResponse(advancedFlowResult);
   }
