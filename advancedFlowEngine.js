@@ -342,6 +342,9 @@ async function executeNode(phone, flow, node, depth = 0) {
         case 'list':
             return await executeListNode(phone, flow, node);
 
+        case 'cta':
+            return await executeCtaNode(phone, flow, node);
+
         case 'image':
             return await executeImageNode(phone, flow, node);
 
@@ -405,18 +408,38 @@ async function executeButtonsNode(phone, flow, node) {
 }
 
 /**
+ * Execute CTA node
+ */
+async function executeCtaNode(phone, flow, node) {
+    const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
+
+    await updateFlowStats(flow._id, 'delivered');
+
+    return {
+        type: 'buttons',
+        content: message,
+        buttons: [{
+            type: node.data.ctaType === 'phone' ? 'call' : 'url',
+            text: node.data.buttonText || 'Click Here',
+            value: node.data.ctaType === 'phone' ? node.data.phoneNumber : node.data.url
+        }]
+    };
+}
+
+/**
  * Execute list node
  */
 async function executeListNode(phone, flow, node) {
     const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
-    const items = node.data.listItems || [];
 
     await updateFlowStats(flow._id, 'delivered');
 
     return {
         type: 'list',
         content: message,
-        items: items
+        buttonText: node.data.buttonText,
+        sections: node.data.sections,
+        items: node.data.listItems || []
     };
 }
 
