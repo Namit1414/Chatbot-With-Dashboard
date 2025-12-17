@@ -7,8 +7,8 @@ const advancedFlowSchema = new mongoose.Schema({
     trigger: { type: String, required: true }, // Main trigger keyword or 'scheduled'
     triggerType: {
         type: String,
-        enum: ['exact', 'contains', 'regex', 'scheduled'],
-        default: 'contains'
+        enum: ['exact', 'contains', 'regex', 'scheduled', 'keyword'],
+        default: 'keyword'
     },
 
     // Schedule configuration (for scheduled flows)
@@ -27,7 +27,7 @@ const advancedFlowSchema = new mongoose.Schema({
     recipientConfig: {
         audienceType: {
             type: String,
-            enum: ['all', 'tags', 'specific'],
+            enum: ['all', 'tags', 'specific', 'individual', 'manual'],
             default: 'all'
         },
         tags: [String],      // If type is 'tags'
@@ -41,7 +41,7 @@ const advancedFlowSchema = new mongoose.Schema({
         id: { type: String, required: true },
         type: {
             type: String,
-            enum: ['start', 'message', 'buttons', 'list', 'image', 'video', 'document', 'delay', 'condition'],
+            enum: ['start', 'message', 'buttons', 'list', 'image', 'video', 'document', 'delay', 'condition', 'cta'],
             required: true
         },
         position: {
@@ -79,7 +79,32 @@ const advancedFlowSchema = new mongoose.Schema({
             // For condition nodes
             condition: String,
             variable: String,
-            value: String // ✅ Added value field
+            value: String,
+
+            // For CTA nodes
+            buttonText: String,
+            ctaType: { type: String, enum: ['url', 'phone'] },
+            url: String,
+            phoneNumber: String,
+            footer: String,
+
+            // For List nodes
+            header: String,
+            sections: [{
+                title: String,
+                rows: [{
+                    id: String,
+                    title: String,
+                    description: String
+                }]
+            }],
+
+            // For Media nodes (unified)
+            caption: String,
+
+            // For delay nodes
+            delay: Number,
+            delaySeconds: Number
         }
     }],
 
