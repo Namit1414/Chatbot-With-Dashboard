@@ -1030,10 +1030,35 @@
                                 </div>
                             </div>
 
+                            <!-- Scheduling Options -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Delivery</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="sendOptions" id="send-now" value="now"
+                                        checked onclick="toggleScheduleTime()">
+                                    <label class="btn btn-outline-primary" for="send-now">
+                                        <i class="bi bi-send-fill"></i> Send Now
+                                    </label>
+                                    <input type="radio" class="btn-check" name="sendOptions" id="send-scheduled"
+                                        value="scheduled" onclick="toggleScheduleTime()">
+                                    <label class="btn btn-outline-primary" for="send-scheduled">
+                                        <i class="bi bi-calendar-event"></i> Schedule
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Schedule Time (Hidden by default) -->
+                            <div class="mb-3" id="schedule-time-container" style="display: none;">
+                                <label class="form-label fw-semibold">Schedule Time</label>
+                                <input type="datetime-local" class="form-control" id="schedule-time">
+                                <div class="form-text small">Messages will be sent at the scheduled time</div>
+                            </div>
+
                             <!-- Send Button -->
                             <button class="btn btn-primary w-100 btn-lg" onclick="sendBulkMessages()"
                                 id="send-bulk-btn">
-                                <i class="bi bi-send-fill"></i> Send to <span id="send-count">0</span> Recipients
+                                <i class="bi bi-send-fill"></i> <span id="send-btn-text">Send to</span> <span
+                                    id="send-count">0</span> Recipients
                             </button>
                         </div>
                     </div>
@@ -1532,7 +1557,7 @@
             let previewText = text;
             if (personalize) {
                 previewText = text
-                    .replace(/{name}/g, '<strong style="color: #00a884;">John</strong>')
+                    .replace(/{name}/g, '<strong style="color: #00a884;">Atika</strong>')
                     .replace(/{preferred_date}/g, '<strong style="color: #00a884;">Tomorrow</strong>')
                     .replace(/{preferred_time}/g, '<strong style="color: #00a884;">10:00 AM - 12:00 PM</strong>');
             }
@@ -1577,6 +1602,20 @@
             modal.hide();
         }
 
+        function toggleScheduleTime() {
+            const isScheduled = document.getElementById('send-scheduled').checked;
+            const container = document.getElementById('schedule-time-container');
+            const btnText = document.getElementById('send-btn-text');
+
+            if (isScheduled) {
+                container.style.display = 'block';
+                btnText.textContent = 'Schedule for';
+            } else {
+                container.style.display = 'none';
+                btnText.textContent = 'Send to';
+            }
+        }
+
         async function sendBulkMessages() {
             const message = document.getElementById('bulk-message-text').value.trim();
 
@@ -1590,6 +1629,62 @@
                 return;
             }
 
+            const isScheduled = document.getElementById('send-scheduled').checked;
+            const personalize = document.getElementById('personalize-messages').checked;
+            const addDelay = document.getElementById('add-delay').checked;
+
+            // Handle scheduled sending
+            if (isScheduled) {
+                const scheduleTime = document.getElementById('schedule-time').value;
+                if (!scheduleTime) {
+                    alert('Please select a schedule time.');
+                    return;
+                }
+
+                const scheduledDate = new Date(scheduleTime);
+                if (scheduledDate <= new Date()) {
+                    alert('Schedule time must be in the future.');
+                    return;
+                }
+
+                if (!confirm(`Schedule this message for ${scheduledDate.toLocaleString()} to ${selectedRecipients.size} recipients?`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/bulk-messages/schedule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message,
+                            recipients: Array.from(selectedRecipients),
+                            scheduledTime: scheduleTime,
+                            personalize,
+                            addDelay
+                        })
+                    });
+
+                    if (response.ok) {
+                        alert('Bulk message scheduled successfully!');
+                        // Reset form
+                        document.getElementById('bulk-message-text').value = '';
+                        clearSelection();
+                        document.getElementById('send-now').checked = true;
+                        toggleScheduleTime();
+                        updateCharCount();
+                        updatePreview();
+                    } else {
+                        const error = await response.json();
+                        alert('Failed to schedule message: ' + (error.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error scheduling message:', error);
+                    alert('Failed to schedule message. Please try again.');
+                }
+                return;
+            }
+
+            // Handle immediate sending
             if (!confirm(`Are you sure you want to send this message to ${selectedRecipients.size} recipients?`)) {
                 return;
             }
@@ -1602,8 +1697,6 @@
             let sent = 0;
             let failed = 0;
             const total = selectedRecipients.size;
-            const personalize = document.getElementById('personalize-messages').checked;
-            const addDelay = document.getElementById('add-delay').checked;
 
             document.getElementById('sent-count').textContent = '0';
             document.getElementById('failed-count').textContent = '0';
