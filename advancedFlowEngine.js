@@ -453,7 +453,7 @@ async function executeImageNode(phone, flow, node) {
 
     return {
         type: 'image',
-        url: node.data.mediaUrl,
+        url: node.data.url || node.data.mediaUrl, // Support both names
         caption: caption
     };
 }
@@ -468,7 +468,7 @@ async function executeVideoNode(phone, flow, node) {
 
     return {
         type: 'video',
-        url: node.data.mediaUrl,
+        url: node.data.url || node.data.mediaUrl, // Support both names
         caption: caption
     };
 }
@@ -483,7 +483,7 @@ async function executeDocumentNode(phone, flow, node) {
 
     return {
         type: 'document',
-        url: node.data.mediaUrl,
+        url: node.data.url || node.data.mediaUrl, // Support both names
         filename: node.data.filename || 'document.pdf',
         caption: caption
     };
@@ -493,7 +493,7 @@ async function executeDocumentNode(phone, flow, node) {
  * Execute delay node
  */
 async function executeDelayNode(phone, flow, node) {
-    const delayMs = (node.data.delaySeconds || 2) * 1000;
+    const delayMs = (node.data.delay || node.data.delaySeconds || 2) * 1000; // Support both names
 
     // Schedule next node execution
     setTimeout(async () => {
