@@ -181,62 +181,54 @@ async function continueFlow(phone, message) {
         return null;
     }
 
-    // Handle user response based on node type
+    // ✅ SIMPLIFIED BUTTON HANDLING
     if (currentNode.type === 'buttons') {
-        console.log('\n========== BUTTON MATCHING ==========');
-        console.log('Available buttons:', JSON.stringify(currentNode.data.buttons, null, 2));
-        console.log('Incoming message:', message);
+        console.log('Button node - finding clicked button...');
 
-        let clickedButton = null;
-
-        // Method 1: Match by button ID (exact)
-        clickedButton = currentNode.data.buttons?.find(btn =>
-            message === btn.id
-        );
+        // Find which button was clicked by matching the button text
+        const clickedButton = currentNode.data.buttons?.find(btn => {
+            // WhatsApp sends back button text as the message
+            return message.toLowerCase().trim() === btn.text.toLowerCase().trim();
+        });
 
         if (clickedButton) {
-            console.log(`✓ Matched by ID: ${clickedButton.id}`);
-        }
+            console.log(`✓ Button clicked: "${clickedButton.text}"`);
+            console.log(`✓ Sending reply: "${clickedButton.reply || clickedButton.value || clickedButton.text}"`);
 
-        // Method 2: Match by button value (case-insensitive)
-        if (!clickedButton) {
-            clickedButton = currentNode.data.buttons?.find(btn =>
-                message.toLowerCase().trim() === btn.value.toLowerCase().trim()
-            );
-            if (clickedButton) {
-                console.log(`✓ Matched by VALUE: ${clickedButton.value}`);
-            }
-        }
-
-        // Method 3: Match by button text (case-insensitive) - NEW!
-        if (!clickedButton) {
-            clickedButton = currentNode.data.buttons?.find(btn =>
-                message.toLowerCase().trim() === btn.text.toLowerCase().trim()
-            );
-            if (clickedButton) {
-                console.log(`✓ Matched by TEXT: ${clickedButton.text}`);
-            }
-        }
-
-        if (clickedButton) {
-            console.log(`Button Matched: ${clickedButton.value}`);
-            console.log('=====================================\n');
-            logToFile(`[ButtonMatch] Matched button id: ${clickedButton.id}, value: ${clickedButton.value}`);
+            // Store in session
+            session.variables.lastButtonClicked = clickedButton.text;
+            session.variables.lastResponse = clickedButton.text;
 
             // Track button click
             await updateFlowStats(flow._id, 'clicked');
 
-            // Store in variables
-            session.variables.lastButtonClicked = clickedButton.id;
-            session.variables.lastButtonText = clickedButton.text;
+            // Send the preset reply message immediately
+            // Use reply field if available, fallback to value, then text
+            const replyText = clickedButton.reply || clickedButton.value || clickedButton.text;
+            const replyMessage = {
+                type: 'text',
+                content: personalizeMessage(replyText, phone, session)
+            };
 
-            // IMPORTANT: Update the 'message' to be the button VALUE
-            // This allows downstream Condition Nodes to check against "yes" instead of "btn_123"
-            message = clickedButton.value;
+            // Find next node to continue flow
+            const nextNode = findNextNode(flow, currentNode.id);
+
+            if (nextNode) {
+                // Update session to next node
+                session.currentNodeId = nextNode.id;
+                session.nodeHistory.push(nextNode.id);
+
+                // Return the reply message (next node will be executed on next user message)
+                return replyMessage;
+            } else {
+                // No next node - flow ends after this reply
+                endFlowSession(phone);
+                return replyMessage;
+            }
         } else {
             console.log('⚠️ No button matched. Treating as raw input.');
-            console.log('=====================================\n');
-            logToFile(`[ButtonNoMatch] Message: "${message}", Available: ${JSON.stringify(currentNode.data.buttons?.map(b => ({ id: b.id, text: b.text, value: b.value })))}`);
+            // User typed something instead of clicking button
+            session.variables.lastResponse = message;
         }
     }
 
