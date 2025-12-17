@@ -78,7 +78,8 @@ const advancedFlowSchema = new mongoose.Schema({
 
             // For condition nodes
             condition: String,
-            variable: String
+            variable: String,
+            value: String // ✅ Added value field
         }
     }],
 
