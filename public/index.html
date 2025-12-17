@@ -2035,51 +2035,9 @@
 
         // Create new flow
         // Edit existing flow
+        // Edit existing flow
         async function editFlow(flowId) {
-            try {
-                const response = await fetch(`/api/advanced-flows/${flowId}`);
-                const flow = await response.json();
-
-                currentFlowId = flow._id;
-                currentFlowNodes = flow.nodes || [];
-                currentFlowConnections = flow.connections || [];
-                // Reset ID counter based on existing nodes
-                nodeIdCounter = currentFlowNodes.reduce((max, n) => {
-                    const num = parseInt(n.id.replace('node_', '')) || 0;
-                    return Math.max(max, num);
-                }, 0) + 1;
-
-                // Populate Settings Inputs
-                document.getElementById('flow-name').value = flow.name;
-                document.getElementById('editor-flow-name-display').textContent = flow.name;
-                document.getElementById('flow-description').value = flow.description || '';
-                // Trigger inputs removed from UI
-                document.getElementById('flow-active').checked = flow.active;
-
-                if (flow.schedule) {
-                    const date = new Date(flow.schedule.time);
-                    const offset = date.getTimezoneOffset() * 60000;
-                    const localDate = new Date(date.getTime() - offset);
-                    document.getElementById('flow-schedule-time').value = localDate.toISOString().slice(0, 16);
-                    const repeatVal = flow.schedule.repeat || 'once';
-                    document.getElementById('flow-schedule-repeat').value = repeatVal;
-                    const radio = document.getElementById('repeat-' + repeatVal);
-                    if (radio) radio.checked = true;
-                }
-
-                // Storing recipient config temporarily to set it when modal opens
-                window.tempRecipientConfig = flow.recipientConfig;
-
-                // Show editor
-                document.getElementById('flow-list-view').style.display = 'none';
-                document.getElementById('flow-editor-view').style.display = 'block';
-
-                // Render canvas
-                renderCanvas();
-            } catch (error) {
-                console.error('Error loading flow:', error);
-                alert('Failed to load flow');
-            }
+            window.location.href = `/flow-builder-v2.html?id=${flowId}`;
         }
 
         // Back to flow list
@@ -2154,38 +2112,7 @@
 
         // Create new flow
         function createNewFlow() {
-            currentFlowId = null;
-            currentFlowNodes = [];
-            currentFlowConnections = [];
-            selectedNodeId = null;
-            nodeIdCounter = 0;
-
-            // Reset Settings
-            document.getElementById('flow-name').value = '';
-            document.getElementById('editor-flow-name-display').textContent = 'Untitled Flow';
-            document.getElementById('flow-description').value = '';
-            // document.getElementById('flow-trigger').value = ''; // Removed
-            // document.getElementById('flow-trigger-type').value = 'scheduled'; // Removed from DOM
-            document.getElementById('flow-active').checked = true;
-            document.getElementById('flow-schedule-time').value = '';
-            document.getElementById('flow-schedule-repeat').value = 'once';
-            document.getElementById('repeat-once').checked = true;
-
-            const recipientSelect = document.getElementById('flow-recipient-list');
-            if (recipientSelect) recipientSelect.selectedIndex = -1;
-
-            // Show editor
-            document.getElementById('flow-list-view').style.display = 'none';
-            document.getElementById('flow-editor-view').style.display = 'block';
-
-            // Clear canvas
-            clearCanvas();
-
-            // Add start node automatically
-            addNode('start');
-
-            // Open settings initially
-            openFlowSettings();
+            window.location.href = '/flow-builder-v2.html';
         }
 
         // ... (existing editFlow logic, omitting to save tokens, assuming it handles missing IDs gracefully or I should update it separately? 
