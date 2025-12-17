@@ -1102,9 +1102,9 @@
             }
 
             const recipientConfig = startNode && startNode.data.triggerType === 'scheduled' ? {
-                type: audType,
+                audienceType: audType,
                 tags: startNode.data.tags ? startNode.data.tags.split(',').map(t => t.trim()) : [],
-                recipientPhone: recPhone
+                phones: recPhone ? [recPhone] : []
             } :
                 null;
 
@@ -1126,6 +1126,8 @@
                 schedule: schedule,
                 recipientConfig: recipientConfig
             };
+
+            console.log('Saving flow data:', flowData);
 
             let method = 'POST';
             let url = '/api/advanced-flows';
@@ -1165,14 +1167,16 @@
                         window.history.pushState({}, '', newUrl);
                     }
 
-                    alert('Flow Saved Successfully!');
+                    alert('Flow Saved Successfully! 🎉');
+                    console.log('Flow saved:', savedFlow);
                 } else {
                     const err = await res.json();
-                    alert('Error saving: ' + err.error);
+                    console.error('Save failed:', err);
+                    alert('Error saving flow: ' + (err.error || 'Unknown server error'));
                 }
             } catch (e) {
-                console.error(e);
-                alert('Save failed');
+                console.error('Fetch error during save:', e);
+                alert('Save failed: Network or connection error.');
             }
         }
 
