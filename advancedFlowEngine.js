@@ -247,7 +247,15 @@ async function continueFlow(phone, message) {
 
                 // 3. EXECUTE NEXT NODE IMMEDIATELY
                 console.log(`[AutoFlow] Proceeding to next node: ${nextNode.id} (${nextNode.type})`);
-                return await executeNode(phone, flow, nextNode);
+                const nextNodeResult = await executeNode(phone, flow, nextNode);
+
+                // If the next node result is flow_complete or no_reply, we should just return that
+                // instead of falling through or returning the button reply.
+                if (nextNodeResult && (nextNodeResult.type === 'flow_complete' || nextNodeResult.type === 'no_reply')) {
+                    return nextNodeResult;
+                }
+
+                return nextNodeResult;
             } else {
                 // No next node - flow ends after this reply
                 endFlowSession(phone);
@@ -310,7 +318,14 @@ function evaluateCondition(condition, userMessage, session) {
 /**
  * Execute a specific node
  */
-async function executeNode(phone, flow, node) {
+async function executeNode(phone, flow, node, depth = 0) {
+    // Loop Protection
+    if (depth > 20) {
+        console.error(`[FlowEngine] Infinite loop detected for ${phone}. Stops at node ${node.id}`);
+        logToFile(`[LoopDetect] Depth ${depth} reached. Stopping.`);
+        return { type: 'text', content: 'Use the force, Luke... but not in a loop. (System Loop Detected)' };
+    }
+
     // Use exact match here as we should have resolved the correct phone key by now
     // But for safety in other calls, we can use findSession if needed. 
     // However, executeNode is internal and usually passed the correct phone key.
@@ -330,7 +345,7 @@ async function executeNode(phone, flow, node) {
     // Execute based on node type
     switch (node.type) {
         case 'message':
-            return await executeMessageNode(phone, flow, node);
+            return await executeMessageNode(phone, flow, node); // Messages don't recurse synchronously usually
 
         case 'buttons':
             return await executeButtonsNode(phone, flow, node);
@@ -351,7 +366,8 @@ async function executeNode(phone, flow, node) {
             return await executeDelayNode(phone, flow, node);
 
         case 'condition':
-            return await executeConditionNode(phone, flow, node);
+            // Pass depth + 1
+            return await executeConditionNode(phone, flow, node, depth + 1);
 
         default:
             console.warn('Unknown node type:', node.type);
@@ -541,8 +557,8 @@ function isConditionMet(node, session) {
 /**
  * Execute condition node
  */
-async function executeConditionNode(phone, flow, node) {
-    console.log(`Executing Condition Node ${node.id}`);
+async function executeConditionNode(phone, flow, node, depth = 0) {
+    console.log(`Executing Condition Node ${node.id} (Depth: ${depth})`);
 
     // Check condition
     const session = flowSessions.get(phone);
@@ -560,7 +576,7 @@ async function executeConditionNode(phone, flow, node) {
     const nextNode = findNextNode(flow, node.id, null, session);
 
     if (nextNode) {
-        return await executeNode(phone, flow, nextNode);
+        return await executeNode(phone, flow, nextNode, depth + 1);
     }
 
     return { type: 'no_reply' };
