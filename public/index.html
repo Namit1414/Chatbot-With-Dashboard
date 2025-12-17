@@ -2407,7 +2407,11 @@
                 message: { text: 'Hello! How can I help you?' },
                 buttons: {
                     text: 'Choose an option:',
-                    buttons: [{ text: 'Option 1', type: 'reply', value: 'option1' }]
+                    buttons: [{
+                        text: 'Option 1',
+                        reply: 'You selected Option 1!',
+                        type: 'reply'
+                    }]
                 },
                 list: {
                     text: 'Select from list:',
@@ -2808,13 +2812,17 @@
                                         <small class="fw-bold">Button ${i + 1}</small>
                                         <button class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeButton(${i})">&times;</button>
                                     </div>
-                                    <input type="text" class="form-control form-control-sm mb-1" id="btn-text-${i}" value="${btn.text}" placeholder="Label">
-                                    <select class="form-select form-select-sm mb-1" id="btn-type-${i}">
+                                    <input type="text" class="form-control form-control-sm mb-1" 
+                                           id="btn-text-${i}" value="${btn.text}" 
+                                           placeholder="Button Text (e.g., Where?)">
+                                    <textarea class="form-control form-control-sm mb-1" 
+                                              id="btn-reply-${i}" rows="2" 
+                                              placeholder="Reply message when clicked">${btn.reply || btn.value || ''}</textarea>
+                                    <select class="form-select form-select-sm" id="btn-type-${i}">
                                         <option value="reply" ${btn.type === 'reply' ? 'selected' : ''}>Quick Reply</option>
                                         <option value="url" ${btn.type === 'url' ? 'selected' : ''}>URL</option>
                                         <option value="call" ${btn.type === 'call' ? 'selected' : ''}>Call</option>
                                     </select>
-                                    <input type="text" class="form-control form-control-sm" id="btn-value-${i}" value="${btn.value || ''}" placeholder="Value (ID/URL/Phone)">
                                 </div>
                             </div>
                         `).join('')}
@@ -2926,19 +2934,14 @@
             } else if (type === 'buttons') {
                 node.data.text = document.getElementById('prop-text').value;
                 const Buttons = [];
-                // Reconstruct buttons from inputs
                 const container = document.getElementById('prop-buttons-list');
                 const btnCards = container.children;
-                for (let i = 0; i < btnCards.length; i++) {
-                    // ✅ PRESERVE existing ID if available to prevent mismatch with WhatsApp
-                    const existingButton = node.data.buttons?.[i];
-                    const buttonId = existingButton?.id || `btn_${Date.now()}_${i}`;
 
+                for (let i = 0; i < btnCards.length; i++) {
                     Buttons.push({
-                        id: buttonId,  // Use existing or generate new
                         text: document.getElementById(`btn-text-${i}`).value,
-                        type: document.getElementById(`btn-type-${i}`).value,
-                        value: document.getElementById(`btn-value-${i}`).value
+                        reply: document.getElementById(`btn-reply-${i}`).value,
+                        type: document.getElementById(`btn-type-${i}`).value
                     });
                 }
                 node.data.buttons = Buttons;
@@ -2994,16 +2997,12 @@
             if (!node) return;
             if (!node.data.buttons) node.data.buttons = [];
 
-            // Generate unique ID that won't change on subsequent updates
-            const newButtonId = `btn_${Date.now()}_${node.data.buttons.length}`;
-
             node.data.buttons.push({
-                id: newButtonId,
                 text: 'New Button',
-                type: 'reply',
-                value: 'yes'
+                reply: 'You clicked this button!',
+                type: 'reply'
             });
-            showNodeProperties(node); // Re-render to show new input
+            showNodeProperties(node);
         }
 
         function removeButton(index) {
