@@ -121,7 +121,7 @@ function buildButtonsMessage(to, messageData) {
                     buttons: replyButtons.map((btn, idx) => ({
                         type: "reply",
                         reply: {
-                            id: btn.id || `btn_${idx}`,
+                            id: btn.text.substring(0, 20),  // Use button TEXT as ID!
                             title: btn.text.substring(0, 20) // Max 20 chars
                         }
                     }))
