@@ -1,4 +1,5 @@
 import AdvancedFlow from "./models/AdvancedFlow.js";
+import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 
 import Lead from "./models/Lead.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
@@ -620,10 +621,23 @@ export function initScheduler() {
                     await executeScheduledFlow(flow);
                 }
             }
+
+            // Check for scheduled bulk messages
+            const scheduledMessages = await ScheduledBulkMessage.find({
+                status: 'pending',
+                scheduledTime: { $lte: now }
+            });
+
+            if (scheduledMessages.length > 0) {
+                console.log(`Scheduler: Found ${scheduledMessages.length} bulk messages due for execution at ${now.toISOString()}`);
+                for (const msg of scheduledMessages) {
+                    await executeScheduledBulkMessage(msg);
+                }
+            }
         } catch (error) {
             console.error('Scheduler error:', error);
         }
-    }, 60000); // Check every 60 seconds
+    }, 5000); // Check every 5 seconds
 }
 
 /**
@@ -717,4 +731,70 @@ async function executeScheduledFlow(flow) {
 
     await flow.save();
     console.log(`Updated schedule for flow "${flow.name}". Next run: ${flow.schedule.nextRun}`);
+}
+
+/**
+ * Execute a scheduled bulk message
+ */
+async function executeScheduledBulkMessage(scheduledMsg) {
+    console.log(`Executing scheduled bulk message ID: ${scheduledMsg._id}`);
+
+    try {
+        const { message, recipients, personalize, addDelay } = scheduledMsg;
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const phone of recipients) {
+            try {
+                let personalizedMessage = message;
+
+                // Personalize if enabled
+                if (personalize) {
+                    const lead = await Lead.findOne({ phone });
+                    if (lead && lead.name) {
+                        personalizedMessage = message
+                            .replace(/{name}/g, lead.name)
+                            .replace(/{preferred_date}/g, lead.preferred_date || 'your requested date')
+                            .replace(/{preferred_time}/g, lead.preferred_time || 'your requested time');
+                    } else {
+                        personalizedMessage = message
+                            .replace(/{name}/g, 'there')
+                            .replace(/{preferred_date}/g, 'your requested date')
+                            .replace(/{preferred_time}/g, 'your requested time');
+                    }
+                }
+
+                // Send message
+                await sendWhatsAppBusinessMessage(
+                    phone,
+                    personalizedMessage,
+                    process.env.WHATSAPP_TOKEN,
+                    process.env.PHONE_NUMBER_ID
+                );
+
+                successCount++;
+                console.log(`✓ Sent to ${phone}`);
+
+                // Add delay if enabled
+                if (addDelay && recipients.indexOf(phone) < recipients.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (err) {
+                failCount++;
+                console.error(`✗ Failed to send to ${phone}:`, err.message);
+            }
+        }
+
+        // Update status
+        scheduledMsg.status = failCount === recipients.length ? 'failed' : 'sent';
+        scheduledMsg.executedAt = new Date();
+        await scheduledMsg.save();
+
+        console.log(`Bulk message execution complete. Success: ${successCount}, Failed: ${failCount}`);
+    } catch (error) {
+        console.error(`Error executing scheduled bulk message ${scheduledMsg._id}:`, error);
+        scheduledMsg.status = 'failed';
+        scheduledMsg.executedAt = new Date();
+        await scheduledMsg.save();
+    }
 }
