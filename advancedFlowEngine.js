@@ -148,7 +148,11 @@ export async function startFlow(phone, flow) {
  * Continue existing flow session
  */
 async function continueFlow(phone, message) {
-    console.log(`continueFlow called for ${phone} with message: "${message}"`);
+    console.log(`\n========== CONTINUE FLOW ==========`);
+    console.log(`Phone: ${phone}`);
+    console.log(`Message: "${message}"`);
+    console.log(`===================================\n`);
+
     logToFile(`[Continue] Phone: ${phone}, Msg: ${message}`);
     const session = flowSessions.get(phone);
 
@@ -179,34 +183,60 @@ async function continueFlow(phone, message) {
 
     // Handle user response based on node type
     if (currentNode.type === 'buttons') {
-        console.log('Checking button reply match...');
-        // Check if user clicked a button
-        // Incoming message is usually the button ID (payload) for interactive messages
-        let clickedButton = currentNode.data.buttons?.find(btn =>
+        console.log('\n========== BUTTON MATCHING ==========');
+        console.log('Available buttons:', JSON.stringify(currentNode.data.buttons, null, 2));
+        console.log('Incoming message:', message);
+
+        let clickedButton = null;
+
+        // Method 1: Match by button ID (exact)
+        clickedButton = currentNode.data.buttons?.find(btn =>
             message === btn.id
         );
 
-        // Fallback: Check if message matches the value (text match)
+        if (clickedButton) {
+            console.log(`✓ Matched by ID: ${clickedButton.id}`);
+        }
+
+        // Method 2: Match by button value (case-insensitive)
         if (!clickedButton) {
             clickedButton = currentNode.data.buttons?.find(btn =>
                 message.toLowerCase().trim() === btn.value.toLowerCase().trim()
             );
+            if (clickedButton) {
+                console.log(`✓ Matched by VALUE: ${clickedButton.value}`);
+            }
+        }
+
+        // Method 3: Match by button text (case-insensitive) - NEW!
+        if (!clickedButton) {
+            clickedButton = currentNode.data.buttons?.find(btn =>
+                message.toLowerCase().trim() === btn.text.toLowerCase().trim()
+            );
+            if (clickedButton) {
+                console.log(`✓ Matched by TEXT: ${clickedButton.text}`);
+            }
         }
 
         if (clickedButton) {
             console.log(`Button Matched: ${clickedButton.value}`);
+            console.log('=====================================\n');
             logToFile(`[ButtonMatch] Matched button id: ${clickedButton.id}, value: ${clickedButton.value}`);
+
             // Track button click
             await updateFlowStats(flow._id, 'clicked');
 
-            // Store in variables if needed
+            // Store in variables
             session.variables.lastButtonClicked = clickedButton.id;
+            session.variables.lastButtonText = clickedButton.text;
 
             // IMPORTANT: Update the 'message' to be the button VALUE
             // This allows downstream Condition Nodes to check against "yes" instead of "btn_123"
             message = clickedButton.value;
         } else {
-            console.log('No button matched. Treating as raw input.');
+            console.log('⚠️ No button matched. Treating as raw input.');
+            console.log('=====================================\n');
+            logToFile(`[ButtonNoMatch] Message: "${message}", Available: ${JSON.stringify(currentNode.data.buttons?.map(b => ({ id: b.id, text: b.text, value: b.value })))}`);
         }
     }
 
