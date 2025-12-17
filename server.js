@@ -7,6 +7,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import session from "express-session";
 import { fileURLToPath } from 'url';
+import multer from 'multer';
 
 import { connectMongo } from "./models/mongo.js";
 import { runFlow } from "./flowEngine.js";
@@ -26,6 +27,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
+
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'public', 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 app.use(bodyParser.json());
 
@@ -92,11 +105,77 @@ app.get("/api/leads", async (req, res) => {
   res.json(leads);
 });
 
+app.post("/api/leads", async (req, res) => {
+  try {
+    const leadData = req.body;
+    if (!leadData.phone) {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+
+    // Save to DB
+    const lead = await Lead.findOneAndUpdate(
+      { phone: leadData.phone },
+      { ...leadData, completed: true, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    console.log(`[ManualLead] Saved/Updated lead in MongoDB: ${leadData.phone}`);
+
+    // Try to save to Google Sheet
+    try {
+      // Use the normalized database object for Google Sheets
+      await saveLead(lead.toObject());
+      console.log(`[ManualLead] Successfully synced to Google Sheet: ${leadData.phone}`);
+    } catch (e) {
+      console.error(`[ManualLead] CRITICAL: Failed to save to Google Sheet for ${leadData.phone}:`, e.message);
+    }
+
+    res.status(201).json(lead);
+  } catch (error) {
+    console.error("Error creating manual lead:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/leads/:phone/read", async (req, res) => {
   const phone = req.params.phone;
   await Lead.updateOne({ phone }, { unreadMessages: 0 });
   res.sendStatus(200);
 });
+
+app.put("/api/leads/id/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      { ...req.body, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+    res.json(lead);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/leads/id/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`[Archive] Attempting to delete lead with ID: ${id}`);
+    const lead = await Lead.findByIdAndDelete(id);
+    if (!lead) {
+      console.warn(`[Archive] Lead not found for ID: ${id}`);
+      return res.status(404).json({ error: "Lead not found" });
+    }
+    console.log(`[Archive] Successfully deleted lead: ${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`[Archive] Error deleting lead:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 
 app.get("/api/messages/:phone", async (req, res) => {
   const phone = req.params.phone;
@@ -112,11 +191,14 @@ app.get("/api/flows", async (req, res) => {
 
 app.post("/api/flows", async (req, res) => {
   try {
+    console.log('Creating new simple flow:', req.body);
     const { trigger, response } = req.body;
     const flow = new Flow({ trigger: trigger.toLowerCase(), response });
     await flow.save();
+    console.log('Simple flow saved successfully:', flow._id);
     res.json(flow);
   } catch (e) {
+    console.error('Error creating simple flow:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -126,10 +208,55 @@ app.delete("/api/flows/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+app.put("/api/flows/:id", async (req, res) => {
+  try {
+    console.log(`[FlowUpdate] Attempting to update flow with ID: "${req.params.id}"`);
+    console.log(`[FlowUpdate] Request body:`, req.body);
+
+    const { trigger, response } = req.body;
+    const flow = await Flow.findByIdAndUpdate(
+      req.params.id,
+      { trigger: trigger.toLowerCase(), response },
+      { new: true }
+    );
+    if (!flow) {
+      console.warn(`[FlowUpdate] Flow not found in database for ID: "${req.params.id}"`);
+      // Check if it exists in AdvancedFlow instead by mistake?
+      const isAdvanced = await AdvancedFlow.findById(req.params.id);
+      if (isAdvanced) {
+        console.warn(`[FlowUpdate] Warning: This ID belongs to an AdvancedFlow, not a Simple Flow.`);
+        return res.status(404).json({ error: 'This is an advanced flow. Please edit it in the Flow Builder.', type: 'advanced_mismatch' });
+      }
+      return res.status(404).json({ error: `Flow not found for ID: ${req.params.id}` });
+    }
+    console.log('Simple flow updated successfully:', flow._id);
+    res.json(flow);
+  } catch (e) {
+    console.error('Error updating simple flow:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post("/api/send", async (req, res) => {
-  const { to, text } = req.body;
-  await sendWhatsAppMessage(to, text, 'dashboard');
+  const { to, text, mediaUrl, messageType, filename } = req.body;
+  if (mediaUrl) {
+    await sendWhatsAppMessage(to, { messageType, url: mediaUrl, caption: text || '', filename }, 'dashboard');
+  } else {
+    await sendWhatsAppMessage(to, text, 'dashboard');
+  }
   res.sendStatus(200);
+});
+
+// File Upload API
+app.post("/api/upload", upload.single('file'), (req, res) => {
+  console.log("📁 Upload request received");
+  if (!req.file) {
+    console.error("❌ No file in request");
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  console.log(`✅ File uploaded: ${req.file.filename} (${req.file.size} bytes)`);
+  const fileUrl = `/uploads/${req.file.filename}`;
+  res.json({ url: fileUrl, filename: req.file.originalname, mimetype: req.file.mimetype });
 });
 
 // Bulk Messaging API
@@ -231,12 +358,14 @@ app.get("/api/advanced-flows/:id", async (req, res) => {
 // Create new advanced flow
 app.post("/api/advanced-flows", async (req, res) => {
   try {
+    console.log('Creating new advanced flow:', req.body.name);
     const flowData = req.body;
     const flow = new AdvancedFlow(flowData);
     await flow.save();
+    console.log('Advanced flow created successfully:', flow._id);
     res.status(201).json(flow);
   } catch (error) {
-    console.error('Error creating flow:', error);
+    console.error('Error creating advanced flow:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -244,17 +373,20 @@ app.post("/api/advanced-flows", async (req, res) => {
 // Update advanced flow
 app.put("/api/advanced-flows/:id", async (req, res) => {
   try {
+    console.log('Updating advanced flow:', req.params.id, req.body.name);
     const flow = await AdvancedFlow.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
     if (!flow) {
+      console.warn('Advanced flow not found for update:', req.params.id);
       return res.status(404).json({ error: 'Flow not found' });
     }
+    console.log('Advanced flow updated successfully:', flow._id);
     res.json(flow);
   } catch (error) {
-    console.error('Error updating flow:', error);
+    console.error('Error updating advanced flow:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -439,10 +571,12 @@ async function sendWhatsAppMessage(to, messageData, from) {
 
   if (typeof messageData === 'string') {
     textContent = messageData;
+  } else if (messageData && messageData.messageType) {
+    const mediaInfo = messageData.url || '';
+    const caption = messageData.caption || messageData.content || '';
+    textContent = `[${messageData.messageType}] ${mediaInfo} ${caption}`.trim();
   } else if (messageData && messageData.content) {
     textContent = messageData.content;
-  } else if (messageData && messageData.messageType) {
-    textContent = `[${messageData.messageType}] ${messageData.content || ''}`;
   }
 
   // Save to database
