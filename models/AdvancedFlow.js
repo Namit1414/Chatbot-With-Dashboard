@@ -104,7 +104,16 @@ const advancedFlowSchema = new mongoose.Schema({
 
             // For delay nodes
             delay: Number,
-            delaySeconds: Number
+            delaySeconds: Number,
+
+            // For start nodes (persistence sync)
+            trigger: String,
+            triggerType: String,
+            scheduleTime: String,
+            audienceType: String,
+            tags: String,
+            recipientPhone: String,
+            url: String // Support for both url and mediaUrl
         }
     }],
 
