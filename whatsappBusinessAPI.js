@@ -62,6 +62,8 @@ export async function sendWhatsAppBusinessMessage(to, messageData, token, phoneN
     }
 
     try {
+        console.log('[WhatsAppAPI] Sending Payload:', JSON.stringify(requestBody, null, 2));
+
         const response = await fetch(baseUrl, {
             method: "POST",
             headers: {
