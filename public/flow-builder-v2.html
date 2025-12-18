@@ -1109,10 +1109,22 @@
             let triggerType = startNode ? (startNode.data.triggerType || 'contains') : 'contains';
             if (triggerType === 'keyword') triggerType = 'contains';
 
+            let scheduleTime = startNode && startNode.data.scheduleTime ? startNode.data.scheduleTime : null;
+            if (scheduleTime && !scheduleTime.includes('Z') && !scheduleTime.includes('+')) {
+                // It's a local time string from the input, convert it to UTC
+                try {
+                    const localDate = new Date(scheduleTime);
+                    if (!isNaN(localDate.getTime())) {
+                        scheduleTime = localDate.toISOString();
+                    }
+                } catch (e) {
+                    console.error("Date conversion error:", e);
+                }
+            }
+
             const schedule = startNode && startNode.data.triggerType === 'scheduled' ? {
-                nextRun: startNode.data.scheduleTime
-            } :
-                null;
+                nextRun: scheduleTime
+            } : null;
 
             // Handle Audience Type
             let audType = startNode && startNode.data.audienceType ? startNode.data.audienceType : 'all';
