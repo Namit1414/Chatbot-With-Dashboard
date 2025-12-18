@@ -1097,6 +1097,14 @@
                         if (btn) {
                             connOffset.label = btn.text;
                         }
+                    } else if (node && node.data.sections) {
+                        // Handle List Node branching
+                        let allRows = [];
+                        node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const row = allRows.find(r => r.id === c.sourceHandle);
+                        if (row) {
+                            connOffset.label = row.title;
+                        }
                     }
                 }
 
