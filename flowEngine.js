@@ -90,6 +90,7 @@ function formatAdvancedFlowResponse(result) {
     content: result.content,
     buttons: result.buttons,
     items: result.items,
+    sections: result.sections, // ✅ Added sections
     url: result.url,
     caption: result.caption,
     filename: result.filename
