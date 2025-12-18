@@ -72,7 +72,7 @@ app.get('/logout', (req, res) => {
 // Authentication Middleware
 app.use((req, res, next) => {
   // Allow public access to these routes
-  if (req.path === '/login' || req.path.startsWith('/webhook')) {
+  if (req.path === '/login' || req.path.startsWith('/webhook') || req.path.startsWith('/uploads')) {
     return next();
   }
 
