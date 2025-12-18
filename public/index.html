@@ -92,6 +92,8 @@
         .nav-link:hover {
             background-color: var(--sidebar-hover);
             color: #fff;
+            transform: translateX(5px) scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
         }
 
         .nav-link.active {
@@ -620,9 +622,10 @@
         }
 
         .flow-builder-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            border-color: rgba(0, 168, 132, 0.3);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 168, 132, 0.4);
+            border-color: var(--primary-color);
+            background: rgba(32, 44, 51, 0.8);
         }
 
         .flow-builder-card:hover::before {
@@ -773,8 +776,10 @@
         }
 
         .stat-card:hover {
-            background: rgba(255, 255, 255, 0.05);
-            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 168, 132, 0.3);
+            border-color: rgba(0, 168, 132, 0.5);
         }
 
         .stat-icon {
@@ -800,8 +805,9 @@
 
         .lead-card:hover {
             border-color: var(--primary-color);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            transform: scale(1.005);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 168, 132, 0.4);
+            transform: scale(1.02) translateY(-2px);
+            background: rgba(32, 44, 51, 0.8);
         }
 
         .lead-avatar {
@@ -870,10 +876,10 @@
         }
 
         .flow-card:hover {
-            transform: translateY(-8px);
-            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(255, 255, 255, 0.08);
             border-color: var(--primary-color);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 168, 132, 0.4);
         }
 
         .flow-card::before {
@@ -1164,8 +1170,8 @@
         }
 
         #send-bulk-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(0, 168, 132, 0.4);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 30px rgba(0, 168, 132, 0.5), 0 0 15px rgba(0, 168, 132, 0.5) !important;
         }
 
         #send-bulk-btn:active {
@@ -1188,9 +1194,11 @@
         }
 
         #bulk-messaging .btn-outline-secondary:hover {
-            background: rgba(108, 117, 125, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background: rgba(108, 117, 125, 0.15);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 12px rgba(0, 168, 132, 0.3);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
         }
 
         #bulk-messaging .btn-success {
@@ -1200,8 +1208,8 @@
         }
 
         #bulk-messaging .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.4);
         }
 
         /* Recipients List Items */
@@ -1418,10 +1426,1368 @@
         #scheduled-messages-list .bi-exclamation-triangle {
             filter: drop-shadow(0 0 20px currentColor);
         }
+
+        /* ========================================
+           LIVE EFFECTS & MICRO-INTERACTIONS
+        ======================================== */
+
+        /* 1. TOAST NOTIFICATION SYSTEM */
+        #toast-container {
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            min-width: 300px !important;
+            max-width: 400px !important;
+            pointer-events: none !important;
+        }
+
+        .toast {
+            background: rgba(17, 24, 39, 0.98) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 2px solid #00a884 !important;
+            border-radius: 14px !important;
+            padding: 16px 20px !important;
+            min-width: 300px !important;
+            max-width: 400px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+                0 0 30px rgba(0, 168, 132, 0.5) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            pointer-events: auto !important;
+            animation: toastSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .toast.removing {
+            animation: toastSlideOut 0.3s ease forwards;
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .toast.success .toast-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .toast.error .toast-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+
+        .toast.info .toast-icon {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .toast.warning .toast-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+
+        .toast-content {
+            flex: 1;
+            color: var(--text-main);
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .toast-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00d4aa, #00a884);
+            width: 100%;
+            transform-origin: left;
+            animation: toastProgress 5s linear forwards;
+        }
+
+        @keyframes toastProgress {
+            to {
+                transform: scaleX(0);
+            }
+        }
+
+        /* 2. SKELETON LOADERS */
+        .skeleton {
+            background: linear-gradient(90deg,
+                    rgba(31, 41, 55, 0.4) 25%,
+                    rgba(75, 85, 99, 0.4) 50%,
+                    rgba(31, 41, 55, 0.4) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .skeleton-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .skeleton-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+        }
+
+        .skeleton-text {
+            flex: 1;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+        }
+
+        .skeleton-line.short {
+            width: 60%;
+        }
+
+        .skeleton-line.medium {
+            width: 80%;
+        }
+
+        .skeleton-button {
+            height: 40px;
+            width: 120px;
+            border-radius: 10px;
+            margin-top: 12px;
+        }
+
+        /* 3. TYPING INDICATOR */
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 16px;
+            background: rgba(31, 41, 55, 0.6);
+            border-radius: 18px;
+            margin: 8px 0;
+        }
+
+        .typing-indicator span {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-right: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* 4. NUMBER COUNTER ANIMATION */
+        .stat-number {
+            display: inline-block;
+            font-variant-numeric: tabular-nums;
+            transition: all 0.3s ease;
+        }
+
+        .stat-number.counting {
+            background: linear-gradient(135deg, #00d4aa, #00a884);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Stats Card Enhancement */
+        .stats-card {
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00d4aa, #00a884);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.6s ease;
+        }
+
+        .stats-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(0, 168, 132, 0.5);
+        }
+
+        /* 5. RIPPLE EFFECT */
+        .ripple-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: rippleEffect 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes rippleEffect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Apply ripple to buttons */
+        .btn,
+        button,
+        .nav-link,
+        .chat-list-item {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Enhanced Button States with Ripple */
+        .btn-primary.ripple-container:active,
+        .btn-success.ripple-container:active,
+        .btn-outline-primary.ripple-container:active {
+            transform: scale(0.98);
+        }
+
+        /* Loading State for Buttons */
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .btn-loading .btn-text {
+            opacity: 0;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Pulse Animation for Notifications */
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Glow Effect for Important Elements */
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(0, 168, 132, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(0, 168, 132, 0.8),
+                    0 0 30px rgba(0, 168, 132, 0.6);
+            }
+        }
+
+        /* Smooth Transitions for All Interactive Elements */
+        * {
+            transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+            transition-duration: 0.2s;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Reduce Motion for Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ========================================
+           ADVANCED VISUAL EFFECTS
+        ======================================== */
+
+        /* ENHANCED PULSE/GLOW EFFECTS */
+
+        /* Pulse - Attention grabbing opacity animation */
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .pulse-fast {
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Glow - Box shadow animation */
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .glow-green {
+            animation: glowGreen 2s ease-in-out infinite;
+        }
+
+        .glow-blue {
+            animation: glowBlue 2s ease-in-out infinite;
+        }
+
+        .glow-red {
+            animation: glowRed 2s ease-in-out infinite;
+        }
+
+        .glow-yellow {
+            animation: glowYellow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(0, 168, 132, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(0, 168, 132, 0.8),
+                    0 0 30px rgba(0, 168, 132, 0.6);
+            }
+        }
+
+        @keyframes glowGreen {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.8),
+                    0 0 30px rgba(16, 185, 129, 0.6);
+            }
+        }
+
+        @keyframes glowBlue {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.8),
+                    0 0 30px rgba(59, 130, 246, 0.6);
+            }
+        }
+
+        @keyframes glowRed {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.8),
+                    0 0 30px rgba(239, 68, 68, 0.6);
+            }
+        }
+
+        @keyframes glowYellow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.8),
+                    0 0 30px rgba(251, 191, 36, 0.6);
+            }
+        }
+
+        /* Pulse Scale - Grows and shrinks */
+        .pulse-scale {
+            animation: pulseScale 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseScale {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Heartbeat - Double pulse like a heartbeat */
+        .heartbeat {
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+
+            0%,
+            40%,
+            100% {
+                transform: scale(1);
+            }
+
+            10% {
+                transform: scale(1.1);
+            }
+
+            20% {
+                transform: scale(1);
+            }
+
+            30% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* MORPHING ICONS */
+
+        .morph-icon {
+            position: relative;
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .morph-icon i {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .morph-icon .icon-from {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        .morph-icon .icon-to {
+            opacity: 0;
+            transform: rotate(90deg) scale(0);
+            position: absolute;
+        }
+
+        .morph-icon.morphed .icon-from {
+            opacity: 0;
+            transform: rotate(-90deg) scale(0);
+        }
+
+        .morph-icon.morphed .icon-to {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        /* Menu to X morphing */
+        .menu-icon {
+            width: 24px;
+            height: 20px;
+            position: relative;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .menu-icon span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: currentColor;
+            border-radius: 3px;
+            opacity: 1;
+            left: 0;
+            transform-origin: center;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .menu-icon span:nth-child(1) {
+            top: 0;
+        }
+
+        .menu-icon span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .menu-icon span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .menu-icon.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .menu-icon.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        .menu-icon.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* Play/Pause morphing */
+        .play-pause-icon {
+            width: 24px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .play-pause-icon::before,
+        .play-pause-icon::after {
+            content: '';
+            position: absolute;
+            background: currentColor;
+            transition: all 0.3s ease;
+        }
+
+        /* Play state (triangle) */
+        .play-pause-icon::before {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 8px 0 8px 14px;
+            border-color: transparent transparent transparent currentColor;
+            left: 6px;
+            top: 4px;
+            background: transparent;
+        }
+
+        .play-pause-icon::after {
+            opacity: 0;
+        }
+
+        /* Pause state (two bars) */
+        .play-pause-icon.paused::before {
+            width: 4px;
+            height: 16px;
+            border: none;
+            background: currentColor;
+            left: 6px;
+            top: 4px;
+        }
+
+        .play-pause-icon.paused::after {
+            opacity: 1;
+            width: 4px;
+            height: 16px;
+            right: 6px;
+            top: 4px;
+        }
+
+        /* PARTICLE SYSTEM */
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* Floating particles (CSS-only fallback) */
+        .particle-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, rgba(0, 212, 170, 0.9) 0%, rgba(0, 168, 132, 0.3) 70%);
+            border-radius: 50%;
+            animation: floatParticle linear infinite;
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(100vh) translateX(0) scale(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-100px) translateX(var(--drift)) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Generate particles with different timings */
+        .particle:nth-child(1) {
+            left: 10%;
+            animation-duration: 15s;
+            animation-delay: 0s;
+            --drift: 50px;
+        }
+
+        .particle:nth-child(2) {
+            left: 20%;
+            animation-duration: 18s;
+            animation-delay: 2s;
+            --drift: -30px;
+        }
+
+        .particle:nth-child(3) {
+            left: 30%;
+            animation-duration: 20s;
+            animation-delay: 4s;
+            --drift: 70px;
+        }
+
+        .particle:nth-child(4) {
+            left: 40%;
+            animation-duration: 16s;
+            animation-delay: 1s;
+            --drift: -50px;
+        }
+
+        .particle:nth-child(5) {
+            left: 50%;
+            animation-duration: 19s;
+            animation-delay: 3s;
+            --drift: 40px;
+        }
+
+        .particle:nth-child(6) {
+            left: 60%;
+            animation-duration: 17s;
+            animation-delay: 5s;
+            --drift: -60px;
+        }
+
+        .particle:nth-child(7) {
+            left: 70%;
+            animation-duration: 21s;
+            animation-delay: 2s;
+            --drift: 80px;
+        }
+
+        .particle:nth-child(8) {
+            left: 80%;
+            animation-duration: 15s;
+            animation-delay: 4s;
+            --drift: -40px;
+        }
+
+        .particle:nth-child(9) {
+            left: 90%;
+            animation-duration: 18s;
+            animation-delay: 1s;
+            --drift: 60px;
+        }
+
+        .particle:nth-child(10) {
+            left: 15%;
+            animation-duration: 22s;
+            animation-delay: 3s;
+            --drift: -70px;
+        }
+
+        /* Starburst effect for celebrations */
+        .starburst {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .starburst-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            animation: burst 1s ease-out forwards;
+        }
+
+        @keyframes burst {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Confetti effect */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #fbbf24;
+            position: absolute;
+            animation: confettiFall 3s linear forwards;
+            z-index: 9999;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* ========================================
+           ENHANCED HOVER EFFECTS
+        ======================================== */
+
+        /* Enhanced Button Hovers */
+        .btn:hover:not(:disabled):not(.btn-loading),
+        button:hover:not(:disabled):not(.btn-loading) {
+            transform: translateY(-2px) scale(1.02) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+            filter: brightness(1.1) !important;
+        }
+
+        .btn-primary:hover:not(:disabled),
+        button.btn-primary:hover:not(:disabled),
+        .btn.btn-primary:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(0, 168, 132, 0.5), 0 0 15px rgba(0, 168, 132, 0.4) !important;
+        }
+
+        .btn-success:hover:not(:disabled),
+        button.btn-success:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        .btn-danger:hover:not(:disabled),
+        button.btn-danger:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .btn-info:hover:not(:disabled),
+        button.btn-info:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5), 0 0 15px rgba(59, 130, 246, 0.4) !important;
+        }
+
+        .btn-warning:hover:not(:disabled),
+        button.btn-warning:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5), 0 0 15px rgba(245, 158, 11, 0.4) !important;
+        }
+
+        /* Generic button element glow */
+        button:not(.no-glow):hover {
+            box-shadow: 0 6px 20px rgba(0, 168, 132, 0.4), 0 0 12px rgba(0, 168, 132, 0.3) !important;
+        }
+
+        /* Ensure ALL buttons glow - super aggressive rule */
+        button:hover,
+        .btn:hover,
+        input[type="button"]:hover,
+        input[type="submit"]:hover,
+        [role="button"]:hover {
+            box-shadow: 0 6px 15px rgba(0, 168, 132, 0.4), 0 0 12px rgba(0, 168, 132, 0.3) !important;
+            transform: translateY(-2px) !important;
+        }
+
+        /* ULTRA AGGRESSIVE - Force glow on ALL buttons with maximum specificity */
+        html body button:not(:disabled):hover,
+        html body .btn:not(:disabled):hover,
+        html body *[class*="btn"]:not(:disabled):hover,
+        html body button[class]:hover,
+        html body .btn-outline-secondary:hover,
+        html body .btn-outline-primary:hover,
+        html body #bulk-messaging button:hover,
+        html body #bulk-messaging .btn:hover {
+            box-shadow: 0 6px 15px rgba(0, 168, 132, 0.5), 0 0 15px rgba(0, 168, 132, 0.4) !important;
+            transform: translateY(-2px) scale(1.02) !important;
+            filter: brightness(1.1) !important;
+        }
+
+        /* Enhanced Card Hover */
+        .card:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 168, 132, 0.2) !important;
+        }
+
+        /* Table Row Hover */
+        .table tbody tr:hover {
+            background-color: rgba(0, 168, 132, 0.1) !important;
+            transform: scale(1.002);
+            cursor: pointer;
+        }
+
+        /* Chat List Item Enhanced (already has hover but ensure it's visible) */
+        .chat-list-item:hover {
+            transform: translateX(5px) !important;
+            box-shadow: -4px 0 0 var(--primary-color) !important;
+        }
+
+        /* Search Input Glow on Focus */
+        input:focus,
+        textarea:focus,
+        select:focus,
+        .form-control:focus,
+        .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2), 0 0 20px rgba(0, 168, 132, 0.3) !important;
+            transform: scale(1.005) !important;
+        }
+
+        /* Icon Hover Scale */
+        button i,
+        a i,
+        .nav-link i {
+            transition: transform 0.2s ease !important;
+        }
+
+        /* Remove transition from arrow icons to allow animation */
+        .bi-arrow-clockwise,
+        .bi-arrow-counterclockwise,
+        .bi-arrow-repeat,
+        .bi-arrow-rotate-right,
+        .bi-arrow-rotate-left,
+        i[class*="arrow-clockwise"],
+        i[class*="arrow-counterclockwise"] {
+            transition: none !important;
+        }
+
+        button:hover i:not([class*="arrow"]):not([class*="rotate"]),
+        a:hover i:not([class*="arrow"]):not([class*="rotate"]),
+        .nav-link:hover i:not([class*="arrow"]):not([class*="rotate"]) {
+            transform: scale(1.15) !important;
+        }
+
+        /* Rotating arrow effects - ANIMATION ONLY, NO TRANSFORM */
+        html body button:hover .bi-arrow-clockwise,
+        html body button:hover .bi.bi-arrow-clockwise,
+        html body button:hover i.bi-arrow-clockwise,
+        html body button:hover .bi-arrow-repeat,
+        html body button:hover .bi-arrow-rotate-right,
+        button:hover i[class*="arrow-clockwise"],
+        a:hover .bi-arrow-clockwise {
+            animation: rotateClockwise 0.8s ease-in-out forwards !important;
+            display: inline-block !important;
+        }
+
+        html body button:hover .bi-arrow-counterclockwise,
+        html body button:hover .bi.bi-arrow-counterclockwise,
+        html body button:hover i.bi-arrow-counterclockwise,
+        html body button:hover .bi-arrow-rotate-left,
+        button:hover i[class*="arrow-counterclockwise"],
+        a:hover .bi-arrow-counterclockwise {
+            animation: rotateCounterClockwise 0.8s ease-in-out forwards !important;
+            display: inline-block !important;
+        }
+
+        @keyframes rotateClockwise {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1.15);
+            }
+        }
+
+        @keyframes rotateCounterClockwise {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            100% {
+                transform: rotate(-360deg) scale(1.15);
+            }
+        }
+
+        /* ========================================
+           RESET/REFRESH BUTTON STYLING
+        ======================================== */
+
+        /* Target all buttons containing reset/refresh arrow icons */
+        button:has(.bi-arrow-clockwise),
+        button:has(.bi-arrow-counterclockwise),
+        button:has(.bi-arrow-repeat),
+        button:has(.bi-arrow-rotate-right),
+        button:has(.bi-arrow-rotate-left),
+        .btn:has(.bi-arrow-clockwise),
+        .btn:has(.bi-arrow-counterclockwise) {
+            border: 2px solid var(--primary-color) !important;
+            border-radius: 12px !important;
+            padding: 0.5rem 1rem !important;
+            color: var(--primary-color) !important;
+            background: transparent !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 0 0 rgba(0, 168, 132, 0) !important;
+        }
+
+        button:has(.bi-arrow-clockwise):hover,
+        button:has(.bi-arrow-counterclockwise):hover,
+        button:has(.bi-arrow-repeat):hover,
+        .btn:has(.bi-arrow-clockwise):hover,
+        .btn:has(.bi-arrow-counterclockwise):hover {
+            background: rgba(0, 168, 132, 0.1) !important;
+            border-color: #00d4aa !important;
+            color: #00d4aa !important;
+            box-shadow: 0 0 15px rgba(0, 168, 132, 0.5), 0 0 30px rgba(0, 168, 132, 0.3) !important;
+            transform: translateY(-2px) scale(1.02) !important;
+        }
+
+        /* Fallback for browsers that don't support :has() */
+        button[onclick*="refresh"],
+        button[onclick*="reload"],
+        button[onclick*="reset"],
+        .btn[onclick*="refresh"],
+        .btn[onclick*="reload"],
+        .btn[onclick*="reset"] {
+            border: 2px solid var(--primary-color) !important;
+            border-radius: 12px !important;
+            color: var(--primary-color) !important;
+        }
+
+        button[onclick*="refresh"]:hover,
+        button[onclick*="reload"]:hover,
+        button[onclick*="reset"]:hover {
+            box-shadow: 0 0 15px rgba(0, 168, 132, 0.5), 0 0 30px rgba(0, 168, 132, 0.3) !important;
+        }
+
+        /* ========================================
+           MODERN MODAL STYLING
+        ======================================== */
+
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75) !important;
+            backdrop-filter: blur(5px) !important;
+        }
+
+        .modal-backdrop.show {
+            opacity: 0.75 !important;
+        }
+
+        /* Modal Dialog */
+        .modal-dialog {
+            animation: modalSlideIn 0.3s ease-out !important;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(11, 20, 26, 0.95) 100%) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(0, 168, 132, 0.3) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+                0 0 40px rgba(0, 168, 132, 0.2) !important;
+        }
+
+        /* Modal Header */
+        .modal-header {
+            background: linear-gradient(135deg, rgba(0, 168, 132, 0.1) 0%, rgba(0, 143, 111, 0.05) 100%) !important;
+            border-bottom: 1px solid rgba(0, 168, 132, 0.3) !important;
+            border-radius: 20px 20px 0 0 !important;
+            padding: 1.5rem !important;
+        }
+
+        .modal-title {
+            color: var(--text-main) !important;
+            font-weight: 600 !important;
+            font-size: 1.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        .modal-title i {
+            color: var(--primary-color) !important;
+            filter: drop-shadow(0 0 10px rgba(0, 168, 132, 0.5)) !important;
+        }
+
+        .btn-close {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.7 !important;
+            transition: all 0.2s !important;
+        }
+
+        .btn-close:hover {
+            opacity: 1 !important;
+            transform: rotate(90deg) scale(1.1) !important;
+        }
+
+        /* Modal Body */
+        .modal-body {
+            padding: 1.5rem !important;
+            color: var(--text-main) !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+        }
+
+        /* Custom Scrollbar for Modal */
+        .modal-body::-webkit-scrollbar {
+            width: 8px !important;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: rgba(31, 41, 55, 0.3) !important;
+            border-radius: 10px !important;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 168, 132, 0.5) !important;
+            border-radius: 10px !important;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 168, 132, 0.7) !important;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            border-top: 1px solid rgba(0, 168, 132, 0.2) !important;
+            padding: 1.25rem 1.5rem !important;
+            background: rgba(0, 0, 0, 0.1) !important;
+            border-radius: 0 0 20px 20px !important;
+        }
+
+        /* Template Items in Modal */
+        .modal-body .list-group-item,
+        .modal-body .card {
+            background: rgba(31, 41, 55, 0.4) !important;
+            border: 1px solid rgba(75, 85, 99, 0.3) !important;
+            border-radius: 12px !important;
+            margin-bottom: 0.75rem !important;
+            padding: 1.25rem !important;
+            transition: all 0.3s ease !important;
+            color: var(--text-main) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        /* Template card accent bar */
+        .modal-body .list-group-item::before,
+        .modal-body .card::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 4px !important;
+            background: linear-gradient(180deg, var(--primary-color), #00d4aa) !important;
+            opacity: 0 !important;
+            transition: opacity 0.3s ease !important;
+        }
+
+        .modal-body .list-group-item:hover::before,
+        .modal-body .card:hover::before {
+            opacity: 1 !important;
+        }
+
+        .modal-body .list-group-item:hover,
+        .modal-body .card:hover {
+            background: rgba(31, 41, 55, 0.7) !important;
+            border-color: rgba(0, 168, 132, 0.6) !important;
+            transform: translateX(8px) scale(1.01) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 168, 132, 0.3) !important;
+            padding-left: 1.5rem !important;
+        }
+
+        /* Template card title styling */
+        .modal-body .list-group-item h5,
+        .modal-body .list-group-item h6,
+        .modal-body .card h5,
+        .modal-body .card h6 {
+            color: var(--text-main) !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.5rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .modal-body .list-group-item:hover h5,
+        .modal-body .list-group-item:hover h6,
+        .modal-body .card:hover h5,
+        .modal-body .card:hover h6 {
+            background: linear-gradient(135deg, #00d4aa, #00a884) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        /* Template description text */
+        .modal-body .list-group-item p,
+        .modal-body .card p {
+            color: var(--text-secondary) !important;
+            font-size: 0.9rem !important;
+            line-height: 1.6 !important;
+            margin-bottom: 0.75rem !important;
+        }
+
+        /* Template category badge */
+        .modal-body .badge {
+            background: rgba(0, 168, 132, 0.15) !important;
+            color: var(--primary-color) !important;
+            border: 1px solid rgba(0, 168, 132, 0.3) !important;
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            font-size: 0.75rem !important;
+            font-weight: 500 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Modal Buttons */
+        .modal .btn {
+            border-radius: 10px !important;
+            padding: 0.6rem 1.2rem !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Particle Background -->
+    <div class="particle-bg">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
     <div id="sidebar">
         <div class="sidebar-header">
             <div class="d-flex align-items-center gap-2">
@@ -1646,7 +3012,8 @@
                             <div class="mb-4">
                                 <label class="form-label fw-bold text-secondary small text-uppercase"
                                     style="letter-spacing: 1px;">Preferred Time Slot</label>
-                                <select class="form-select bg-dark border-0 text-white p-3" id="schedule-time" required>
+                                <select class="form-select bg-dark border-0 text-white p-3" id="call-schedule-time"
+                                    required>
                                     <option value="">Select...</option>
                                     <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
                                     <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
@@ -2223,9 +3590,9 @@
                             </div>
 
                             <!-- Schedule Time (Hidden by default) -->
-                            <div class="mb-3" id="schedule-time-container" style="display: none;">
+                            <div class="mb-3" id="bulk-schedule-time-container" style="display: none;">
                                 <label class="form-label fw-semibold">Schedule Time</label>
-                                <input type="datetime-local" class="form-control" id="schedule-time">
+                                <input type="datetime-local" class="form-control" id="bulk-schedule-time">
                                 <div class="form-text small">Messages will be sent at the scheduled time</div>
                             </div>
 
@@ -2627,7 +3994,7 @@
             const lead = allLeads.find(l => l._id === id);
             if (lead) {
                 document.getElementById('schedule-date').value = lead.preferred_date || '';
-                document.getElementById('schedule-time').value = lead.preferred_time || '';
+                document.getElementById('call-schedule-time').value = lead.preferred_time || '';
             }
             const modal = new bootstrap.Modal(document.getElementById('scheduleCallModal'));
             modal.show();
@@ -2638,7 +4005,7 @@
             const id = document.getElementById('schedule-lead-phone').value;
             const data = {
                 preferred_date: document.getElementById('schedule-date').value,
-                preferred_time: document.getElementById('schedule-time').value
+                preferred_time: document.getElementById('call-schedule-time').value
             };
 
             try {
@@ -3385,7 +4752,7 @@
 
         function toggleScheduleTime() {
             const isScheduled = document.getElementById('send-scheduled').checked;
-            const container = document.getElementById('schedule-time-container');
+            const container = document.getElementById('bulk-schedule-time-container');
             const btnText = document.getElementById('send-btn-text');
 
             if (isScheduled) {
@@ -3416,7 +4783,7 @@
 
             // Handle scheduled sending
             if (isScheduled) {
-                const scheduleTime = document.getElementById('schedule-time').value;
+                const scheduleTime = document.getElementById('bulk-schedule-time').value;
                 if (!scheduleTime) {
                     alert('Please select a schedule time.');
                     return;
@@ -4750,6 +6117,368 @@
                 if (typeof fetchFlows === 'function') fetchFlows();
             }
         };
+
+
+        // ========================================
+        // LIVE EFFECTS JAVASCRIPT UTILITIES
+        // ========================================
+
+        // 1. TOAST NOTIFICATION SYSTEM
+        function showToast(title, message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            if (!container) {
+                console.error('Toast container not found!');
+                return;
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: 'bi-check-circle-fill',
+                error: 'bi-x-circle-fill',
+                warning: 'bi-exclamation-triangle-fill',
+                info: 'bi-info-circle-fill'
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="bi ${icons[type]}"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    ${message ? `<div class="toast-message">${message}</div>` : ''}
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                ${duration > 0 ? '<div class="toast-progress"></div>' : ''}
+            `;
+
+            // Add to container
+            container.appendChild(toast);
+
+            // Force reflow to ensure animation plays
+            toast.offsetHeight;
+
+            // Auto remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.classList.add('removing');
+                        setTimeout(() => {
+                            if (toast.parentElement) {
+                                toast.remove();
+                            }
+                        }, 300);
+                    }
+                }, duration);
+            }
+
+            console.log(`✅ Toast created: ${type} - ${title}`);
+            return toast;
+        }
+
+        // Convenience methods
+        window.toast = {
+            success: (title, message, duration) => showToast(title, message, 'success', duration),
+            error: (title, message, duration) => showToast(title, message, 'error', duration),
+            warning: (title, message, duration) => showToast(title, message, 'warning', duration),
+            info: (title, message, duration) => showToast(title, message, 'info', duration)
+        };
+
+
+        // 2. RIPPLE EFFECT
+        function createRipple(event, buttonElement) {
+            const button = buttonElement || event.currentTarget;
+
+            // Don't add ripple if button is disabled
+            if (!button || button.disabled || button.classList.contains('btn-loading')) return;
+
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+
+            button.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // Add ripple to all buttons
+        function initRippleEffect() {
+            document.addEventListener('click', (e) => {
+                const button = e.target.closest('button, .btn, .nav-link');
+                if (button && !button.classList.contains('no-ripple')) {
+                    createRipple(e, button);
+                }
+            });
+        }
+
+        // 3. NUMBER COUNTER ANIMATION
+        function animateNumber(element, start, end, duration = 1000) {
+            if (!element) return;
+
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+
+            element.classList.add('counting');
+
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                    element.classList.remove('counting');
+                }
+                element.textContent = Math.floor(current);
+            }, 16);
+        }
+
+        // Animate stats on page load
+        function animateStats() {
+            const statElements = document.querySelectorAll('.stat-number, [id^="stat-"]');
+            statElements.forEach(el => {
+                const targetValue = parseInt(el.textContent) || 0;
+                if (targetValue > 0) {
+                    el.textContent = '0';
+                    setTimeout(() => animateNumber(el, 0, targetValue, 1500), 300);
+                }
+            });
+        }
+
+        // 4. TYPING INDICATOR
+        function showTypingIndicator(container) {
+            if (!container) return null;
+
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = `
+                <span>AI is typing</span>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+
+            container.appendChild(indicator);
+            return indicator;
+        }
+
+        function hideTypingIndicator(indicator) {
+            if (indicator && indicator.parentElement) {
+                indicator.remove();
+            }
+        }
+
+        // 5. SKELETON LOADER
+        function createSkeletonCard() {
+            return `
+                <div class="skeleton-card">
+                    <div class="skeleton-header">
+                        <div class="skeleton skeleton-avatar"></div>
+                        <div class="skeleton-text">
+                            <div class="skeleton skeleton-line"></div>
+                            <div class="skeleton skeleton-line short"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton skeleton-line medium"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line short"></div>
+                    <div class="skeleton skeleton-button"></div>
+                </div>
+            `;
+        }
+
+        function showSkeletonLoaders(container, count = 3) {
+            if (!container) return;
+
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                container.innerHTML += createSkeletonCard();
+            }
+        }
+
+        // BUTTON LOADING STATE HELPER
+        function setButtonLoading(button, loading = true) {
+            if (!button) return;
+
+            if (loading) {
+                button.classList.add('btn-loading');
+                button.disabled = true;
+                // Wrap text in span if not already wrapped
+                if (!button.querySelector('.btn-text')) {
+                    const text = button.innerHTML;
+                    button.innerHTML = `<span class="btn-text">${text}</span>`;
+                }
+            } else {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+            }
+        }
+
+        // INITIALIZE ALL EFFECTS
+        function initLiveEffects() {
+            // Initialize ripple effect
+            initRippleEffect();
+
+            // Animate stats on first load
+            setTimeout(animateStats, 500);
+
+            // Show welcome toast
+            setTimeout(() => {
+                toast.success('Welcome!', 'Dashboard loaded successfully', 3000);
+            }, 1000);
+
+            console.log('✨ Live effects initialized');
+        }
+
+        // Note: Initialization moved to end of script after all effects are defined
+
+
+        // ========================================
+        // ADVANCED EFFECTS JAVASCRIPT
+        // ========================================
+
+        // MORPHING ICON TOGGLE
+        function morphIcon(element) {
+            if (!element) return;
+            element.classList.toggle('morphed');
+        }
+
+        // Create morph icon programmatically
+        function createMorphIcon(iconFrom, iconTo, container) {
+            const morphDiv = document.createElement('div');
+            morphDiv.className = 'morph-icon';
+            morphDiv.innerHTML = `
+                <i class="bi ${iconFrom} icon-from"></i>
+                <i class="bi ${iconTo} icon-to"></i>
+            `;
+            morphDiv.addEventListener('click', () => morphIcon(morphDiv));
+            if (container) container.appendChild(morphDiv);
+            return morphDiv;
+        }
+
+        // CONFETTI CELEBRATION
+        function triggerConfetti(duration = 3000) {
+            const colors = ['#fbbf24', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ef4444'];
+            const confettiCount = 50;
+
+            for (let i = 0; i < confettiCount; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.top = '-10px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.width = (Math.random() * 10 + 5) + 'px';
+                    confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+
+                    document.body.appendChild(confetti);
+
+                    setTimeout(() => confetti.remove(), duration);
+                }, i * 30);
+            }
+        }
+
+        // STARBURST EFFECT
+        function triggerStarburst(x, y) {
+            const burst = document.createElement('div');
+            burst.className = 'starburst';
+            burst.style.left = x + 'px';
+            burst.style.top = y + 'px';
+
+            const particleCount = 12;
+            const colors = ['#fbbf24', '#f59e0b', '#10b981', '#00d4aa'];
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'starburst-particle';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+                const angle = (i / particleCount) * Math.PI * 2;
+                const distance = 100 + Math.random() * 50;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+
+                burst.appendChild(particle);
+            }
+
+            document.body.appendChild(burst);
+            setTimeout(() => burst.remove(), 1000);
+        }
+
+        // Add pulse/glow to element
+        function addPulse(element, type = 'pulse') {
+            if (!element) return;
+            element.classList.add(type);
+        }
+
+        function removePulse(element, type = 'pulse') {
+            if (!element) return;
+            element.classList.remove(type);
+        }
+
+        // Add glow with specific color
+        function addGlow(element, color = '') {
+            if (!element) return;
+            const glowClass = color ? `glow-${color}` : 'glow';
+            element.classList.add(glowClass);
+        }
+
+        function removeGlow(element) {
+            if (!element) return;
+            element.classList.remove('glow', 'glow-green', 'glow-blue', 'glow-red', 'glow-yellow');
+        }
+
+        // ENHANCED INITIALIZATION
+        const originalInitLiveEffects = initLiveEffects;
+        initLiveEffects = function () {
+            // Call original init
+            originalInitLiveEffects();
+
+            // Add example pulse to unread badges (if any)
+            setTimeout(() => {
+                const badges = document.querySelectorAll('.badge.bg-danger, .badge.bg-success');
+                badges.forEach(badge => {
+                    if (parseInt(badge.textContent) > 0) {
+                        addPulse(badge, 'pulse-fast');
+                    }
+                });
+            }, 2000);
+
+            console.log('✨ Advanced effects initialized');
+        };
+
+        // Make functions globally available
+        window.morphIcon = morphIcon;
+        window.createMorphIcon = createMorphIcon;
+        window.triggerConfetti = triggerConfetti;
+        window.triggerStarburst = triggerStarburst;
+        window.addPulse = addPulse;
+        window.removePulse = removePulse;
+        window.addGlow = addGlow;
+        window.removeGlow = removeGlow;
+
+
+        // INITIALIZE ALL EFFECTS - Called after all functions are defined
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLiveEffects);
+        } else {
+            initLiveEffects();
+        }
 
 
         fetchFlows();
