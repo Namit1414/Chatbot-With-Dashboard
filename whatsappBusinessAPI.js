@@ -113,7 +113,16 @@ function buildButtonsMessage(to, messageData) {
                     name: "cta_url",
                     parameters: {
                         display_text: ctaButtons[0].text,
-                        url: ctaButtons[0].value
+                        url: (function () {
+                            let val = ctaButtons[0].value;
+                            if (val && val.startsWith('/')) {
+                                const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+                                if (baseUrl) {
+                                    val = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) + val : baseUrl + val;
+                                }
+                            }
+                            return val;
+                        })()
                     }
                 }
             }
@@ -210,13 +219,25 @@ function buildListMessage(to, messageData) {
  * Build media message (image/video)
  */
 function buildMediaMessage(to, mediaType, messageData) {
+    let url = messageData.url;
+
+    // Prepend base URL for relative paths (e.g., /uploads/...)
+    if (url && url.startsWith('/')) {
+        const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+        if (baseUrl) {
+            url = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) + url : baseUrl + url;
+        } else {
+            console.warn(`[WhatsAppAPI] Warning: Relative URL detected (${url}) but no PUBLIC_URL or RENDER_EXTERNAL_URL found in environment.`);
+        }
+    }
+
     return {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: to,
         type: mediaType,
         [mediaType]: {
-            link: messageData.url,
+            link: url,
             caption: messageData.caption || ''
         }
     };
@@ -226,13 +247,23 @@ function buildMediaMessage(to, mediaType, messageData) {
  * Build document message
  */
 function buildDocumentMessage(to, messageData) {
+    let url = messageData.url;
+
+    // Prepend base URL for relative paths
+    if (url && url.startsWith('/')) {
+        const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+        if (baseUrl) {
+            url = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) + url : baseUrl + url;
+        }
+    }
+
     return {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: to,
         type: "document",
         document: {
-            link: messageData.url,
+            link: url,
             caption: messageData.caption || '',
             filename: messageData.filename || 'document.pdf'
         }
