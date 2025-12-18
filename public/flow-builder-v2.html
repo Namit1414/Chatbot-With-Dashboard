@@ -493,12 +493,39 @@
                     .then(r => r.json())
                     .then(flow => {
                         state.flowId = flow._id;
-                        state.nodes = flow.nodes.map(n => ({
-                            ...n,
-                            x: n.position.x,
-                            y: n.position.y,
-                            data: n.data || {}
-                        }));
+                        state.nodes = flow.nodes.map(n => {
+                            const node = {
+                                ...n,
+                                x: n.position.x || 0,
+                                y: n.position.y || 0,
+                                data: n.data || {}
+                            };
+
+                            // Sync Start Node with Flow-level Trigger Info (for persistence/legacy)
+                            if (node.type === 'start') {
+                                if (!node.data.trigger && flow.trigger) node.data.trigger = flow.trigger;
+                                if (!node.data.triggerType && flow.triggerType) {
+                                    node.data.triggerType = flow.triggerType === 'keyword' ? 'contains' : flow.triggerType;
+                                }
+
+                                // Schedule Sync
+                                if (flow.schedule?.nextRun && !node.data.scheduleTime) {
+                                    node.data.scheduleTime = flow.schedule.nextRun.substring(0, 16); // format for datetime-local
+                                }
+
+                                // Recipient Sync
+                                if (flow.recipientConfig) {
+                                    if (!node.data.audienceType) node.data.audienceType = flow.recipientConfig.audienceType;
+                                    if (flow.recipientConfig.tags?.length > 0 && !node.data.tags) {
+                                        node.data.tags = flow.recipientConfig.tags.join(', ');
+                                    }
+                                    if (flow.recipientConfig.phones?.length > 0 && !node.data.recipientPhone) {
+                                        node.data.recipientPhone = flow.recipientConfig.phones[0];
+                                    }
+                                }
+                            }
+                            return node;
+                        });
                         state.connections = flow.connections || [];
                         render();
                     })
