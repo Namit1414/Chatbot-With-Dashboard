@@ -760,14 +760,27 @@
             } else if (node.type === 'message') {
                 body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
             } else if (node.type === 'buttons') {
-                body.innerText = node.data.text || '(Question)';
+                body.innerHTML = `
+                    <div style="margin-bottom: 8px; opacity: 0.9;">${node.data.text ? (node.data.text.substring(0, 40) + (node.data.text.length > 40 ? '...' : '')) : '(Question text)'}</div>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        ${(node.data.buttons || []).map(b => `<span style="background:rgba(16, 185, 129, 0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-size:0.75em; border: 1px solid rgba(16, 185, 129, 0.2);">${b.text}</span>`).join('')}
+                    </div>
+                `;
             } else if (['image', 'video', 'document'].includes(node.type)) {
                 body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark"></i> <span>${node.type}</span></div>`;
             } else if (node.type === 'cta') {
                 body.innerText = `CTA: ${node.data.buttonText || 'Link'}`;
             } else if (node.type === 'list') {
-                const rowCount = node.data.sections ? node.data.sections.reduce((acc, s) => acc + s.rows.length, 0) : 0;
-                body.innerText = `${rowCount} Options`;
+                const sections = node.data.sections || [];
+                const rowCount = sections.reduce((acc, s) => acc + s.rows.length, 0);
+                body.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 4px; color: #ec4899;">${node.data.buttonText || 'View Menu'}</div>
+                    <div style="opacity: 0.7; font-size: 0.85em;">${rowCount} options in ${sections.length} sections</div>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap; mt-2;">
+                         ${sections.slice(0, 1).map(s => s.rows.slice(0, 3).map(r => `<span style="background:rgba(236, 72, 153, 0.1); color:#ec4899; padding:1px 5px; border-radius:4px; font-size:0.75em; border: 1px solid rgba(236, 72, 153, 0.2);">${r.title}</span>`).join('')).join('')}
+                         ${rowCount > 3 ? '<span style="opacity:0.5; font-size:0.75em;">...</span>' : ''}
+                    </div>
+                `;
             }
             el.appendChild(body);
 
@@ -799,7 +812,22 @@
                 node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
                 allRows.forEach((row, idx) => {
                     const count = allRows.length;
-                    el.appendChild(createPort(node.id, 'output', row.id, idx, count));
+                    const p = createPort(node.id, 'output', row.id, idx, count);
+
+                    const lbl = document.createElement('span');
+                    lbl.innerText = row.title.length > 10 ? row.title.substring(0, 8) + '..' : row.title;
+                    lbl.className = 'port-label';
+                    lbl.style.position = 'absolute';
+                    lbl.style.bottom = '-20px';
+                    lbl.style.left = '50%';
+                    lbl.style.transform = 'translateX(-50%)';
+                    lbl.style.fontSize = '0.7em';
+                    lbl.style.whiteSpace = 'nowrap';
+                    lbl.style.color = '#aaa';
+                    lbl.style.pointerEvents = 'none';
+                    p.appendChild(lbl);
+
+                    el.appendChild(p);
                 });
                 if (allRows.length === 0) {
                     el.appendChild(createPort(node.id, 'output', 'out'));
