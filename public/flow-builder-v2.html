@@ -1026,25 +1026,30 @@
                     <div class="mb-3"><label class="form-label">Body Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>
                     <div class="mb-3"><label class="form-label">Menu Button Text</label><input type="text" class="form-control-glass" value="${node.data.buttonText || ''}" oninput="updateNodeProperty('${node.id}', 'buttonText', this.value)"></div>
                     <div class="mb-3"><label class="form-label">Title (Header)</label><input type="text" class="form-control-glass" value="${node.data.header || ''}" placeholder="Optional Header" oninput="updateNodeProperty('${node.id}', 'header', this.value)"></div>
-                    <div class="mb-3"><label class="form-label">List Items</label>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                             <label class="form-label mb-0">List Sections</label>
+                             <button class="btn-glass" style="padding: 4px 8px; font-size: 0.8rem;" onclick="addListSection('${node.id}')"><i class="bi bi-plus"></i> Section</button>
+                        </div>
                  `;
 
                 const sections = node.data.sections || [];
                 sections.forEach((sec, sIdx) => {
-                    // Simple implementation: Just one section for now or user can edit title.
-                    // Render Rows
-                    content += `<div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
-                        <input type="text" class="form-control-glass form-control-sm mb-2" value="${sec.title}" placeholder="Section Title" oninput="updateListSection('${node.id}', ${sIdx}, 'title', this.value)" style="font-weight: 600;">
+                    content += `<div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;">
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="text" class="form-control-glass form-control-sm mb-0" value="${sec.title}" placeholder="Section Title" oninput="updateListSection('${node.id}', ${sIdx}, 'title', this.value)" style="font-weight: 600;">
+                            ${sections.length > 1 ? `<button class="btn-glass" style="padding: 8px;" onclick="removeListSection('${node.id}', ${sIdx})"><i class="bi bi-trash"></i></button>` : ''}
+                        </div>
                         <div id="list-rows-${node.id}-${sIdx}">`;
 
                     sec.rows.forEach((row, rIdx) => {
                         content += `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${row.title}" placeholder="Item Title" oninput="updateListRow('${node.id}', ${sIdx}, ${rIdx}, 'title', this.value)"><button class="btn-glass" onclick="removeListRow('${node.id}', ${sIdx}, ${rIdx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`;
                     });
 
-                    content += `</div><button class="btn-glass w-100 mt-2" onclick="addListRow('${node.id}', ${sIdx})"><i class="bi bi-plus"></i> Add Item</button></div>`;
+                    content += `</div><button class="btn-glass w-100 mt-2" onclick="addListRow('${node.id}', ${sIdx})" style="font-size: 0.85rem; padding: 6px;"><i class="bi bi-plus"></i> Add Item</button></div>`;
                 });
 
-                content += `</div>`; // Close List Items
+                content += `</div>`; // Close List Sections
             }
 
             // Media Types
@@ -1083,6 +1088,8 @@
                 const connOffset = {
                     source: c.source,
                     target: c.target,
+                    sourceHandle: c.sourceHandle,
+                    targetHandle: c.targetHandle,
                     id: c.id
                 };
 
@@ -1620,6 +1627,34 @@
             const node = state.nodes.find(n => n.id === nodeId);
             if (node && node.data.sections[sIdx]) {
                 node.data.sections[sIdx][key] = value;
+                render();
+            }
+        }
+
+        function addListSection(nodeId) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node) {
+                if (!node.data.sections) node.data.sections = [];
+                node.data.sections.push({
+                    title: 'New Section',
+                    rows: [{ id: 'row_' + Date.now(), title: 'New Option', description: '' }]
+                });
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        function removeListSection(nodeId, sIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections) {
+                // Remove connections for all rows in this section
+                const rows = node.data.sections[sIdx].rows;
+                rows.forEach(r => {
+                    state.connections = state.connections.filter(c => c.sourceHandle !== r.id);
+                });
+
+                node.data.sections.splice(sIdx, 1);
+                showNodeProperties(node);
                 render();
             }
         }
