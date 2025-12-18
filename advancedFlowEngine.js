@@ -671,12 +671,7 @@ function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
     const connections = flow.connections?.filter(c => c.source === currentNodeId) || [];
 
     if (connections.length === 0) {
-        // No connections, check for sequential next node
-        const currentIndex = flow.nodes.findIndex(n => n.id === currentNodeId);
-        if (currentIndex >= 0 && currentIndex < flow.nodes.length - 1) {
-            return flow.nodes[currentIndex + 1];
-        }
-        return null;
+        return null; // A node without connections is an exit node
     }
 
     // 1. Check for labeled connections (Explicit branching)
