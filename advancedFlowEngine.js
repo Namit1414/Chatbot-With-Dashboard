@@ -141,8 +141,58 @@ export async function startFlow(phone, flow) {
         // Let's assume if it starts and halts, it's a dead flow.
     }
 
-    // Execute next node
-    return await executeNode(phone, flow, nextNode);
+    // Execute next node with burst support
+    return await executeNodeWithBurst(phone, flow, nextNode);
+}
+
+/**
+ * Executes a node and automatically advances through any subsequent 
+ * non-interactive nodes (message, image, video, document, delay)
+ * in a single execution cycle (burst).
+ */
+async function executeNodeWithBurst(phone, flow, firstNode) {
+    const session = flowSessions.get(phone);
+    if (!session) return null;
+
+    // 1. Execute the first node
+    session.currentNodeId = firstNode.id;
+    if (!session.nodeHistory.includes(firstNode.id)) {
+        session.nodeHistory.push(firstNode.id);
+    }
+
+    let currentResult = await executeNode(phone, flow, firstNode);
+    let lastNode = firstNode;
+
+    // 2. Sequential Burst handling
+    // Advance as long as we have simple content nodes
+    while (currentResult && ['message', 'image', 'video', 'document', 'delay'].includes(lastNode.type)) {
+        const nextAfter = findNextNode(flow, lastNode.id, null, session);
+
+        if (nextAfter && ['message', 'image', 'video', 'document', 'delay'].includes(nextAfter.type)) {
+            // Send current node content immediately using the direct API helper
+            console.log(`[Burst] Sending intermediate ${lastNode.type}...`);
+            await sendWhatsAppBusinessMessage(
+                phone,
+                { ...currentResult, messageType: currentResult.type || currentResult.messageType },
+                process.env.WHATSAPP_TOKEN,
+                process.env.PHONE_NUMBER_ID
+            );
+
+            // Small delay for delivery stability
+            await new Promise(r => setTimeout(r, 400));
+
+            // Advance session and execute next
+            console.log(`[Burst] Advancing to: ${nextAfter.id} (${nextAfter.type})`);
+            session.currentNodeId = nextAfter.id;
+            session.nodeHistory.push(nextAfter.id);
+            currentResult = await executeNode(phone, flow, nextAfter);
+            lastNode = nextAfter;
+        } else {
+            break;
+        }
+    }
+
+    return currentResult;
 }
 
 /**
@@ -236,10 +286,20 @@ async function continueFlow(phone, message) {
             const branchText = (matchedBranch.text || matchedBranch.title || '').toLowerCase().trim();
             const branchId = matchedBranch.id;
 
-            const connection = flow.connections?.find(c =>
-                c.source === currentNode.id &&
-                (c.label?.toLowerCase().trim() === branchText || c.sourceHandle === branchId)
+            console.log(`[Interactive] Seeking connection for branch: "${branchText}" (ID: ${branchId})`);
+
+            // 1. Try matching by sourceHandle (Most reliable for specific branches)
+            let connection = flow.connections?.find(c =>
+                c.source === currentNode.id && c.sourceHandle === branchId
             );
+
+            // 2. Fallback to matching by label (backward compatibility or manual labels)
+            if (!connection) {
+                connection = flow.connections?.find(c =>
+                    c.source === currentNode.id &&
+                    c.label?.toLowerCase().trim() === branchText
+                );
+            }
 
             if (connection) {
                 nextNode = flow.nodes.find(n => n.id === connection.target);
@@ -251,10 +311,7 @@ async function continueFlow(phone, message) {
             }
 
             if (nextNode) {
-                session.currentNodeId = nextNode.id;
-                session.nodeHistory.push(nextNode.id);
-                console.log(`[Interactive] Proceeding to: ${nextNode.id} (${nextNode.type})`);
-                return await executeNode(phone, flow, nextNode);
+                return await executeNodeWithBurst(phone, flow, nextNode);
             } else {
                 // No next connection, but we matched a button. Return feedback/reply.
                 const feedbackText = matchedBranch.reply || matchedBranch.value || responseValue;
