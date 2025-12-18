@@ -795,19 +795,6 @@ export function initScheduler() {
             const now = new Date();
             const leadCount = await Lead.countDocuments({});
 
-            // DIAGNOSTIC LOG: List ALL scheduled flows regardless of active status
-            const allScheduled = await AdvancedFlow.find({ triggerType: 'scheduled' });
-
-            console.log(`[Scheduler Diagnostic] ${now.toISOString()} | Scheduled Flows Total: ${allScheduled.length} | Total Leads: ${leadCount}`);
-
-            if (allScheduled.length > 0) {
-                allScheduled.forEach(f => {
-                    const nextRun = f.schedule?.nextRun;
-                    const due = nextRun && nextRun <= now;
-                    console.log(`[Scheduler Diagnostic] - Flow: "${f.name}" (${f._id}) | Active: ${f.active !== false} | nextRun: ${nextRun ? nextRun.toISOString() : 'NULL'} | Due: ${due}`);
-                });
-            }
-
             // Find flows that are due. Use $ne: false to include ones where 'active' is undefined
             const flows = await AdvancedFlow.find({
                 active: { $ne: false },
