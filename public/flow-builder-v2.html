@@ -721,7 +721,15 @@
             const body = document.createElement('div');
             body.className = 'node-body';
             if (node.type === 'start') {
-                body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">Trigger: ${node.data.trigger || 'keyword'}</div>`;
+                let triggerText = node.data.trigger || '';
+                if (node.data.triggerType === 'scheduled') {
+                    triggerText = '📅 Scheduled';
+                } else if (node.data.triggerType === 'exact') {
+                    triggerText = '🎯 Exact: ' + (node.data.trigger || '...');
+                } else {
+                    triggerText = '🔍 Keyword: ' + (node.data.trigger || '...');
+                }
+                body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">${triggerText}</div>`;
             } else if (node.type === 'message') {
                 body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
             } else if (node.type === 'buttons') {
@@ -959,7 +967,7 @@
             if (node.type === 'start') {
                 const isScheduled = node.data.triggerType === 'scheduled';
 
-                content += ` <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);"><label class="form-label" style="color: var(--primary); font-weight: 600;">Trigger Settings</label><div class="mb-3"><label class="form-label">Trigger Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'triggerType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="keyword"${node.data.triggerType === 'keyword' ? ' selected' : ''}>Contains Keyword</option><option value="exact"${node.data.triggerType === 'exact' ? ' selected' : ''}>Exact Match</option><option value="scheduled"${isScheduled ? ' selected' : ''}>Scheduled</option></select></div>`;
+                content += ` <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);"><label class="form-label" style="color: var(--primary); font-weight: 600;">Trigger Settings</label><div class="mb-3"><label class="form-label">Trigger Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'triggerType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="contains"${node.data.triggerType === 'contains' || !node.data.triggerType || node.data.triggerType === 'keyword' ? ' selected' : ''}>Contains Keyword</option><option value="exact"${node.data.triggerType === 'exact' ? ' selected' : ''}>Exact Match</option><option value="scheduled"${isScheduled ? ' selected' : ''}>Scheduled</option></select></div>`;
 
                 if (isScheduled) {
                     content += ` <div class="mb-3"><label class="form-label">Schedule Time</label><input type="datetime-local" class="form-control-glass" value="${node.data.scheduleTime || ''}" onchange="updateNodeProperty('${node.id}', 'scheduleTime', this.value)"></div><div class="mb-3"><label class="form-label">Recipients</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'audienceType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="all"${node.data.audienceType === 'all' ? ' selected' : ''}>All Leads</option><option value="tags"${node.data.audienceType === 'tags' ? ' selected' : ''}>By Tags</option><option value="individual"${node.data.audienceType === 'individual' ? ' selected' : ''}>Individual (System)</option><option value="manual"${node.data.audienceType === 'manual' ? ' selected' : ''}>Manual Number</option></select></div>`;
@@ -1096,10 +1104,10 @@
             });
 
             // Extract Trigger from Start Node
-            // Extract Trigger from Start Node
             const startNode = state.nodes.find(n => n.type === 'start');
             const trigger = startNode ? (startNode.data.trigger || 'manual_v2') : 'manual_v2';
-            const triggerType = startNode ? (startNode.data.triggerType || 'keyword') : 'keyword';
+            let triggerType = startNode ? (startNode.data.triggerType || 'contains') : 'contains';
+            if (triggerType === 'keyword') triggerType = 'contains';
 
             const schedule = startNode && startNode.data.triggerType === 'scheduled' ? {
                 nextRun: startNode.data.scheduleTime
@@ -1109,6 +1117,11 @@
             // Handle Audience Type
             let audType = startNode && startNode.data.audienceType ? startNode.data.audienceType : 'all';
             const recPhone = startNode && startNode.data.recipientPhone ? startNode.data.recipientPhone : null;
+
+            // Map frontend types to backend 'specific' type if needed
+            if (audType === 'individual' || audType === 'manual') {
+                audType = 'specific';
+            }
 
             // SPECIAL CASE: If Individual + Select All, switch type to 'all'
             if (audType === 'individual' && recPhone === 'all_contacts') {
@@ -1366,7 +1379,7 @@
             };
 
             if (type === 'start') {
-                node.data = { trigger: 'hello', triggerType: 'keyword' };
+                node.data = { trigger: 'hello', triggerType: 'contains' };
             } else if (type === 'message') {
                 node.data = { text: 'Hello, how can I help?' };
             } else if (type === 'buttons') {
