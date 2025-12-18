@@ -147,7 +147,7 @@ function buildButtonsMessage(to, messageData) {
                     buttons: replyButtons.map((btn, idx) => ({
                         type: "reply",
                         reply: {
-                            id: btn.text.substring(0, 20),  // Use button TEXT as ID!
+                            id: btn.id || btn.text.substring(0, 20),
                             title: btn.text.substring(0, 20) // Max 20 chars
                         }
                     }))
@@ -170,9 +170,10 @@ function buildButtonsMessage(to, messageData) {
  * Build list message (up to 10 items)
  */
 function buildListMessage(to, messageData) {
-    const items = (messageData.items || []).slice(0, 10); // Max 10 items
+    const items = (messageData.items || []).slice(0, 10);
+    const sections = messageData.sections || [];
 
-    if (items.length === 0) {
+    if (items.length === 0 && sections.length === 0) {
         // Fallback to text
         return {
             messaging_product: "whatsapp",
@@ -194,7 +195,7 @@ function buildListMessage(to, messageData) {
                 text: messageData.content || 'Select an option'
             },
             action: {
-                button: messageData.buttonText || "View Options",
+                button: messageData.buttonText || "View Menu",
                 sections: messageData.sections ? messageData.sections.map(sec => ({
                     title: sec.title.substring(0, 24),
                     rows: sec.rows.map(row => ({
