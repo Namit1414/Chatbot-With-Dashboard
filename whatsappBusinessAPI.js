@@ -231,6 +231,8 @@ function buildMediaMessage(to, mediaType, messageData) {
         }
     }
 
+    console.log(`[WhatsAppAPI] Final URI for ${mediaType}:`, url);
+
     return {
         messaging_product: "whatsapp",
         recipient_type: "individual",
