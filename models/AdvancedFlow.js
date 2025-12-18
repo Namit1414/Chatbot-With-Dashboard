@@ -113,6 +113,8 @@ const advancedFlowSchema = new mongoose.Schema({
         id: { type: String },
         source: { type: String, required: true },
         target: { type: String, required: true },
+        sourceHandle: String,
+        targetHandle: String,
         label: String // For conditional branches
     }],
 
