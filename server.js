@@ -247,16 +247,47 @@ app.post("/api/send", async (req, res) => {
   res.sendStatus(200);
 });
 
-// File Upload API
-app.post("/api/upload", upload.single('file'), (req, res) => {
-  console.log("📁 Upload request received");
+// Cloudinary Configuration
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// File Upload API (Now using Cloudinary for permanent storage)
+app.post("/api/upload", upload.single('file'), async (req, res) => {
+  console.log("📁 Permanent upload request received");
+
   if (!req.file) {
     console.error("❌ No file in request");
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  console.log(`✅ File uploaded: ${req.file.filename} (${req.file.size} bytes)`);
-  const fileUrl = `/uploads/${req.file.filename}`;
-  res.json({ url: fileUrl, filename: req.file.originalname, mimetype: req.file.mimetype });
+
+  try {
+    // Determine folder based on file type
+    const folder = req.file.mimetype.startsWith('image/') ? 'bot-images' : 'bot-documents';
+
+    // Upload to Cloudinary
+    // We use a buffer upload since multer is using memory or we can use the path
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: folder,
+      resource_type: "auto", // Automatically detect if it's image, video, or raw file
+    });
+
+    console.log(`✅ Permanent upload successful: ${result.secure_url}`);
+
+    res.json({
+      url: result.secure_url,
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      public_id: result.public_id
+    });
+  } catch (error) {
+    console.error("❌ Cloudinary Upload Error:", error);
+    res.status(500).json({ error: 'Failed to upload to permanent storage', details: error.message });
+  }
 });
 
 // Bulk Messaging API
