@@ -1128,12 +1128,12 @@
                 audType = 'all';
             }
 
-            const recipientConfig = startNode && startNode.data.triggerType === 'scheduled' ? {
+            const isScheduled = startNode && startNode.data.triggerType === 'scheduled';
+            const recipientConfig = isScheduled ? {
                 audienceType: audType,
-                tags: startNode.data.tags ? startNode.data.tags.split(',').map(t => t.trim()) : [],
-                phones: recPhone ? [recPhone] : []
-            } :
-                null;
+                tags: audType === 'tags' ? (startNode.data.tags || '').split(',').map(t => t.trim()).filter(t => t) : [],
+                phones: audType === 'specific' ? (Array.isArray(recPhone) ? recPhone : (recPhone ? [recPhone] : [])) : []
+            } : null;
 
             // Map Frontend Nodes (flat x,y) to Backend Nodes (nested position)
             const backendNodes = state.nodes.map(n => ({
