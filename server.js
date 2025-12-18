@@ -8,6 +8,8 @@ import { Server } from "socket.io";
 import session from "express-session";
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+import MongoStore from 'connect-mongo';
+
 
 import { connectMongo } from "./models/mongo.js";
 import { runFlow } from "./flowEngine.js";
@@ -43,11 +45,19 @@ const upload = multer({ storage: storage });
 app.use(bodyParser.json());
 
 app.use(session({
-  secret: 'secret-key-replace-in-production',
+  secret: process.env.SESSION_SECRET || 'secret-key-replace-in-production',
   resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false } // Set to true if using https
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions'
+  }),
+  cookie: {
+    secure: false, // Set to true if using https
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  }
 }));
+
 
 // Login Routes
 app.get('/login', (req, res) => {
