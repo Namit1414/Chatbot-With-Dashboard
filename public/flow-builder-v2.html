@@ -406,7 +406,7 @@
         </div>
 
         <!-- Palette -->
-        <div class="glass-panel" style="grid-area: palette; padding: 20px;">
+        <div class="glass-panel" style="grid-area: palette; padding: 20px; overflow-y: auto;">
             <div
                 style="margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.8em; letter-spacing: 1px;">
                 NODES</div>
@@ -1041,7 +1041,21 @@
 
             // Media Types
             if (['image', 'video', 'document'].includes(node.type)) {
-                content += ` <div class="mb-3"><label class="form-label">Media URL</label><input type="text" class="form-control-glass" value="${node.data.url || ''}" oninput="updateNodeProperty('${node.id}', 'url', this.value)"></div><div class="mb-3"><label class="form-label">Caption</label><input type="text" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)"></div>`;
+                content += ` 
+                    <div class="mb-3">
+                        <label class="form-label">Media URL</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="node-media-url" class="form-control-glass" value="${node.data.url || ''}" oninput="updateNodeProperty('${node.id}', 'url', this.value)">
+                            <button class="btn-glass" onclick="document.getElementById('node-file-input').click()" style="white-space: nowrap; padding: 10px 14px;">
+                                <i class="bi bi-upload"></i> Upload
+                            </button>
+                            <input type="file" id="node-file-input" style="display: none;" onchange="handleNodeFileUpload('${node.id}', this.files[0])">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Caption</label>
+                        <input type="text" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)">
+                    </div>`;
             }
 
             if (node.type === 'delay') {
@@ -1494,6 +1508,39 @@
             if (node) {
                 node.data[key] = value;
                 render(); // Re-render canvas (node preview might change)
+            }
+        }
+
+        async function handleNodeFileUpload(nodeId, file) {
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadBtn = event.currentTarget; // This might be tricky if called via onchange
+            // Let's just use a simple alert/loading state if needed
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                        updateNodeProperty(nodeId, 'url', data.url);
+                        // Update the input field directly for immediate feedback
+                        const urlInput = document.getElementById('node-media-url');
+                        if (urlInput) urlInput.value = data.url;
+                        alert('File uploaded successfully! 🎉');
+                    }
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            } catch (e) {
+                console.error("Upload error:", e);
+                alert('An error occurred during upload.');
             }
         }
 
