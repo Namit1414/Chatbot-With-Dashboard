@@ -182,79 +182,90 @@ async function continueFlow(phone, message) {
         return null;
     }
 
-    // ✅ SIMPLIFIED BUTTON HANDLING
-    if (currentNode.type === 'buttons') {
-        console.log('Button node - finding clicked button...');
+    // ✅ ROBUST INTERACTIVE HANDLING (Buttons & Lists)
+    if (currentNode.type === 'buttons' || currentNode.type === 'cta' || currentNode.type === 'list') {
+        console.log(`[Interactive] Current node is ${currentNode.type}. Searching for match...`);
 
-        // Find which button was clicked by matching the button text
-        const clickedButton = currentNode.data.buttons?.find(btn => {
-            // WhatsApp sends back button text as the message
-            return message.toLowerCase().trim() === btn.text.toLowerCase().trim();
-        });
+        let matchedBranch = null;
+        let responseValue = message; // Default to the incoming message/ID
 
-        if (clickedButton) {
-            console.log(`✓ Button clicked: "${clickedButton.text}"`);
-
-            // Store in session
-            session.variables.lastButtonClicked = clickedButton.text;
-            session.variables.lastResponse = clickedButton.text;
-
-            // Track button click
-            await updateFlowStats(flow._id, 'clicked');
-
-            // Define reply message for fallback return (if flow ends here)
-            const replyText = clickedButton.reply || clickedButton.value || clickedButton.text;
-            const replyMessage = {
-                type: 'text',
-                content: personalizeMessage(replyText, phone, session)
-            };
-
-            // Note: We used to send an immediate feedback message here, but it caused double messaging 
-            // (feedback + next node). We removed it so only the next node content functions as the reply.
-
-            // 2. Determine connection based on button label
-            // We need to look for a connection where label matches button text OR ID
-            let nextNode = null;
-
-            // First check for specific button connection
-            const buttonConnection = flow.connections?.find(c =>
-                c.source === currentNode.id &&
-                (c.label === clickedButton.text || c.label === clickedButton.id)
+        if (currentNode.type === 'buttons' || currentNode.type === 'cta') {
+            const buttons = currentNode.data.buttons || [];
+            // Match by ID first (WhatsApp button_reply.id), then by text
+            const btn = buttons.find(b =>
+                message === b.id ||
+                message.toLowerCase().trim() === b.text.toLowerCase().trim() ||
+                (b.text.length > 20 && message === b.text.substring(0, 20)) // Handle truncation
             );
 
-            if (buttonConnection) {
-                nextNode = flow.nodes.find(n => n.id === buttonConnection.target);
-            } else {
-                // Fallback to default next node logic
-                // Pass session for smart routing!
-                nextNode = findNextNode(flow, currentNode.id, message, session);
+            if (btn) {
+                console.log(`✓ Button matched: "${btn.text}"`);
+                matchedBranch = btn;
+                responseValue = btn.text;
+                session.variables.lastButtonClicked = btn.text;
+            }
+        } else if (currentNode.type === 'list') {
+            // Find matched row in sections
+            let allRows = [];
+            (currentNode.data.sections || []).forEach(s => {
+                (s.rows || []).forEach(r => allRows.push(r));
+            });
+            // Also check listItems for backward compatibility
+            (currentNode.data.listItems || []).forEach(r => allRows.push(r));
+
+            const row = allRows.find(r =>
+                message === r.id ||
+                message.toLowerCase().trim() === r.title.toLowerCase().trim()
+            );
+
+            if (row) {
+                console.log(`✓ List row matched: "${row.title}"`);
+                matchedBranch = row;
+                responseValue = row.title;
+                session.variables.lastListItemSelected = row.title;
+            }
+        }
+
+        if (matchedBranch) {
+            // Store in session
+            session.variables.lastResponse = responseValue;
+            await updateFlowStats(flow._id, 'clicked');
+
+            // Find next node based on connection label (Text/Title) or handle ID
+            let nextNode = null;
+            const branchText = (matchedBranch.text || matchedBranch.title || '').toLowerCase().trim();
+            const branchId = matchedBranch.id;
+
+            const connection = flow.connections?.find(c =>
+                c.source === currentNode.id &&
+                (c.label?.toLowerCase().trim() === branchText || c.sourceHandle === branchId)
+            );
+
+            if (connection) {
+                nextNode = flow.nodes.find(n => n.id === connection.target);
+            }
+
+            // Fallback to finding by raw message if connection didn't match ID/Text
+            if (!nextNode) {
+                nextNode = findNextNode(flow, currentNode.id, responseValue, session);
             }
 
             if (nextNode) {
-                // Update session to next node
                 session.currentNodeId = nextNode.id;
                 session.nodeHistory.push(nextNode.id);
-
-                // 3. EXECUTE NEXT NODE IMMEDIATELY
-                console.log(`[AutoFlow] Proceeding to next node: ${nextNode.id} (${nextNode.type})`);
-                const nextNodeResult = await executeNode(phone, flow, nextNode);
-
-                // If the next node result is flow_complete or no_reply, we should just return that
-                // instead of falling through or returning the button reply.
-                if (nextNodeResult && (nextNodeResult.type === 'flow_complete' || nextNodeResult.type === 'no_reply')) {
-                    return nextNodeResult;
-                }
-
-                return nextNodeResult;
+                console.log(`[Interactive] Proceeding to: ${nextNode.id} (${nextNode.type})`);
+                return await executeNode(phone, flow, nextNode);
             } else {
-                // No next node - flow ends after this reply
+                // No next connection, but we matched a button. Return feedback/reply.
+                const feedbackText = matchedBranch.reply || matchedBranch.value || responseValue;
                 endFlowSession(phone);
-                return replyMessage; // Return the feedback as the final result
+                return {
+                    type: 'text',
+                    content: personalizeMessage(feedbackText, phone, session)
+                };
             }
         } else {
-            console.log('⚠️ No button matched. Treating as raw input.');
-            // User typed something instead of clicking button
-            session.variables.lastResponse = message;
+            console.log('⚠️ No interactive match found. Fallthrough to search.');
         }
     }
 
