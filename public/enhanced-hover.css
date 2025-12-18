@@ -1,0 +1,51 @@
+/* ========================================
+   ENHANCED HOVER EFFECTS - ADD TO END OF STYLE TAG
+======================================== */
+
+/* Enhanced Button Hovers */
+.btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+    filter: brightness(1.1) !important;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 168, 132, 0.5) !important;
+}
+
+.btn-success:hover {
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Enhanced Card Hover */
+.card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 168, 132, 0.2) !important;
+}
+
+/* Table Row Hover */
+.table tbody tr:hover {
+    background-color: rgba(0, 168, 132, 0.1) !important;
+    transform: scale(1.005);
+    transition: all 0.2s ease;
+}
+
+/* Chat List Item Enhanced */
+.chat-list-item:hover {
+    background: var(--sidebar-hover) !important;
+    transform: translateX(5px) scale(1.01) !important;
+    box-shadow: -4px 0 0 var(--primary-color) !important;
+}
+
+/* Search Input Glow on Focus */
+#lead-search:focus,
+.form-control:focus,
+textarea:focus,
+input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2), 0 0 20px rgba(0, 168, 132, 0.3) !important;
+    transform: scale(1.01) !important;
+}
