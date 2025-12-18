@@ -738,8 +738,9 @@ export function initScheduler() {
             });
 
             if (flows.length > 0) {
-                console.log(`Scheduler: Found ${flows.length} flows due for execution at ${now.toISOString()}`);
+                console.log(`[Scheduler] ${now.toISOString()}: Found ${flows.length} flows due for execution.`);
                 for (const flow of flows) {
+                    console.log(`[Scheduler] Triggering flow: "${flow.name}" (${flow._id})`);
                     await executeScheduledFlow(flow);
                 }
             }
@@ -772,58 +773,69 @@ async function executeScheduledFlow(flow) {
     let recipients = [];
     try {
         const config = flow.recipientConfig || { audienceType: 'all' };
+        console.log(`[Scheduler] Audience config for "${flow.name}":`, JSON.stringify(config));
 
         if (config.audienceType === 'tags') {
             const tags = config.tags || [];
             if (tags.length > 0) {
-                // Determine if 'tags' field exists by checking one document or just running query
                 recipients = await Lead.find({ tags: { $in: tags } });
             }
         } else if (config.audienceType === 'specific' || config.audienceType === 'individual' || config.audienceType === 'manual') {
             const phones = config.phones || [];
-            // We need to create objects that look like leads
             recipients = phones.map(p => ({
                 phone: p.replace(/\D/g, ''), // clean number
                 name: 'User'
             })).filter(r => r.phone.length > 0);
         } else {
-            // 'all'
+            // Default to 'all'
+            console.log(`[Scheduler] Fetching all leads for flow "${flow.name}"`);
             recipients = await Lead.find({});
         }
     } catch (e) {
-        console.error('Error fetching recipients for scheduler:', e);
+        console.error(`[Scheduler] Error fetching recipients for flow "${flow.name}":`, e);
         recipients = [];
     }
 
-    console.log(`Targeting ${recipients.length} recipients for flow "${flow.name}"`);
+    if (recipients.length === 0) {
+        console.warn(`[Scheduler] No recipients found for flow "${flow.name}". Stopping.`);
+        flow.schedule.lastRun = new Date();
+        flow.active = false;
+        await flow.save();
+        return;
+    }
+
+    console.log(`[Scheduler] Targeting ${recipients.length} recipients for flow "${flow.name}"`);
 
     // 2. Execute Flow for each recipient
+    const token = process.env.WHATSAPP_TOKEN;
+    const phoneId = process.env.PHONE_NUMBER_ID;
+
+    if (!token || !phoneId) {
+        console.error('[Scheduler] WhatsApp environment variables missing! Cannot send.');
+        return;
+    }
+
     for (const recipient of recipients) {
         try {
+            console.log(`[Scheduler] Starting flow for recipient: ${recipient.phone}`);
             // Initiate flow
             const result = await startFlow(recipient.phone, flow);
 
             if (result) {
                 // Determine message format
                 let msgToSend = result;
-
-                // Map 'type' to 'messageType' if needed for API helper
                 if (result.type && !result.messageType) {
-                    // For text messages, we can just send the content string if we want, 
-                    // or keep object but ensure messageType is set.
-                    // The API helper checks messageType.
                     msgToSend = { ...result, messageType: result.type };
                 }
 
-                await sendWhatsAppBusinessMessage(
-                    recipient.phone,
-                    msgToSend,
-                    process.env.WHATSAPP_TOKEN,
-                    process.env.PHONE_NUMBER_ID
-                );
+                console.log(`[Scheduler] Sending initial message to ${recipient.phone}...`);
+                await sendWhatsAppBusinessMessage(recipient.phone, msgToSend, token, phoneId);
+                console.log(`[Scheduler] Successfully sent to ${recipient.phone}`);
+            } else {
+                console.warn(`[Scheduler] No starting node content found for ${recipient.phone} in flow "${flow.name}". Check connections after Start node.`);
             }
         } catch (err) {
-            console.error(`Failed to start flow for ${recipient.phone}:`, err);
+            console.error(`[Scheduler] Failed to process recipient ${recipient.phone}:`, err.message);
         }
     }
 
