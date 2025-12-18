@@ -87,6 +87,7 @@ function findMatchingFlow(flows, message) {
                 if (msgLower === trigger) return flow;
                 break;
             case 'contains':
+            case 'keyword':
                 if (msgLower.includes(trigger)) return flow;
                 break;
             case 'regex':
@@ -778,7 +779,7 @@ async function executeScheduledFlow(flow) {
                 // Determine if 'tags' field exists by checking one document or just running query
                 recipients = await Lead.find({ tags: { $in: tags } });
             }
-        } else if (config.audienceType === 'specific') {
+        } else if (config.audienceType === 'specific' || config.audienceType === 'individual' || config.audienceType === 'manual') {
             const phones = config.phones || [];
             // We need to create objects that look like leads
             recipients = phones.map(p => ({
