@@ -29,6 +29,7 @@
             --text-secondary: #94a3b8;
 
             --node-width: 280px;
+            --node-width-list: 350px;
         }
 
         * {
@@ -229,6 +230,10 @@
             overflow: visible;
             transition: box-shadow 0.2s, border-color 0.2s;
             z-index: 10;
+        }
+
+        .flow-node.list {
+            width: var(--node-width-list);
         }
 
         .flow-node.selected {
@@ -575,7 +580,7 @@
                 // Update Position & State
                 el.style.left = node.x + 'px';
                 el.style.top = node.y + 'px';
-                el.className = `flow-node ${state.selectedNodeId === node.id ? 'selected' : ''}`;
+                el.className = `flow-node ${node.type} ${state.selectedNodeId === node.id ? 'selected' : ''}`;
 
                 // Update Content only if new (simple approach) or if we wanted full sync
                 // For now, let's redraw content to ensure ports etc are correct, 
@@ -629,42 +634,40 @@
                 }
 
                 else {
-                    // Fallback if ports not found (shouldn't happen if nodes are rendered)
-                    x2 = tgtNode.x + 140; // Approx center of node
-                    y2 = tgtNode.y - 6; // Approx top center
+                    const nodeWidth = srcNode.type === 'list' ? 350 : 280;
+                    const halfWidth = nodeWidth / 2;
+
+                    x2 = tgtNode.x + (tgtNode.type === 'list' ? 175 : 140);
+                    y2 = tgtNode.y - 6;
 
                     if (conn.sourceHandle === 'out') {
-                        x1 = srcNode.x + 140;
-                        y1 = srcNode.y + 100; // Approx bottom center
+                        x1 = srcNode.x + halfWidth;
+                        y1 = srcNode.y + 100;
                     }
                     else if (srcNode.type === 'list') {
-                        // List Handle Fallback
                         let allRows = [];
                         if (srcNode.data.sections) srcNode.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
                         const rowIdx = allRows.findIndex(r => r.id === conn.sourceHandle);
                         if (rowIdx >= 0) {
                             const count = allRows.length;
-                            const step = 280 / (count + 1);
+                            const step = nodeWidth / (count + 1);
                             x1 = srcNode.x + (step * (rowIdx + 1));
                             y1 = srcNode.y + 100;
                         } else {
-                            x1 = srcNode.x + 140;
+                            x1 = srcNode.x + halfWidth;
                             y1 = srcNode.y + 100;
                         }
                     }
                     else {
-                        // Button Handle - approximate if port element not found
                         const btnIdx = srcNode.data.buttons ? srcNode.data.buttons.findIndex(b => b.id === conn.sourceHandle) : -1;
-
                         if (btnIdx >= 0) {
                             const count = srcNode.data.buttons.length;
-                            const step = 280 / (count + 1); // 280 is node width
+                            const step = nodeWidth / (count + 1);
                             x1 = srcNode.x + (step * (btnIdx + 1));
-                            y1 = srcNode.y + 100; // Approx bottom
+                            y1 = srcNode.y + 100;
                         }
-
                         else {
-                            x1 = srcNode.x + 140;
+                            x1 = srcNode.x + halfWidth;
                             y1 = srcNode.y + 100;
                         }
                     }
@@ -699,7 +702,7 @@
                         y1 = srcNode.y + srcPortEl.offsetTop + 6;
                     } else {
                         // Fallback
-                        x1 = srcNode.x + 140;
+                        x1 = srcNode.x + (srcNode.type === 'list' ? 175 : 140);
                         y1 = srcNode.y + 100;
                     }
 
@@ -776,9 +779,9 @@
                 body.innerHTML = `
                     <div style="font-weight: 500; margin-bottom: 4px; color: #ec4899;">${node.data.buttonText || 'View Menu'}</div>
                     <div style="opacity: 0.7; font-size: 0.85em;">${rowCount} options in ${sections.length} sections</div>
-                    <div style="display:flex; gap:4px; flex-wrap:wrap; mt-2;">
-                         ${sections.slice(0, 1).map(s => s.rows.slice(0, 3).map(r => `<span style="background:rgba(236, 72, 153, 0.1); color:#ec4899; padding:1px 5px; border-radius:4px; font-size:0.75em; border: 1px solid rgba(236, 72, 153, 0.2);">${r.title}</span>`).join('')).join('')}
-                         ${rowCount > 3 ? '<span style="opacity:0.5; font-size:0.75em;">...</span>' : ''}
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top: 8px;">
+                         ${sections.map(s => s.rows.slice(0, 5).map(r => `<span style="background:rgba(236, 72, 153, 0.1); color:#ec4899; padding:2px 8px; border-radius:6px; font-size:0.75em; border: 1px solid rgba(236, 72, 153, 0.2); white-space: nowrap;">${r.title}</span>`).join('')).join('')}
+                         ${rowCount > 5 ? '<span style="opacity:0.5; font-size:0.75em; align-self: flex-end;">+ others</span>' : ''}
                     </div>
                 `;
             }
