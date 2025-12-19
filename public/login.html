@@ -39,92 +39,71 @@
             position: relative;
         }
 
-        /* Animated Gradient Background */
+        /* Animated Aura Background */
         body::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 20% 50%, rgba(0, 168, 132, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
-            animation: gradientShift 15s ease infinite;
+            top: -25%;
+            left: -25%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 212, 170, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 10% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 20%, rgba(0, 168, 132, 0.08) 0%, transparent 40%);
+            animation: auraPulse 20s ease-in-out infinite alternate;
             z-index: 0;
+            filter: blur(40px);
         }
 
-        @keyframes gradientShift {
+        @keyframes auraPulse {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
 
-            0%,
+            50% {
+                transform: translate(-5%, 5%) scale(1.05);
+            }
+
             100% {
-                transform: translate(0, 0) rotate(0deg);
-            }
-
-            33% {
-                transform: translate(5%, -5%) rotate(120deg);
-            }
-
-            66% {
-                transform: translate(-5%, 5%) rotate(240deg);
+                transform: translate(5%, -5%) scale(1.1);
             }
         }
 
         /* Floating Particles */
         .particle {
             position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(0, 168, 132, 0.5);
+            background: rgba(0, 212, 170, 0.3);
             border-radius: 50%;
-            animation: float 20s infinite;
-            z-index: 0;
+            pointer-events: none;
+            z-index: 1;
+            filter: blur(1px);
+            animation: float-around var(--duration) ease-in-out infinite var(--delay);
         }
 
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0) translateX(0);
+        @keyframes float-around {
+            0% {
+                transform: translate(0, 0) scale(1);
                 opacity: 0;
             }
 
             10% {
-                opacity: 1;
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: translate(var(--move-x), var(--move-y)) scale(1.2);
+                opacity: 0.8;
             }
 
             90% {
-                opacity: 1;
+                opacity: 0.5;
             }
 
             100% {
-                transform: translateY(-100vh) translateX(50px);
+                transform: translate(calc(var(--move-x) * 1.5), calc(var(--move-y) * 1.5)) scale(1);
                 opacity: 0;
             }
-        }
-
-        .particle:nth-child(2) {
-            left: 20%;
-            animation-delay: 2s;
-            animation-duration: 18s;
-        }
-
-        .particle:nth-child(3) {
-            left: 40%;
-            animation-delay: 4s;
-            animation-duration: 22s;
-        }
-
-        .particle:nth-child(4) {
-            left: 60%;
-            animation-delay: 6s;
-            animation-duration: 19s;
-        }
-
-        .particle:nth-child(5) {
-            left: 80%;
-            animation-delay: 8s;
-            animation-duration: 21s;
         }
 
         /* Login Container */
@@ -239,6 +218,17 @@
         .form-input::placeholder {
             color: var(--text-secondary);
             opacity: 0.6;
+        }
+
+        /* Autofill Styles */
+        .form-input:-webkit-autofill,
+        .form-input:-webkit-autofill:hover,
+        .form-input:-webkit-autofill:focus,
+        .form-input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 50px #1f2937 inset !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
+            caret-color: var(--text-primary);
+            transition: background-color 5000s ease-in-out 0s;
         }
 
         .input-icon {
@@ -430,12 +420,9 @@
 </head>
 
 <body>
-    <!-- Floating Particles -->
-    <div class="particle" style="left: 10%;"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
+    <!-- Particle Container -->
+    <div id="particle-container"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;"></div>
 
     <!-- Login Container -->
     <div class="login-container">
@@ -445,7 +432,7 @@
                 <div class="logo-wrapper">
                     <i class="bi bi-whatsapp logo-icon"></i>
                 </div>
-                <h1 class="brand-title">Welcome Back</h1>
+                <h1 class="brand-title">Welcome Back, Atika</h1>
                 <p class="brand-subtitle">Sign in to access your dashboard</p>
             </div>
 
@@ -563,6 +550,48 @@
                 input.parentElement.style.transform = 'scale(1)';
             });
         });
+
+        // Dynamic Particles
+        function initParticles() {
+            const container = document.getElementById('particle-container');
+            const particleCount = 25;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+
+                // Random size between 2px and 6px
+                const size = Math.random() * 4 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+
+                // Random position
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+
+                // Random movement vectors
+                const moveX = (Math.random() - 0.5) * 200;
+                const moveY = (Math.random() - 0.5) * 200;
+
+                // Random duration and delay
+                const duration = Math.random() * 15 + 10;
+                const delay = Math.random() * -20; // Negative delay to start mid-animation
+
+                particle.style.setProperty('--move-x', `${moveX}px`);
+                particle.style.setProperty('--move-y', `${moveY}px`);
+                particle.style.setProperty('--duration', `${duration}s`);
+                particle.style.setProperty('--delay', `${delay}s`);
+
+                // Alternate between primary and secondary colors
+                if (Math.random() > 0.5) {
+                    particle.style.background = 'rgba(59, 130, 246, 0.3)'; // Blueish
+                }
+
+                container.appendChild(particle);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initParticles);
     </script>
 </body>
 
