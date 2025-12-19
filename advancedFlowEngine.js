@@ -165,10 +165,10 @@ async function executeNodeWithBurst(phone, flow, firstNode) {
 
     // 2. Sequential Burst handling
     // Advance as long as we have simple content nodes
-    while (currentResult && ['message', 'image', 'video', 'document', 'delay'].includes(lastNode.type)) {
+    while (currentResult && ['message', 'image', 'video', 'document', 'audio', 'delay'].includes(lastNode.type)) {
         const nextAfter = findNextNode(flow, lastNode.id, null, session);
 
-        if (nextAfter && ['message', 'image', 'video', 'document', 'delay'].includes(nextAfter.type)) {
+        if (nextAfter && ['message', 'image', 'video', 'document', 'audio', 'delay'].includes(nextAfter.type)) {
             // Send current node content immediately using the direct API helper
             console.log(`[Burst] Sending intermediate ${lastNode.type}...`);
             await sendWhatsAppBusinessMessage(
@@ -423,7 +423,11 @@ async function executeNode(phone, flow, node, depth = 0) {
         case 'document':
             return await executeDocumentNode(phone, flow, node);
 
+        case 'audio':
+            return await executeAudioNode(phone, flow, node);
+
         case 'delay':
+            // Pass depth + 1
             return await executeDelayNode(phone, flow, node);
 
         case 'condition':
@@ -452,7 +456,7 @@ async function executeMessageNode(phone, flow, node) {
 
     await updateFlowStats(flow._id, 'delivered');
 
-    return { type: 'text', content: message };
+    return { type: 'text', messageType: 'text', content: message };
 }
 
 /**
@@ -522,6 +526,7 @@ async function executeImageNode(phone, flow, node) {
 
     return {
         type: 'image',
+        messageType: 'image',
         url: node.data.url || node.data.mediaUrl, // Support both names
         caption: caption
     };
@@ -537,6 +542,7 @@ async function executeVideoNode(phone, flow, node) {
 
     return {
         type: 'video',
+        messageType: 'video',
         url: node.data.url || node.data.mediaUrl, // Support both names
         caption: caption
     };
@@ -547,14 +553,38 @@ async function executeVideoNode(phone, flow, node) {
  */
 async function executeDocumentNode(phone, flow, node) {
     const caption = personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
+    const url = node.data.url || node.data.mediaUrl;
+    const filename = node.data.filename || 'document.pdf';
+
+    console.log(`\n--- DOCUMENT NODE EXECUTION ---`);
+    console.log(`Phone: ${phone}`);
+    console.log(`Node ID: ${node.id}`);
+    console.log(`Target URL: ${url}`);
+    console.log(`Filename: ${filename}`);
+    console.log(`Caption: ${caption}`);
+    console.log(`-------------------------------\n`);
 
     await updateFlowStats(flow._id, 'delivered');
 
     return {
         type: 'document',
-        url: node.data.url || node.data.mediaUrl, // Support both names
-        filename: node.data.filename || 'document.pdf',
+        messageType: 'document',
+        url: url,
+        filename: filename,
         caption: caption
+    };
+}
+
+/**
+ * Execute audio node
+ */
+async function executeAudioNode(phone, flow, node) {
+    await updateFlowStats(flow._id, 'delivered');
+
+    return {
+        type: 'audio',
+        messageType: 'audio',
+        url: node.data.url || node.data.mediaUrl // Support both names
     };
 }
 
