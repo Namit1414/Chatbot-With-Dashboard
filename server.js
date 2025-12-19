@@ -258,17 +258,33 @@ app.delete("/api/leads/id/:id", async (req, res) => {
 app.get("/api/messages/:phone", async (req, res) => {
   const phone = sanitizePhone(req.params.phone);
   const suffix = phone.slice(-10);
+  const limit = parseInt(req.query.limit) || 0;
 
   // Fetch messages that match the full phone or the last 10 digits (fallback for inconsistently saved numbers)
-  const messages = await Message.find({
+  let query = Message.find({
     $or: [
       { from: phone },
       { to: phone },
       { from: { $regex: suffix + "$" } },
       { to: { $regex: suffix + "$" } }
     ]
-  }).sort({ timestamp: 1 });
+  });
 
+  if (limit > 0) {
+    // Get latest messages and reverse them to display in chronological order
+    const latestMessages = await Message.find({
+      $or: [
+        { from: phone },
+        { to: phone },
+        { from: { $regex: suffix + "$" } },
+        { to: { $regex: suffix + "$" } }
+      ]
+    }).sort({ timestamp: -1 }).limit(limit);
+
+    return res.json(latestMessages.reverse());
+  }
+
+  const messages = await query.sort({ timestamp: 1 });
   res.json(messages);
 });
 
