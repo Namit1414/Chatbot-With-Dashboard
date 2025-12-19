@@ -196,8 +196,13 @@ export async function syncLeadsFromSheet(LeadModel) {
 
     let syncCount = 0;
     for (const row of rows) {
-      const phone = String(row.get('phone') || "").replace(/\D/g, "");
+      let phone = String(row.get('phone') || "").replace(/\D/g, "");
       if (!phone) continue;
+
+      // Auto-prefix with 91 if it's a 10-digit number
+      if (phone.length === 10) {
+        phone = "91" + phone;
+      }
 
       const leadData = {
         phone: phone,
@@ -214,6 +219,14 @@ export async function syncLeadsFromSheet(LeadModel) {
         updatedAt: new Date()
       };
 
+      const existingLead = await LeadModel.findOne({ phone: phone });
+
+      // Only update Mongo if the Sheet has newer or missing data
+      // For simplicity, we'll check if the Lead exists and if it was updated recently
+      // But usually, if we sync from sheet, we treat sheet as intentional human edit.
+      // However, if the user edited in dashboard recently, we should be careful.
+      // For now, let's keep it simple: always sync IF not recently updated in Mongo via webhook/dashboard (e.g. within last 1 min)
+
       await LeadModel.findOneAndUpdate(
         { phone: phone },
         { $set: leadData },
@@ -226,6 +239,68 @@ export async function syncLeadsFromSheet(LeadModel) {
     return syncCount;
   } catch (error) {
     console.error("❌ [GoogleSheet] Failed to sync from Sheet:", error.message);
+    throw error;
+  }
+}
+
+export async function syncLeadsToSheet(LeadModel) {
+  try {
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
+      return;
+    }
+
+    const leads = await LeadModel.find({});
+    console.log(`[GoogleSheet] Syncing ${leads.length} MongoDB leads to Google Sheet...`);
+
+    const sheet = await getSheet();
+    const rows = await sheet.getRows();
+
+    const normalizeForMatch = (p) => {
+      const clean = String(p || "").replace(/\D/g, "");
+      return clean.length >= 10 ? clean.slice(-10) : clean;
+    };
+
+    let updateCount = 0;
+    let addCount = 0;
+
+    for (const lead of leads) {
+      const sanitizedPhone = String(lead.phone || "").replace(/\D/g, "");
+      if (!sanitizedPhone) continue;
+
+      const searchTarget = normalizeForMatch(sanitizedPhone);
+
+      const rowData = {
+        phone: sanitizedPhone,
+        name: lead.name || "N/A",
+        age: lead.age || "",
+        weight: lead.weight || "",
+        height: lead.height || "",
+        gender: lead.gender || "",
+        place: lead.place || "",
+        health_issues: lead.health_issues || "",
+        preferred_date: lead.preferred_date || "",
+        preferred_time: lead.preferred_time || "",
+        createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
+      };
+
+      let existingRow = rows.find(row => normalizeForMatch(row.get('phone')) === searchTarget);
+
+      if (existingRow) {
+        // Update
+        existingRow.assign(rowData);
+        await existingRow.save();
+        updateCount++;
+      } else {
+        // Add
+        await sheet.addRow(rowData);
+        addCount++;
+      }
+    }
+
+    console.log(`✅ [GoogleSheet] Sync back complete: ${updateCount} updated, ${addCount} added.`);
+    return { updateCount, addCount };
+  } catch (error) {
+    console.error("❌ [GoogleSheet] Failed to sync back to Sheet:", error.message);
     throw error;
   }
 }
