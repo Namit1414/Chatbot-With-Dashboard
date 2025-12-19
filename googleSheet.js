@@ -16,6 +16,18 @@ const doc = new GoogleSpreadsheet(
   auth
 );
 
+const _normalizePhone = (phone) => {
+  if (!phone) return "";
+  let clean = String(phone).replace(/@s\.whatsapp\.net/g, "").replace(/\D/g, "");
+  if (clean.length === 10) clean = "91" + clean;
+  return clean;
+};
+
+const _normalizeForMatch = (p) => {
+  const clean = _normalizePhone(p);
+  return clean.length >= 10 ? clean.slice(-10) : clean;
+};
+
 async function getSheet() {
   try {
     // Some setups require explicit service account auth
@@ -46,7 +58,7 @@ export async function saveLead(lead) {
     }
 
     const sheet = await getSheet();
-    const sanitizedPhone = String(lead.phone || "").replace(/@s\.whatsapp\.net/g, "").replace(/\D/g, "");
+    const sanitizedPhone = _normalizePhone(lead.phone);
 
     const rowData = {
       phone: sanitizedPhone,
@@ -65,17 +77,11 @@ export async function saveLead(lead) {
     // Try to find existing row to update
     const rows = await sheet.getRows();
 
-    // Normalize function to get the last 10 digits
-    const normalizeForMatch = (p) => {
-      const clean = String(p || "").replace(/\D/g, "");
-      return clean.length >= 10 ? clean.slice(-10) : clean;
-    };
-
-    const searchTarget = normalizeForMatch(sanitizedPhone);
+    const searchTarget = _normalizeForMatch(sanitizedPhone);
     console.log(`[GoogleSheet] Searching for target suffix ${searchTarget} among ${rows.length} rows...`);
 
     let existingRow = rows.find(row => {
-      const rowPhone = normalizeForMatch(row.get('phone'));
+      const rowPhone = _normalizeForMatch(row.get('phone'));
       return rowPhone === searchTarget && searchTarget !== "";
     });
 
@@ -84,7 +90,7 @@ export async function saveLead(lead) {
       existingRow = rows.find(row => {
         const rawValues = row._rawData || [];
         return rawValues.some(val => {
-          const cleanVal = normalizeForMatch(val);
+          const cleanVal = _normalizeForMatch(val);
           return cleanVal === searchTarget && searchTarget !== "";
         });
       });
@@ -118,15 +124,10 @@ export async function findLeadByPhone(phone) {
     const sheet = await getSheet();
     const rows = await sheet.getRows();
 
-    const normalizeForMatch = (p) => {
-      const clean = String(p || "").replace(/\D/g, "");
-      return clean.length >= 10 ? clean.slice(-10) : clean;
-    };
-
-    const searchTarget = normalizeForMatch(phone);
+    const searchTarget = _normalizeForMatch(phone);
 
     for (const row of rows) {
-      if (normalizeForMatch(row.get('phone')) === searchTarget && searchTarget !== "") {
+      if (_normalizeForMatch(row.get('phone')) === searchTarget && searchTarget !== "") {
         console.log(`Found matching lead in Google Sheet for phone: ${phone}`);
         return {
           phone: row.get('phone'),
@@ -159,15 +160,10 @@ export async function deleteLeadByPhone(phone) {
     const sheet = await getSheet();
     const rows = await sheet.getRows();
 
-    const normalizeForMatch = (p) => {
-      const clean = String(p || "").replace(/\D/g, "");
-      return clean.length >= 10 ? clean.slice(-10) : clean;
-    };
-
-    const searchTarget = normalizeForMatch(phone);
+    const searchTarget = _normalizeForMatch(phone);
     if (!searchTarget) return;
 
-    const existingRow = rows.find(row => normalizeForMatch(row.get('phone')) === searchTarget);
+    const existingRow = rows.find(row => _normalizeForMatch(row.get('phone')) === searchTarget);
 
     if (existingRow) {
       console.log(`[GoogleSheet] Deleting row for ${phone} (matched suffix ${searchTarget})`);
@@ -196,13 +192,8 @@ export async function syncLeadsFromSheet(LeadModel) {
 
     let syncCount = 0;
     for (const row of rows) {
-      let phone = String(row.get('phone') || "").replace(/\D/g, "");
+      let phone = _normalizePhone(row.get('phone'));
       if (!phone) continue;
-
-      // Auto-prefix with 91 if it's a 10-digit number
-      if (phone.length === 10) {
-        phone = "91" + phone;
-      }
 
       const leadData = {
         phone: phone,
@@ -255,19 +246,14 @@ export async function syncLeadsToSheet(LeadModel) {
     const sheet = await getSheet();
     const rows = await sheet.getRows();
 
-    const normalizeForMatch = (p) => {
-      const clean = String(p || "").replace(/\D/g, "");
-      return clean.length >= 10 ? clean.slice(-10) : clean;
-    };
-
     let updateCount = 0;
     let addCount = 0;
 
     for (const lead of leads) {
-      const sanitizedPhone = String(lead.phone || "").replace(/\D/g, "");
+      const sanitizedPhone = _normalizePhone(lead.phone);
       if (!sanitizedPhone) continue;
 
-      const searchTarget = normalizeForMatch(sanitizedPhone);
+      const searchTarget = _normalizeForMatch(sanitizedPhone);
 
       const rowData = {
         phone: sanitizedPhone,
@@ -283,7 +269,7 @@ export async function syncLeadsToSheet(LeadModel) {
         createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
       };
 
-      let existingRow = rows.find(row => normalizeForMatch(row.get('phone')) === searchTarget);
+      let existingRow = rows.find(row => _normalizeForMatch(row.get('phone')) === searchTarget);
 
       if (existingRow) {
         // Update
