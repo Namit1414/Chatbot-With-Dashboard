@@ -28,8 +28,11 @@ export async function runFlow(phone, message) {
   // This ensures active flow sessions take precedence over legacy lead capture
   const advancedFlowResult = await executeAdvancedFlow(phone, message);
   if (advancedFlowResult) {
+    console.log(`[FlowEngine] Advanced Flow Matched. Result Type: ${advancedFlowResult.type}`);
     // Format response based on type
-    return formatAdvancedFlowResponse(advancedFlowResult);
+    const formatted = formatAdvancedFlowResponse(advancedFlowResult);
+    console.log(`[FlowEngine] Formatted Response:`, JSON.stringify(formatted, null, 2));
+    return formatted;
   }
 
   // 2️⃣ Continue lead flow if active
