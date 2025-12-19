@@ -371,20 +371,53 @@ app.post("/api/upload", upload.single('file'), async (req, res) => {
   }
 
   try {
-    // Determine folder based on file type
-    const folder = req.file.mimetype.startsWith('image/') ? 'bot-images' : 'bot-documents';
+    // Determine folder and resource_type based on file type
+    const isImage = req.file.mimetype.startsWith('image/');
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const isPdf = req.file.mimetype === 'application/pdf';
+
+    const folder = isImage ? 'bot-images' : (isVideo ? 'bot-videos' : 'bot-documents');
+
+    // For PDFs, 'raw' is technically the most correct type in Cloudinary
+    const resourceType = (isImage || isVideo) ? 'auto' : 'raw';
 
     // Upload to Cloudinary
-    // We use a buffer upload since multer is using memory or we can use the path
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: folder,
-      resource_type: "auto", // Automatically detect if it's image, video, or raw file
+      resource_type: resourceType,
+      type: "upload",
+      access_mode: "public",
+      invalidate: true
     });
 
-    console.log(`✅ Permanent upload successful: ${result.secure_url}`);
+    console.log(`✅ Cloudinary upload successful: ${result.secure_url}`);
+
+    let finalUrl = result.secure_url;
+
+    // Self-test accessibility before returning to UI
+    try {
+      const testRes = await fetch(finalUrl, { method: 'GET' });
+      if (testRes.status === 401 || testRes.status === 403) {
+        console.error(`❌ Cloudinary Access Denied (Status: ${testRes.status}). Account security is blocking public links.`);
+
+        // AUTOMATIC FALLBACK: Use local server URL if Cloudinary is blocked
+        const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+        if (baseUrl) {
+          const localPath = `/uploads/${path.basename(req.file.path)}`;
+          finalUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) + localPath : baseUrl + localPath;
+          console.log(`🚀 AUTOMATIC FALLBACK: Using Local Server URL: ${finalUrl}`);
+        } else {
+          console.warn(`⚠️ No PUBLIC_URL found. Fallback impossible. File might be undeliverable.`);
+        }
+      } else {
+        console.log(`🌐 Verified: Publicly accessible via Cloudinary`);
+      }
+    } catch (e) {
+      console.warn(`⚠️ Access check failed: ${e.message}`);
+    }
 
     res.json({
-      url: result.secure_url,
+      url: finalUrl,
       filename: req.file.originalname,
       mimetype: req.file.mimetype,
       public_id: result.public_id
