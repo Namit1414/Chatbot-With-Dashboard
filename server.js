@@ -20,7 +20,7 @@ import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
-import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet } from "./googleSheet.js";
+import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -105,11 +105,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 await connectMongo();
 initScheduler();
 
-// Start periodic sync from Google Sheet (every 5 minutes)
+// Periodic Two-Way Sync (every 5 minutes)
 setInterval(async () => {
   try {
-    console.log("[Sync] Running periodic Google Sheet to MongoDB sync...");
+    console.log("[Sync] Running periodic Two-Way sync...");
+    // 1. Pull from Sheet to MongoDB (Intentional human edits in Sheet come first)
     await syncLeadsFromSheet(Lead);
+    // 2. Push from MongoDB to Sheet (Dashboard updates or new leads from Webhook)
+    await syncLeadsToSheet(Lead);
+    console.log("[Sync] Continuous two-way sync cycle completed.");
   } catch (e) {
     console.error("[Sync] Periodic sync failed:", e.message);
   }
@@ -117,7 +121,11 @@ setInterval(async () => {
 
 function sanitizePhone(phone) {
   if (!phone) return "";
-  return phone.replace(/\D/g, "");
+  let clean = phone.toString().replace(/\D/g, "");
+  if (clean.length === 10) {
+    clean = "91" + clean;
+  }
+  return clean;
 }
 
 app.get("/api/leads", async (req, res) => {
@@ -129,7 +137,28 @@ app.get("/api/leads", async (req, res) => {
   }
 
   const leads = await Lead.find({}).sort({ updatedAt: -1 });
-  res.json(leads);
+
+  // Merge duplicates in-memory for the UI if they exist (e.g. 91890... vs 890...)
+  const mergedMap = new Map();
+  leads.forEach(lead => {
+    const s = sanitizePhone(lead.phone);
+    if (!mergedMap.has(s)) {
+      mergedMap.set(s, lead.toObject());
+    } else {
+      const existing = mergedMap.get(s);
+      // Combine unread counts
+      existing.unreadMessages = (existing.unreadMessages || 0) + (lead.unreadMessages || 0);
+      // Prefer the version with more complete data or more recent update
+      if (new Date(lead.updatedAt) > new Date(existing.updatedAt)) {
+        Object.assign(existing, lead.toObject(), {
+          unreadMessages: existing.unreadMessages,
+          phone: s // Use normalized phone
+        });
+      }
+    }
+  });
+
+  res.json(Array.from(mergedMap.values()));
 });
 
 app.post("/api/leads", async (req, res) => {
@@ -139,10 +168,11 @@ app.post("/api/leads", async (req, res) => {
       return res.status(400).json({ error: "Phone number is required" });
     }
 
+    const sanitized = sanitizePhone(leadData.phone);
     // Save to DB
     const lead = await Lead.findOneAndUpdate(
-      { phone: leadData.phone },
-      { ...leadData, completed: true, updatedAt: new Date() },
+      { phone: sanitized },
+      { ...leadData, phone: sanitized, completed: true, updatedAt: new Date() },
       { upsert: true, new: true }
     );
     console.log(`[ManualLead] Saved/Updated lead in MongoDB: ${leadData.phone}`);
@@ -164,7 +194,7 @@ app.post("/api/leads", async (req, res) => {
 });
 
 app.post("/api/leads/:phone/read", async (req, res) => {
-  const phone = req.params.phone;
+  const phone = sanitizePhone(req.params.phone);
   await Lead.updateOne({ phone }, { unreadMessages: 0 });
   res.sendStatus(200);
 });
@@ -172,9 +202,12 @@ app.post("/api/leads/:phone/read", async (req, res) => {
 app.put("/api/leads/id/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const data = { ...req.body };
+    if (data.phone) data.phone = sanitizePhone(data.phone);
+
     const lead = await Lead.findByIdAndUpdate(
       id,
-      { ...req.body, updatedAt: new Date() },
+      { ...data, updatedAt: new Date() },
       { new: true }
     );
     if (!lead) return res.status(404).json({ error: "Lead not found" });
@@ -223,8 +256,19 @@ app.delete("/api/leads/id/:id", async (req, res) => {
 
 
 app.get("/api/messages/:phone", async (req, res) => {
-  const phone = req.params.phone;
-  const messages = await Message.find({ $or: [{ from: phone }, { to: phone }] }).sort({ timestamp: 1 });
+  const phone = sanitizePhone(req.params.phone);
+  const suffix = phone.slice(-10);
+
+  // Fetch messages that match the full phone or the last 10 digits (fallback for inconsistently saved numbers)
+  const messages = await Message.find({
+    $or: [
+      { from: phone },
+      { to: phone },
+      { from: { $regex: suffix + "$" } },
+      { to: { $regex: suffix + "$" } }
+    ]
+  }).sort({ timestamp: 1 });
+
   res.json(messages);
 });
 
@@ -573,6 +617,8 @@ app.post("/webhook", async (req, res) => {
 
     if (lead) {
       io.emit('leadUpdated', lead);
+      // Immediate sync to Google Sheet for new/active leads
+      saveLead(lead.toObject()).catch(e => console.error("[Sync] Webhook lead sync failed:", e.message));
     }
 
 
