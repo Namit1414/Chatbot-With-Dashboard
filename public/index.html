@@ -3717,6 +3717,13 @@
             }
         }
 
+        function normalizePhone(phone) {
+            if (!phone) return "";
+            let clean = String(phone).replace(/\D/g, "");
+            if (clean.length === 10) return "91" + clean;
+            return clean;
+        }
+
         function showContent(contentId) {
             document.querySelectorAll('.page-content, .page-content-fluid').forEach(content => {
                 content.style.display = 'none';
@@ -3758,7 +3765,7 @@
             leads.sort((a, b) => (b.unreadMessages || 0) - (a.unreadMessages || 0));
 
             leads.forEach(lead => {
-                const isActive = currentLeadPhone === lead.phone;
+                const isActive = normalizePhone(currentLeadPhone) === normalizePhone(lead.phone);
                 const initials = (lead.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
                 const unreadBadge = (lead.unreadMessages || 0) > 0 ? `<span class="badge rounded-pill bg-success ms-auto">${lead.unreadMessages}</span>` : '';
 
@@ -4077,7 +4084,7 @@
 
         async function openChat(phone, name) {
             if (!phone) return;
-            const targetPhone = String(phone);
+            const targetPhone = normalizePhone(phone);
 
             try {
                 currentLeadPhone = targetPhone;
@@ -4093,7 +4100,7 @@
 
                 // Update sidebar highlight immediately
                 document.querySelectorAll('.chat-list-item').forEach(item => {
-                    const itemPhone = item.getAttribute('data-phone');
+                    const itemPhone = normalizePhone(item.getAttribute('data-phone'));
                     item.classList.toggle('active', itemPhone === targetPhone);
                 });
 
@@ -4116,12 +4123,18 @@
                 if (!response.ok) throw new Error('Network response was not ok');
                 const messages = await response.json();
 
-                // Clear and render
+                // Clear and render optimized
                 const chatContainer = document.getElementById('chat-container');
                 if (chatContainer) {
                     chatContainer.innerHTML = '';
                     lastMessageDate = null;
-                    messages.forEach(msg => displayMessage(msg));
+
+                    // Create a fragment for better performance (one DOM append for all messages)
+                    const fragment = document.createDocumentFragment();
+                    messages.forEach(msg => displayMessage(msg, false, fragment));
+                    chatContainer.appendChild(fragment);
+
+                    // Single scroll operation at the end
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
 
@@ -4138,8 +4151,8 @@
             }
         }
 
-        function displayMessage(message) {
-            const chatContainer = document.getElementById('chat-container');
+        function displayMessage(message, shouldScroll = true, targetContainer = null) {
+            const chatContainer = targetContainer || document.getElementById('chat-container');
             if (!chatContainer) return;
 
             const msgDate = new Date(message.timestamp || message.createdAt || Date.now());
@@ -4155,8 +4168,8 @@
 
             const messageElement = document.createElement('div');
 
-            const mFrom = String(message.from || '').replace(/\D/g, '');
-            const targetPhone = String(currentLeadPhone || '').replace(/\D/g, '');
+            const mFrom = normalizePhone(message.from || '');
+            const targetPhone = normalizePhone(currentLeadPhone || '');
 
             const isFromDashboard = message.from === 'dashboard';
             const isFromLead = mFrom === targetPhone;
@@ -4213,7 +4226,14 @@
             }
 
             chatContainer.appendChild(messageElement);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Only scroll if requested and we are appending to the main container
+            if (shouldScroll && !targetContainer) {
+                const mainContainer = document.getElementById('chat-container');
+                if (mainContainer) {
+                    mainContainer.scrollTop = mainContainer.scrollHeight;
+                }
+            }
         }
 
         function setPublicUrl() {
@@ -4342,7 +4362,11 @@
 
         const socket = io();
         socket.on('newMessage', (message) => {
-            if (message.from === currentLeadPhone || message.to === currentLeadPhone) {
+            const mFrom = normalizePhone(message.from);
+            const mTo = normalizePhone(message.to);
+            const curPhone = normalizePhone(currentLeadPhone);
+
+            if (mFrom === curPhone || mTo === curPhone) {
                 // Determine if we should display it
                 // 'dashboard' messages are handled optimistically, so avoiding dupe if latency is low? 
                 // Actually socket comes back from server.
@@ -4838,8 +4862,21 @@
             }
 
             // Show progress section
-            document.getElementById('bulk-progress-section').style.display = 'block';
-            document.getElementById('bulk-progress-section').scrollIntoView({ behavior: 'smooth' });
+            const progressSection = document.getElementById('bulk-progress-section');
+            progressSection.style.display = 'block';
+
+            // Fix: Target only the content container for scrolling to prevent the entire UI (including sidebar) from shifting
+            const contentContainer = document.getElementById('content');
+            if (contentContainer) {
+                // Small timeout to allow the browser to render the newly displayed section
+                setTimeout(() => {
+                    const targetScroll = progressSection.offsetTop - 20;
+                    contentContainer.scrollTo({
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
 
             // Reset counters
             let sent = 0;
