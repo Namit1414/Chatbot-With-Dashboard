@@ -62,10 +62,53 @@ export async function saveLead(lead) {
       createdAt: lead.createdAt || new Date().toISOString()
     };
 
-    await sheet.addRow(rowData);
-    console.log(`✅ [GoogleSheet] Row successfully added for ${sanitizedPhone}`);
+    // Try to find existing row to update
+    const rows = await sheet.getRows();
+
+    // Normalize function to get the last 10 digits
+    const normalizeForMatch = (p) => {
+      const clean = String(p || "").replace(/\D/g, "");
+      return clean.length >= 10 ? clean.slice(-10) : clean;
+    };
+
+    const searchTarget = normalizeForMatch(sanitizedPhone);
+    console.log(`[GoogleSheet] Searching for target suffix ${searchTarget} among ${rows.length} rows...`);
+
+    let existingRow = rows.find(row => {
+      const rowPhone = normalizeForMatch(row.get('phone'));
+      return rowPhone === searchTarget && searchTarget !== "";
+    });
+
+    // Fallback: If not found by header, search through all values
+    if (!existingRow) {
+      existingRow = rows.find(row => {
+        const rawValues = row._rawData || [];
+        return rawValues.some(val => {
+          const cleanVal = normalizeForMatch(val);
+          return cleanVal === searchTarget && searchTarget !== "";
+        });
+      });
+      if (existingRow) console.log(`[GoogleSheet] Found existing lead via suffix fallback for ${searchTarget}`);
+    }
+
+    if (existingRow) {
+      console.log(`[GoogleSheet] Updating existing row for ${sanitizedPhone} (matched suffix ${searchTarget})`);
+      // Update fields
+      existingRow.assign(rowData);
+      await existingRow.save();
+      console.log(`✅ [GoogleSheet] Row successfully updated for ${sanitizedPhone}`);
+    } else {
+      // Final sanity check: Log the first row's keys to help debug header mismatch
+      if (rows.length > 0) {
+        console.log(`[GoogleSheet] Available headers in first row:`, Object.keys(rows[0].toObject()));
+      }
+
+      console.log(`[GoogleSheet] Adding new row for ${sanitizedPhone}`);
+      await sheet.addRow(rowData);
+      console.log(`✅ [GoogleSheet] Row successfully added for ${sanitizedPhone}`);
+    }
   } catch (error) {
-    console.error(`❌ [GoogleSheet] Failed to add row for ${lead.phone}:`, error.message);
+    console.error(`❌ [GoogleSheet] Failed to save to Sheet for ${lead.phone || 'unknown'}:`, error.message);
     throw error;
   }
 }
@@ -74,11 +117,17 @@ export async function findLeadByPhone(phone) {
   try {
     const sheet = await getSheet();
     const rows = await sheet.getRows();
-    const sanitizedPhone = phone.replace(/@s\.whatsapp\.net/g, "");
+
+    const normalizeForMatch = (p) => {
+      const clean = String(p || "").replace(/\D/g, "");
+      return clean.length >= 10 ? clean.slice(-10) : clean;
+    };
+
+    const searchTarget = normalizeForMatch(phone);
 
     for (const row of rows) {
-      if (row.get('phone') === sanitizedPhone) {
-        console.log(`Found matching lead in Google Sheet for phone: ${sanitizedPhone}`);
+      if (normalizeForMatch(row.get('phone')) === searchTarget && searchTarget !== "") {
+        console.log(`Found matching lead in Google Sheet for phone: ${phone}`);
         return {
           phone: row.get('phone'),
           name: row.get('name'),
@@ -94,9 +143,89 @@ export async function findLeadByPhone(phone) {
         };
       }
     }
-    return null; // User not found
+    return null;
   } catch (error) {
     console.error("Error finding lead by phone in Google Sheet:", error);
     return null;
+  }
+}
+
+export async function deleteLeadByPhone(phone) {
+  try {
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
+      return;
+    }
+
+    const sheet = await getSheet();
+    const rows = await sheet.getRows();
+
+    const normalizeForMatch = (p) => {
+      const clean = String(p || "").replace(/\D/g, "");
+      return clean.length >= 10 ? clean.slice(-10) : clean;
+    };
+
+    const searchTarget = normalizeForMatch(phone);
+    if (!searchTarget) return;
+
+    const existingRow = rows.find(row => normalizeForMatch(row.get('phone')) === searchTarget);
+
+    if (existingRow) {
+      console.log(`[GoogleSheet] Deleting row for ${phone} (matched suffix ${searchTarget})`);
+      await existingRow.delete();
+      console.log(`✅ [GoogleSheet] Row successfully deleted for ${phone}`);
+      return true;
+    }
+
+    console.log(`[GoogleSheet] No row found to delete for ${phone}`);
+    return false;
+  } catch (error) {
+    console.error(`❌ [GoogleSheet] Failed to delete lead ${phone}:`, error.message);
+    throw error;
+  }
+}
+
+export async function syncLeadsFromSheet(LeadModel) {
+  try {
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
+      return;
+    }
+
+    const sheet = await getSheet();
+    const rows = await sheet.getRows();
+    console.log(`[GoogleSheet] Syncing ${rows.length} rows to MongoDB...`);
+
+    let syncCount = 0;
+    for (const row of rows) {
+      const phone = String(row.get('phone') || "").replace(/\D/g, "");
+      if (!phone) continue;
+
+      const leadData = {
+        phone: phone,
+        name: row.get('name') || "N/A",
+        age: row.get('age') || null,
+        weight: row.get('weight') || null,
+        height: row.get('height') || null,
+        gender: row.get('gender') || "N/A",
+        place: row.get('place') || "N/A",
+        health_issues: row.get('health_issues') || "N/A",
+        preferred_date: row.get('preferred_date') || "",
+        preferred_time: row.get('preferred_time') || "",
+        completed: true,
+        updatedAt: new Date()
+      };
+
+      await LeadModel.findOneAndUpdate(
+        { phone: phone },
+        { $set: leadData },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      syncCount++;
+    }
+
+    console.log(`✅ [GoogleSheet] Successfully synced ${syncCount} leads to MongoDB`);
+    return syncCount;
+  } catch (error) {
+    console.error("❌ [GoogleSheet] Failed to sync from Sheet:", error.message);
+    throw error;
   }
 }
