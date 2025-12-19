@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 /**
  * WhatsApp Business API Helper
  * Handles sending interactive messages, media, and buttons
@@ -8,6 +10,10 @@
  * Supports: text, buttons, list, image, video, document
  */
 export async function sendWhatsAppBusinessMessage(to, messageData, token, phoneNumberId) {
+    if (!token || !phoneNumberId) {
+        console.error('[WhatsAppAPI] Missing credentials: TOKEN or PHONE_ID not provided.');
+        throw new Error('Missing WhatsApp configuration');
+    }
     const baseUrl = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
     let requestBody = {
@@ -31,27 +37,14 @@ export async function sendWhatsAppBusinessMessage(to, messageData, token, phoneN
                 requestBody = buildListMessage(to, messageData);
                 break;
             case 'image':
-                if (messageData.url) {
-                    requestBody = buildMediaMessage(to, 'image', messageData);
-                } else {
-                    requestBody.type = "text";
-                    requestBody.text = { body: messageData.caption || 'Image placeholder (No URL provided)' };
-                }
-                break;
             case 'video':
-                if (messageData.url) {
-                    requestBody = buildMediaMessage(to, 'video', messageData);
-                } else {
-                    requestBody.type = "text";
-                    requestBody.text = { body: messageData.caption || 'Video placeholder (No URL provided)' };
-                }
-                break;
+            case 'audio':
             case 'document':
-                if (messageData.url) {
-                    requestBody = buildDocumentMessage(to, messageData);
+                if (messageData.url || messageData.mediaUrl) {
+                    requestBody = buildMediaMessage(to, messageData.messageType, messageData);
                 } else {
                     requestBody.type = "text";
-                    requestBody.text = { body: messageData.caption || 'Document placeholder (No URL provided)' };
+                    requestBody.text = { body: messageData.caption || messageData.content || `${messageData.messageType} placeholder (No URL provided)` };
                 }
                 break;
             default:
@@ -76,11 +69,14 @@ export async function sendWhatsAppBusinessMessage(to, messageData, token, phoneN
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('WhatsApp API Error:', data);
-            throw new Error(data.error?.message || 'Failed to send message');
+            console.error('❌ WhatsApp API Error:', JSON.stringify(data, null, 2));
+            const errorMsg = data.error?.message || 'Failed to send message';
+            const errorCode = data.error?.code || 'UnknownCode';
+            const errorSubcode = data.error?.error_subcode || '';
+            throw new Error(`WhatsApp API Error (${errorCode}/${errorSubcode}): ${errorMsg}`);
         }
 
-        console.log('✅ WhatsApp message sent:', data);
+        console.log('✅ WhatsApp message sent successfully:', data.messages?.[0]?.id || 'Success');
         return data;
     } catch (error) {
         console.error('Error sending WhatsApp message:', error);
@@ -222,7 +218,7 @@ function buildListMessage(to, messageData) {
  * Build media message (image/video)
  */
 function buildMediaMessage(to, mediaType, messageData) {
-    let url = messageData.url;
+    let url = messageData.url || messageData.mediaUrl;
 
     // Prepend base URL for relative paths (e.g., /uploads/...)
     if (url && url.startsWith('/')) {
@@ -236,44 +232,39 @@ function buildMediaMessage(to, mediaType, messageData) {
 
     console.log(`[WhatsAppAPI] Final URI for ${mediaType}:`, url);
 
-    return {
+    const resObj = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: to,
         type: mediaType,
-        [mediaType]: {
-            link: url,
-            caption: messageData.caption || ''
-        }
+        [mediaType]: (function () {
+            const obj = { link: url };
+
+            // Image and Video support captions. Document does too, but Audio does NOT.
+            if (['image', 'video', 'document'].includes(mediaType)) {
+                const caption = (messageData.caption || messageData.content || '').toString().trim();
+                if (caption.length > 0) {
+                    obj.caption = caption;
+                }
+            }
+
+            // Document requires (or strongly benefits from) a filename
+            if (mediaType === 'document') {
+                let filename = messageData.filename || 'document.pdf';
+                // Sanitize filename: remove spaces and special characters for better delivery
+                filename = filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+                if (!filename.includes('.')) filename += '.pdf';
+                obj.filename = filename;
+            }
+
+            return obj;
+        })()
     };
+
+    console.log(`[WhatsAppAPI] Payload for ${mediaType}:`, JSON.stringify(resObj, null, 2));
+    return resObj;
 }
 
-/**
- * Build document message
- */
-function buildDocumentMessage(to, messageData) {
-    let url = messageData.url;
-
-    // Prepend base URL for relative paths
-    if (url && url.startsWith('/')) {
-        const baseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
-        if (baseUrl) {
-            url = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) + url : baseUrl + url;
-        }
-    }
-
-    return {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: to,
-        type: "document",
-        document: {
-            link: url,
-            caption: messageData.caption || '',
-            filename: messageData.filename || 'document.pdf'
-        }
-    };
-}
 
 /**
  * Send template message
@@ -294,6 +285,8 @@ export async function sendWhatsAppTemplate(to, templateName, languageCode, compo
             components: components || []
         }
     };
+
+    console.log(`[WhatsAppAPI] Sending to ${to} Payload:`, JSON.stringify(requestBody, null, 2));
 
     try {
         const response = await fetch(baseUrl, {
