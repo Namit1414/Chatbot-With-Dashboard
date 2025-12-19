@@ -2934,15 +2934,9 @@
                     <div
                         class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
                         <h4 class="mb-0 fw-bold">Chats</h4>
-                        <button class="btn btn-sm btn-outline-secondary border-0" onclick="setPublicUrl()"
-                            title="Set Public URL for Media">
-                            <i class="bi bi-gear"></i>
-                        </button>
+
                     </div>
-                    <div class="px-3 py-2 bg-warning bg-opacity-10 small text-warning" id="url-warning"
-                        style="display:none;">
-                        <i class="bi bi-exclamation-triangle"></i> Localhost detected. Media may not send.
-                    </div>
+
                     <div class="p-3 border-bottom border-light border-opacity-10">
                         <div class="search-wrapper">
                             <i class="bi bi-search"></i>
@@ -3734,6 +3728,11 @@
                 if (contentId === 'live-chat') {
                     selected.classList.add('flex-column');
                 }
+
+                // Lazily render content if it was skipped during fetchLeads
+                if (contentId === 'leads') renderLeadCards(allLeads);
+                if (contentId === 'flows') fetchFlows();
+                if (contentId === 'flow-builder') loadAdvancedFlows();
             }
 
             document.querySelectorAll('#sidebar .nav-link').forEach(link => {
@@ -3750,7 +3749,13 @@
                 const response = await fetch('/api/leads');
                 allLeads = await response.json();
                 updateLeadStats();
-                renderLeadCards(allLeads);
+
+                // Only render visible tab components to save resources
+                const leadsVisible = document.getElementById('leads').style.display !== 'none';
+                if (leadsVisible) {
+                    renderLeadCards(allLeads);
+                }
+
                 renderChatSidebar(allLeads);
             } catch (error) {
                 console.error('Error fetching leads:', error);
@@ -3803,12 +3808,14 @@
         });
 
         function filterChatSidebar() {
-            const term = document.getElementById('chat-sidebar-search').value.toLowerCase();
+            const term = (document.getElementById('chat-sidebar-search')?.value || '').toLowerCase();
             const filtered = allLeads.filter(l => (l.name || '').toLowerCase().includes(term) || l.phone.includes(term));
             renderChatSidebar(filtered);
         }
 
+        const gradientCache = new Map();
         function stringToGradient(str) {
+            if (gradientCache.has(str)) return gradientCache.get(str);
             const gradients = [
                 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
                 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)',
@@ -3817,7 +3824,9 @@
             ];
             let hash = 0;
             for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-            return gradients[Math.abs(hash) % gradients.length];
+            const res = gradients[Math.abs(hash) % gradients.length];
+            gradientCache.set(str, res);
+            return res;
         }
 
         function updateLeadStats() {
@@ -4118,8 +4127,8 @@
                     avatar.style.background = stringToGradient(targetPhone);
                 }
 
-                // Fetch and display messages
-                const response = await fetch(`/api/messages/${targetPhone}`);
+                // Fetch and display messages - Added limit for performance
+                const response = await fetch(`/api/messages/${targetPhone}?limit=200`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 const messages = await response.json();
 
@@ -4129,19 +4138,33 @@
                     chatContainer.innerHTML = '';
                     lastMessageDate = null;
 
-                    // Create a fragment for better performance (one DOM append for all messages)
+                    // Build a single HTML string for the bulk load - much faster than many document fragments/DOM nodes
+                    let bulkHtml = '';
+                    if (messages.length >= 200) {
+                        bulkHtml += `<div class="text-center my-3"><small class="text-muted">Showing last 200 messages. For older history, contact admin.</small></div>`;
+                    }
+
                     const fragment = document.createDocumentFragment();
-                    messages.forEach(msg => displayMessage(msg, false, fragment));
+                    messages.forEach(msg => displayMessage(msg, false, fragment, targetPhone));
                     chatContainer.appendChild(fragment);
 
                     // Single scroll operation at the end
                     chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
 
-                // Mark as read (background task)
-                fetch(`/api/leads/${targetPhone}/read`, { method: 'POST' })
-                    .then(() => fetchLeads())
-                    .catch(err => console.error("Error marking as read:", err));
+                // Mark as read (Update locally FIRST for instant UI response)
+                fetch(`/api/leads/${targetPhone}/read`, { method: 'POST' });
+                const lead = allLeads.find(l => normalizePhone(l.phone) === targetPhone);
+                if (lead) {
+                    lead.unreadMessages = 0;
+                    // Update specific Sidebar badge without redraw
+                    const item = document.querySelector(`.chat-list-item[data-phone="${lead.phone}"]`);
+                    if (item) {
+                        const badge = item.querySelector('.badge');
+                        if (badge) badge.remove();
+                    }
+                    updateLeadStats();
+                }
 
                 const msgInput = document.getElementById('message-input');
                 if (msgInput) msgInput.focus();
@@ -4151,11 +4174,12 @@
             }
         }
 
-        function displayMessage(message, shouldScroll = true, targetContainer = null) {
+        function displayMessage(message, shouldScroll = true, targetContainer = null, normalizedTargetPhone = null) {
             const chatContainer = targetContainer || document.getElementById('chat-container');
             if (!chatContainer) return;
 
-            const msgDate = new Date(message.timestamp || message.createdAt || Date.now());
+            const timestamp = message.timestamp || message.createdAt || Date.now();
+            const msgDate = new Date(timestamp);
             const dateStr = msgDate.toDateString();
 
             if (dateStr !== lastMessageDate) {
@@ -4169,11 +4193,11 @@
             const messageElement = document.createElement('div');
 
             const mFrom = normalizePhone(message.from || '');
-            const targetPhone = normalizePhone(currentLeadPhone || '');
+            const targetPhone = normalizedTargetPhone || normalizePhone(currentLeadPhone || '');
 
             const isFromDashboard = message.from === 'dashboard';
             const isFromLead = mFrom === targetPhone;
-            const time = new Date(message.timestamp || message.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             let contentHtml = `<div class="message-text">${message.text}</div>`;
 
@@ -4236,29 +4260,9 @@
             }
         }
 
-        function setPublicUrl() {
-            const current = localStorage.getItem('chat_public_url') || window.location.origin;
-            const url = prompt("Enter your public URL (e.g. from ngrok) for media to work on WhatsApp:\n(Meta's servers cannot access localhost)", current);
-            if (url !== null) {
-                localStorage.setItem('chat_public_url', url.endsWith('/') ? url.slice(0, -1) : url);
-                checkUrlWarning();
-            }
-        }
 
-        function checkUrlWarning() {
-            const warning = document.getElementById('url-warning');
-            const base = localStorage.getItem('chat_public_url') || window.location.origin;
-            if (base.includes('localhost') || base.includes('127.0.0.1')) {
-                warning.style.display = 'block';
-            } else {
-                warning.style.display = 'none';
-            }
-        }
 
-        // Check on load
-        window.addEventListener('load', checkUrlWarning);
-
-        document.getElementById('send-button').addEventListener('click', sendMessage);
+        document.getElementById('send-button').addEventListener('click', () => sendMessage());
         document.getElementById('message-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
@@ -4326,6 +4330,10 @@
         }
 
         async function sendMessage(mediaUrl = null, messageType = null, originalName = null, caption = null) {
+            // Fix: If called as an event listener, the first argument is a MouseEvent.
+            if (mediaUrl instanceof Event || (mediaUrl && typeof mediaUrl === 'object' && mediaUrl.type)) {
+                mediaUrl = null;
+            }
             const messageInput = document.getElementById('message-input');
             const text = caption || messageInput.value;
             if ((text || mediaUrl) && currentLeadPhone) {
@@ -4335,11 +4343,7 @@
                         text: text
                     };
                     if (mediaUrl) {
-                        const publicUrl = localStorage.getItem('chat_public_url');
-                        const base = publicUrl || window.location.origin;
-                        if (base.includes('localhost')) {
-                            console.warn("⚠️ Sending a localhost URL to WhatsApp. Meta servers cannot access localhost. Please use a tunnel like ngrok.");
-                        }
+                        const base = mediaUrl.startsWith('/') ? window.location.origin : '';
                         body.mediaUrl = base + mediaUrl;
                         body.messageType = messageType;
                         body.filename = originalName;
@@ -4389,8 +4393,25 @@
         });
 
         socket.on('leadUpdated', (lead) => {
-            fetchLeads();
-            // Optional notification sound could go here
+            // Update local allLeads array without full fetch
+            const normalizedPhone = normalizePhone(lead.phone);
+            const idx = allLeads.findIndex(l => normalizePhone(l.phone) === normalizedPhone);
+
+            if (idx !== -1) {
+                allLeads[idx] = { ...allLeads[idx], ...lead };
+            } else {
+                allLeads.unshift(lead); // Put new leads at top
+            }
+
+            // Sync stats and UI
+            updateLeadStats();
+            renderChatSidebar(allLeads);
+
+            // Only update Lead cards if the leads tab is visible to save CPU
+            const leadsTab = document.getElementById('leads');
+            if (leadsTab && leadsTab.style.display !== 'none') {
+                renderLeadCards(allLeads);
+            }
         });
 
         // Flows Logic
