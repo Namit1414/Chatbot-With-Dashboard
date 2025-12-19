@@ -270,6 +270,18 @@
             border-bottom-color: #f59e0b;
         }
 
+        .node-header.video {
+            border-bottom-color: #ef4444;
+        }
+
+        .node-header.audio {
+            border-bottom-color: #ec4899;
+        }
+
+        .node-header.document {
+            border-bottom-color: #3b82f6;
+        }
+
         .node-header.condition {
             border-bottom-color: #8b5cf6;
         }
@@ -423,7 +435,16 @@
                 <i class="bi bi-ui-checks" style="color: #10b981;"></i> Buttons
             </div>
             <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'image')">
-                <i class="bi bi-image" style="color: #f59e0b;"></i> Image/Video
+                <i class="bi bi-image" style="color: #f59e0b;"></i> Image
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'video')">
+                <i class="bi bi-play-btn" style="color: #ef4444;"></i> Video
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'audio')">
+                <i class="bi bi-mic" style="color: #ec4899;"></i> Audio
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'document')">
+                <i class="bi bi-file-earmark-text" style="color: #3b82f6;"></i> Document
             </div>
             <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'condition')">
                 <i class="bi bi-shuffle" style="color: #8b5cf6;"></i> Condition
@@ -734,7 +755,10 @@
             if (node.type === 'start') { iconClass = 'bi-play-circle-fill'; iconStyle += 'color: #10b981;'; }
             else if (node.type === 'message') { iconClass = 'bi-chat-text'; iconStyle += 'color: var(--primary);'; }
             else if (node.type === 'buttons') { iconClass = 'bi-ui-checks'; iconStyle += 'color: #10b981;'; }
-            else if (['image', 'video', 'document'].includes(node.type)) { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
+            else if (node.type === 'image') { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
+            else if (node.type === 'video') { iconClass = 'bi-play-btn'; iconStyle += 'color: #ef4444;'; }
+            else if (node.type === 'audio') { iconClass = 'bi-mic'; iconStyle += 'color: #ec4899;'; }
+            else if (node.type === 'document') { iconClass = 'bi-file-earmark-text'; iconStyle += 'color: #3b82f6;'; }
             else if (node.type === 'condition') { iconClass = 'bi-shuffle'; iconStyle += 'color: #8b5cf6;'; }
             else if (node.type === 'delay') { iconClass = 'bi-clock'; iconStyle += 'color: #64748b;'; }
             else if (node.type === 'cta') { iconClass = 'bi-link-45deg'; iconStyle += 'color: #06b6d4;'; }
@@ -769,8 +793,14 @@
                         ${(node.data.buttons || []).map(b => `<span style="background:rgba(16, 185, 129, 0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-size:0.75em; border: 1px solid rgba(16, 185, 129, 0.2);">${b.text}</span>`).join('')}
                     </div>
                 `;
-            } else if (['image', 'video', 'document'].includes(node.type)) {
-                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark"></i> <span>${node.type}</span></div>`;
+            } else if (node.type === 'image') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-image"></i> <span>Image</span></div>`;
+            } else if (node.type === 'video') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-play-btn"></i> <span>Video</span></div>`;
+            } else if (node.type === 'audio') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-mic"></i> <span>Audio</span></div>`;
+            } else if (node.type === 'document') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark-text"></i> <span>${node.data.filename || 'Document'}</span></div>`;
             } else if (node.type === 'cta') {
                 body.innerText = `CTA: ${node.data.buttonText || 'Link'}`;
             } else if (node.type === 'list') {
@@ -1111,10 +1141,10 @@
             }
 
             // Media Types
-            if (['image', 'video', 'document'].includes(node.type)) {
+            if (['image', 'video', 'document', 'audio'].includes(node.type)) {
                 content += ` 
                     <div class="mb-3">
-                        <label class="form-label">Media URL</label>
+                        <label class="form-label">${capitalize(node.type)} URL</label>
                         <div class="d-flex gap-2">
                             <input type="text" id="node-media-url" class="form-control-glass" value="${node.data.url || ''}" oninput="updateNodeProperty('${node.id}', 'url', this.value)">
                             <button class="btn-glass" onclick="document.getElementById('node-file-input').click()" style="white-space: nowrap; padding: 10px 14px;">
@@ -1124,9 +1154,17 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Caption</label>
+                        <label class="form-label">Caption (Optional)</label>
                         <input type="text" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)">
                     </div>`;
+
+                if (node.type === 'document') {
+                    content += `
+                    <div class="mb-3">
+                        <label class="form-label">Display Filename</label>
+                        <input type="text" class="form-control-glass" value="${node.data.filename || ''}" placeholder="e.g. PriceList.pdf" oninput="updateNodeProperty('${node.id}', 'filename', this.value)">
+                    </div>`;
+                }
             }
 
             if (node.type === 'delay') {
@@ -1478,8 +1516,10 @@
                 };
             } else if (type === 'condition') {
                 node.data = { variable: 'lastResponse', condition: 'equals', value: 'yes' };
-            } else if (type === 'image' || type === 'video' || type === 'document') {
+            } else if (type === 'image' || type === 'video' || type === 'audio') {
                 node.data = { url: '', caption: '' };
+            } else if (type === 'document') {
+                node.data = { url: '', caption: '', filename: '' };
             } else if (type === 'delay') {
                 node.data = { delay: 3 };
             } else if (type === 'cta') {
@@ -1616,9 +1656,6 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            const uploadBtn = event.currentTarget; // This might be tricky if called via onchange
-            // Let's just use a simple alert/loading state if needed
-
             try {
                 const res = await fetch('/api/upload', {
                     method: 'POST',
@@ -1628,11 +1665,26 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.url) {
-                        updateNodeProperty(nodeId, 'url', data.url);
-                        // Update the input field directly for immediate feedback
-                        const urlInput = document.getElementById('node-media-url');
-                        if (urlInput) urlInput.value = data.url;
-                        alert('File uploaded successfully! 🎉');
+                        const node = state.nodes.find(n => n.id === nodeId);
+                        if (node) {
+                            node.data.url = data.url;
+                            // Auto-detect type based on mimetype
+                            if (data.mimetype.startsWith('video/')) {
+                                node.type = 'video';
+                            } else if (data.mimetype.startsWith('image/')) {
+                                node.type = 'image';
+                            } else if (data.mimetype.startsWith('audio/')) {
+                                node.type = 'audio';
+                            } else {
+                                node.type = 'document';
+                                node.data.filename = data.filename;
+                            }
+
+                            // Re-render to reflect changes
+                            render();
+                            showNodeProperties(node);
+                            alert('File uploaded successfully! 🎉');
+                        }
                     }
                 } else {
                     alert('Upload failed. Please try again.');
