@@ -20,7 +20,7 @@ import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
-import { saveLead, findLeadByPhone } from "./googleSheet.js";
+import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -105,12 +105,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 await connectMongo();
 initScheduler();
 
+// Start periodic sync from Google Sheet (every 5 minutes)
+setInterval(async () => {
+  try {
+    console.log("[Sync] Running periodic Google Sheet to MongoDB sync...");
+    await syncLeadsFromSheet(Lead);
+  } catch (e) {
+    console.error("[Sync] Periodic sync failed:", e.message);
+  }
+}, 5 * 60 * 1000); // 5 minutes
+
 function sanitizePhone(phone) {
   if (!phone) return "";
   return phone.replace(/\D/g, "");
 }
 
 app.get("/api/leads", async (req, res) => {
+  // Optional: Sync from sheet whenever dashboard leads are requested to ensure fresh data
+  try {
+    await syncLeadsFromSheet(Lead);
+  } catch (e) {
+    console.warn("[Sync] Background sync during GET failed:", e.message);
+  }
+
   const leads = await Lead.find({}).sort({ updatedAt: -1 });
   res.json(leads);
 });
@@ -161,6 +178,15 @@ app.put("/api/leads/id/:id", async (req, res) => {
       { new: true }
     );
     if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    // Sync update to Google Sheet
+    try {
+      await saveLead(lead.toObject());
+      console.log(`[LeadUpdate] Successfully synced update to Google Sheet: ${lead.phone}`);
+    } catch (e) {
+      console.error(`[LeadUpdate] Failed to sync update to Google Sheet for ${lead.phone}:`, e.message);
+    }
+
     res.json(lead);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -176,6 +202,15 @@ app.delete("/api/leads/id/:id", async (req, res) => {
       console.warn(`[Archive] Lead not found for ID: ${id}`);
       return res.status(404).json({ error: "Lead not found" });
     }
+
+    // Sync deletion to Google Sheet
+    try {
+      await deleteLeadByPhone(lead.phone);
+      console.log(`[Archive] Successfully synced deletion to Google Sheet: ${lead.phone}`);
+    } catch (e) {
+      console.error(`[Archive] Failed to sync deletion to Google Sheet for ${lead.phone}:`, e.message);
+    }
+
     console.log(`[Archive] Successfully deleted lead: ${id}`);
     res.json({ success: true });
   } catch (error) {
