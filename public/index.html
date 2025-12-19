@@ -47,25 +47,101 @@
             height: 100vh;
             overflow: hidden;
             display: flex;
+            position: relative;
+        }
+
+        /* Animated Aura Background - Intensified Colors */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -25%;
+            left: -25%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at 30% 30%, rgba(7, 80, 55, 0.568) 0%, transparent 55%),
+                radial-gradient(circle at 70% 70%, rgba(0, 212, 255, 0.35) 0%, transparent 55%),
+                radial-gradient(circle at 10% 80%, rgba(0, 168, 132, 0.25) 0%, transparent 55%),
+                radial-gradient(circle at 90% 20%, rgba(59, 130, 246, 0.25) 0%, transparent 55%);
+            animation: auraPulse 15s ease-in-out infinite alternate;
+            z-index: -2;
+            filter: blur(40px);
+            pointer-events: none;
+        }
+
+        @keyframes auraPulse {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: translate(-3%, 3%) scale(1.05) rotate(1deg);
+            }
+
+            100% {
+                transform: translate(3%, -3%) scale(1.1) rotate(-1deg);
+            }
+        }
+
+        /* High-Visibility Floating Particles */
+        .bg-particle {
+            position: absolute;
+            background: rgba(0, 255, 128, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            filter: blur(0.5px);
+            box-shadow: 0 0 10px rgba(0, 255, 128, 0.6), 0 0 20px rgba(0, 255, 128, 0.2);
+            animation: float-around var(--duration) ease-in-out infinite var(--delay);
+        }
+
+        @keyframes float-around {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translate(var(--move-x), var(--move-y)) scale(1.2);
+                opacity: 0.6;
+            }
+
+            90% {
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: translate(calc(var(--move-x) * 1.5), calc(var(--move-y) * 1.5)) scale(1.5);
+                opacity: 0;
+            }
         }
 
         /* Sidebar */
         #sidebar {
             width: 280px;
-            background-color: var(--sidebar-bg);
+            background-color: rgba(17, 27, 33, 0.75);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             color: var(--sidebar-text);
             display: flex;
             flex-direction: column;
             border-right: 1px solid var(--border-color);
             transition: all 0.3s ease;
+            position: relative;
+            z-index: 10;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
         }
 
         .sidebar-header {
             padding: 20px;
-            background-color: var(--sidebar-bg);
+            background-color: transparent;
             display: flex;
             align-items: center;
             gap: 10px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .sidebar-header h2 {
@@ -109,9 +185,12 @@
         /* Main Content */
         #content {
             flex: 1;
-            background-color: var(--secondary-bg);
+            background-color: rgba(11, 20, 26, 0.60);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             overflow-y: auto;
             position: relative;
+            /* Removed z-index to prevent stacking context issues for modals */
         }
 
         .page-content {
@@ -177,6 +256,25 @@
             vertical-align: middle;
             padding: 16px;
             color: var(--text-main);
+        }
+
+        /* Selective Global Transitions for Interactive Elements */
+        .btn,
+        .nav-link,
+        .card,
+        .chat-list-item,
+        .stat-card,
+        .flow-card,
+        .lead-card,
+        .modal-content,
+        .form-control,
+        .form-select {
+            transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Premium Live Chat Styles */
@@ -739,7 +837,20 @@
         #sidebar.collapsed .sidebar-header .d-flex,
         #sidebar.collapsed .nav-link span,
         #sidebar.collapsed .sidebar-footer {
-            display: none !important;
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        #sidebar .sidebar-header .d-flex,
+        #sidebar .nav-link span,
+        #sidebar .sidebar-footer {
+            transition: opacity 0.3s ease, width 0.3s ease;
+            white-space: nowrap;
         }
 
         #sidebar.collapsed .nav-link {
@@ -752,17 +863,32 @@
             padding: 20px 0;
         }
 
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: #aebac1;
-            cursor: pointer;
-            padding: 5px;
-            transition: all 0.2s;
+        html body #sidebar .toggle-btn {
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            color: #aebac1 !important;
+            cursor: pointer !important;
+            padding: 5px !important;
+            box-shadow: none !important;
+            filter: none !important;
+            transition: transform 0.3s ease, color 0.3s ease;
+            transform: none;
+            opacity: 1;
+            backdrop-filter: none !important;
+            outline: none !important;
         }
 
-        .toggle-btn:hover {
-            color: white;
+        html body #sidebar .toggle-btn:hover,
+        html body #sidebar .toggle-btn:focus,
+        html body #sidebar .toggle-btn:active {
+            color: #fff !important;
+            background: transparent !important;
+            transform: scale(1.1);
+        }
+
+        html body #sidebar .toggle-btn i {
+            transition: transform 0.3s ease;
         }
 
         /* Premium Lead Management Styles */
@@ -1845,11 +1971,16 @@
             }
         }
 
-        /* Smooth Transitions for All Interactive Elements */
-        * {
-            transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-            transition-duration: 0.2s;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        /* Selective transitions for better performance and to avoid jank */
+        .btn,
+        .nav-link,
+        .card,
+        .chat-list-item,
+        .stat-card,
+        .flow-card,
+        .lead-card,
+        .modal-content {
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Reduce Motion for Accessibility */
@@ -2180,119 +2311,7 @@
             opacity: 0.4;
         }
 
-        /* Floating particles (CSS-only fallback) */
-        .particle-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 1;
-            opacity: 1;
-        }
-
-        .particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: radial-gradient(circle, rgba(0, 212, 170, 0.9) 0%, rgba(0, 168, 132, 0.3) 70%);
-            border-radius: 50%;
-            animation: floatParticle linear infinite;
-            box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
-        }
-
-        @keyframes floatParticle {
-            0% {
-                transform: translateY(100vh) translateX(0) scale(0);
-                opacity: 0;
-            }
-
-            10% {
-                opacity: 1;
-            }
-
-            90% {
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(-100px) translateX(var(--drift)) scale(1);
-                opacity: 0;
-            }
-        }
-
-        /* Generate particles with different timings */
-        .particle:nth-child(1) {
-            left: 10%;
-            animation-duration: 15s;
-            animation-delay: 0s;
-            --drift: 50px;
-        }
-
-        .particle:nth-child(2) {
-            left: 20%;
-            animation-duration: 18s;
-            animation-delay: 2s;
-            --drift: -30px;
-        }
-
-        .particle:nth-child(3) {
-            left: 30%;
-            animation-duration: 20s;
-            animation-delay: 4s;
-            --drift: 70px;
-        }
-
-        .particle:nth-child(4) {
-            left: 40%;
-            animation-duration: 16s;
-            animation-delay: 1s;
-            --drift: -50px;
-        }
-
-        .particle:nth-child(5) {
-            left: 50%;
-            animation-duration: 19s;
-            animation-delay: 3s;
-            --drift: 40px;
-        }
-
-        .particle:nth-child(6) {
-            left: 60%;
-            animation-duration: 17s;
-            animation-delay: 5s;
-            --drift: -60px;
-        }
-
-        .particle:nth-child(7) {
-            left: 70%;
-            animation-duration: 21s;
-            animation-delay: 2s;
-            --drift: 80px;
-        }
-
-        .particle:nth-child(8) {
-            left: 80%;
-            animation-duration: 15s;
-            animation-delay: 4s;
-            --drift: -40px;
-        }
-
-        .particle:nth-child(9) {
-            left: 90%;
-            animation-duration: 18s;
-            animation-delay: 1s;
-            --drift: 60px;
-        }
-
-        .particle:nth-child(10) {
-            left: 15%;
-            animation-duration: 22s;
-            animation-delay: 3s;
-            --drift: -70px;
-        }
+        /* Background animations are now handled by the dynamic Aura and bg-particle system */
 
         /* Starburst effect for celebrations */
         .starburst {
@@ -2335,6 +2354,7 @@
             position: absolute;
             animation: confettiFall 3s linear forwards;
             z-index: 9999;
+            pointer-events: none;
         }
 
         @keyframes confettiFall {
@@ -2388,7 +2408,7 @@
         }
 
         /* Generic button element glow */
-        button:not(.no-glow):hover {
+        button:hover {
             box-shadow: 0 6px 20px rgba(0, 168, 132, 0.4), 0 0 12px rgba(0, 168, 132, 0.3) !important;
         }
 
@@ -2774,19 +2794,9 @@
     <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
-    <!-- Particle Background -->
-    <div class="particle-bg">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
+    <!-- Dynamic Background Particle Container -->
+    <div id="bg-particle-container"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1;"></div>
 
     <div id="sidebar">
         <div class="sidebar-header">
@@ -2794,7 +2804,7 @@
                 <i class="bi bi-whatsapp text-success" style="font-size: 1.8rem;"></i>
                 <h2>BodyfyStudio</h2>
             </div>
-            <button class="toggle-btn" onclick="toggleSidebar()">
+            <button class="toggle-btn no-glow no-ripple" onclick="toggleSidebar()">
                 <i class="bi bi-list fs-3"></i>
             </button>
         </div>
@@ -2913,128 +2923,9 @@
             </div>
         </div>
 
-        <!-- Add Lead Modal -->
-        <div class="modal fade" id="addLeadModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Add New Lead Manually</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="add-lead-form">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Name</label>
-                                    <input type="text" class="form-control" id="lead-name" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Phone (with country code, e.g. 911234567890)</label>
-                                    <input type="text" class="form-control" id="lead-phone" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Age</label>
-                                    <input type="number" class="form-control" id="lead-age">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Weight (kg)</label>
-                                    <input type="number" class="form-control" id="lead-weight">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Height (cm)</label>
-                                    <input type="number" class="form-control" id="lead-height">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Gender</label>
-                                    <select class="form-select" id="lead-gender">
-                                        <option value="">Select...</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Place/Locality</label>
-                                    <input type="text" class="form-control" id="lead-place">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Health Issues</label>
-                                    <textarea class="form-control" id="lead-health" rows="2"></textarea>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Preferred Date</label>
-                                    <input type="date" class="form-control" id="lead-pref-date">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Preferred Time Slot</label>
-                                    <select class="form-select" id="lead-pref-time">
-                                        <option value="">Select...</option>
-                                        <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
-                                        <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
-                                        <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
-                                        <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
-                                        <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
-                                        <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
-                                        <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
-                                        <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
-                                        <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
-                                        <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mt-4">
-                                <button type="submit" class="btn btn-primary w-100">Save Lead</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Schedule Call Modal -->
-        <div class="modal fade" id="scheduleCallModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content"
-                    style="background: var(--surface-bg); border: 1px solid var(--border-color);">
-                    <div class="modal-header border-bottom border-light border-opacity-10">
-                        <h5 class="modal-title fw-bold">Schedule Follow-up Call</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <form id="schedule-call-form">
-                            <input type="hidden" id="schedule-lead-phone">
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-secondary small text-uppercase"
-                                    style="letter-spacing: 1px;">Preferred Date</label>
-                                <input type="date" class="form-control bg-dark border-0 text-white p-3"
-                                    id="schedule-date" required>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-secondary small text-uppercase"
-                                    style="letter-spacing: 1px;">Preferred Time Slot</label>
-                                <select class="form-select bg-dark border-0 text-white p-3" id="call-schedule-time"
-                                    required>
-                                    <option value="">Select...</option>
-                                    <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
-                                    <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
-                                    <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
-                                    <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
-                                    <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
-                                    <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
-                                    <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
-                                    <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
-                                    <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
-                                    <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
-                                <i class="bi bi-calendar-check me-2"></i> Update Schedule
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+
+
 
         <div id="live-chat" class="page-content-fluid" style="display: none; height: 100%;">
             <div class="chat-tab-container">
@@ -3136,52 +3027,7 @@
                 <!-- Premium flows will be loaded here -->
             </div>
 
-            <!-- New Flow Modal -->
-            <div class="modal fade" id="newFlowModal" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow-lg"
-                        style="background: var(--surface-bg); border-radius: 20px;">
-                        <div class="modal-header border-bottom border-light border-opacity-10 p-4">
-                            <h5 class="modal-title fw-bold"><i class="bi bi-magic me-2 text-primary"></i> Create
-                                Automation Flow</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body p-4">
-                            <form id="create-flow-form">
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold text-secondary small text-uppercase"
-                                        style="letter-spacing: 1px;">Trigger Keyword</label>
-                                    <div class="input-group shadow-sm">
-                                        <span class="input-group-text bg-dark border-0 text-primary"><i
-                                                class="bi bi-lightning-fill"></i></span>
-                                        <input type="text" class="form-control bg-dark border-0 text-white p-3"
-                                            id="flow-trigger" placeholder="e.g. price, hello, help" required>
-                                    </div>
-                                    <div class="form-text text-muted mt-2">The bot will trigger this flow when a user
-                                        sends this exact word.</div>
-                                </div>
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold text-secondary small text-uppercase"
-                                        style="letter-spacing: 1px;">Response Message</label>
-                                    <textarea class="form-control bg-dark border-0 text-white p-3 shadow-sm"
-                                        id="flow-response" rows="4" placeholder="What should the bot say in return?"
-                                        required></textarea>
-                                </div>
-                                <div class="p-3 bg-primary bg-opacity-10 rounded-3 mb-4">
-                                    <div class="d-flex gap-3">
-                                        <i class="bi bi-info-circle-fill text-primary fs-4"></i>
-                                        <small class="text-secondary">This is a simple automation. For complex
-                                            multi-step journeys, use the <strong>Flow Builder</strong> tab.</small>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
-                                    <i class="bi bi-check-circle-fill me-2"></i> Activate Flow
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
         </div>
 
 
@@ -3327,130 +3173,7 @@
                     </div>
                 </div>
 
-                <!-- Flow Settings Modal -->
-                <div class="modal fade" id="flowSettingsModal" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content border-0 shadow-lg">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title fs-5"><i class="bi bi-gear-fill me-2"></i>Flow Configuration</h5>
-                                <button type="button" class="btn-close btn-close-white"
-                                    data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body p-4">
-                                <!-- Genera Info -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
-                                        style="font-size: 0.75rem; letter-spacing: 1px;">General</label>
-                                    <div class="input-group mb-2">
-                                        <span class="input-group-text bg-transparent border-end-0"><i
-                                                class="bi bi-tag text-muted"></i></span>
-                                        <input type="text" class="form-control border-start-0 ps-0" id="flow-name"
-                                            placeholder="Name your flow..." value="New Flow">
-                                    </div>
-                                    <div class="input-group">
-                                        <span
-                                            class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
-                                                class="bi bi-card-text text-muted"></i></span>
-                                        <textarea class="form-control border-start-0 ps-0" id="flow-description"
-                                            rows="2" placeholder="Description (optional)"></textarea>
-                                    </div>
-                                </div>
 
-                                <!-- Scheduling -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
-                                        style="font-size: 0.75rem; letter-spacing: 1px;">Scheduling</label>
-                                    <div class="card bg-body-tertiary border-0">
-                                        <div class="card-body p-3">
-                                            <div class="mb-3">
-                                                <label class="form-label small text-muted mb-1">Start Time</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text bg-transparent border-end-0"><i
-                                                            class="bi bi-calendar-event text-primary"></i></span>
-                                                    <input type="datetime-local"
-                                                        class="form-control border-start-0 ps-0"
-                                                        id="flow-schedule-time">
-                                                </div>
-                                            </div>
-                                            <div class="mb-0">
-                                                <label class="form-label small text-muted mb-1">Frequency</label>
-                                                <div class="btn-group w-100" role="group">
-                                                    <input type="radio" class="btn-check" name="repeatOptions"
-                                                        id="repeat-once" value="once" checked
-                                                        onclick="updateRepeatSelect('once')">
-                                                    <label class="btn btn-outline-secondary btn-sm"
-                                                        for="repeat-once">Once</label>
-
-                                                    <input type="radio" class="btn-check" name="repeatOptions"
-                                                        id="repeat-daily" value="daily"
-                                                        onclick="updateRepeatSelect('daily')">
-                                                    <label class="btn btn-outline-secondary btn-sm"
-                                                        for="repeat-daily">Daily</label>
-
-                                                    <input type="radio" class="btn-check" name="repeatOptions"
-                                                        id="repeat-weekly" value="weekly"
-                                                        onclick="updateRepeatSelect('weekly')">
-                                                    <label class="btn btn-outline-secondary btn-sm"
-                                                        for="repeat-weekly">Weekly</label>
-
-                                                    <input type="radio" class="btn-check" name="repeatOptions"
-                                                        id="repeat-monthly" value="monthly"
-                                                        onclick="updateRepeatSelect('monthly')">
-                                                    <label class="btn btn-outline-secondary btn-sm"
-                                                        for="repeat-monthly">Monthly</label>
-                                                </div>
-                                                <select class="form-select d-none" id="flow-schedule-repeat">
-                                                    <option value="once">Once</option>
-                                                    <option value="daily">Daily</option>
-                                                    <option value="weekly">Weekly</option>
-                                                    <option value="monthly">Monthly</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Audience -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-bold text-secondary x-small text-uppercase"
-                                        style="font-size: 0.75rem; letter-spacing: 1px;">Target Audience</label>
-                                    <div class="input-group">
-                                        <span
-                                            class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
-                                                class="bi bi-people text-muted"></i></span>
-                                        <select class="form-select border-start-0 ps-0" id="flow-recipient-list"
-                                            multiple size="4">
-                                            <option value="all">All Leads (Broadcast)</option>
-                                            <!-- Leads populated via JS -->
-                                        </select>
-                                    </div>
-                                    <div class="form-text small text-end mt-1 text-muted"><i
-                                            class="bi bi-info-circle me-1"></i>Hold Ctrl/Cmd to select multiple</div>
-                                </div>
-
-                                <!-- Active Toggle -->
-                                <div class="card border-0 shadow-sm bg-body-tertiary">
-                                    <div class="card-body p-2 d-flex justify-content-between align-items-center">
-                                        <span class="fw-semibold text-secondary small"><i
-                                                class="bi bi-toggle-on me-2"></i>Status</span>
-                                        <div class="form-check form-switch mb-0">
-                                            <input class="form-check-input" type="checkbox" id="flow-active" checked>
-                                            <label class="form-check-label small" for="flow-active">Active</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-body-tertiary border-top-0">
-                                <button type="button" class="btn btn-link text-secondary text-decoration-none"
-                                    data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm"
-                                    onclick="applyFlowSettings()">
-                                    <i class="bi bi-check-lg me-1"></i> Apply Settings
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -3673,18 +3396,295 @@
             </div>
         </div>
 
-        <!-- Templates Modal -->
-        <div class="modal fade" id="templatesModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Message Templates</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row g-3" id="templates-list">
-                            <!-- Templates will be loaded here -->
+    </div>
+
+    <!-- Modals moved to body root for proper stacking context -->
+    <!-- Add Lead Modal -->
+    <div class="modal fade" id="addLeadModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Lead Manually</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-lead-form">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" id="lead-name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone (with country code, e.g. 911234567890)</label>
+                                <input type="text" class="form-control" id="lead-phone" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Age</label>
+                                <input type="number" class="form-control" id="lead-age">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Weight (kg)</label>
+                                <input type="number" class="form-control" id="lead-weight">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Height (cm)</label>
+                                <input type="number" class="form-control" id="lead-height">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" id="lead-gender">
+                                    <option value="">Select...</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Place/Locality</label>
+                                <input type="text" class="form-control" id="lead-place">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Health Issues</label>
+                                <textarea class="form-control" id="lead-health" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Preferred Date</label>
+                                <input type="date" class="form-control" id="lead-pref-date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Preferred Time Slot</label>
+                                <select class="form-select" id="lead-pref-time">
+                                    <option value="">Select...</option>
+                                    <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                                    <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                                    <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
+                                    <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
+                                    <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                                    <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+                                    <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
+                                    <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
+                                    <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
+                                    <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
+                                </select>
+                            </div>
                         </div>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">Save Lead</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Call Modal -->
+    <div class="modal fade" id="scheduleCallModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background: var(--surface-bg); border: 1px solid var(--border-color);">
+                <div class="modal-header border-bottom border-light border-opacity-10">
+                    <h5 class="modal-title fw-bold">Schedule Follow-up Call</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="schedule-call-form">
+                        <input type="hidden" id="schedule-lead-phone">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase"
+                                style="letter-spacing: 1px;">Preferred Date</label>
+                            <input type="date" class="form-control bg-dark border-0 text-white p-3" id="schedule-date"
+                                required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase"
+                                style="letter-spacing: 1px;">Preferred Time Slot</label>
+                            <select class="form-select bg-dark border-0 text-white p-3" id="call-schedule-time"
+                                required>
+                                <option value="">Select...</option>
+                                <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                                <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                                <option value="12:00 PM - 01:00 PM">12:00 PM - 01:00 PM</option>
+                                <option value="01:00 PM - 02:00 PM">01:00 PM - 02:00 PM</option>
+                                <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                                <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+                                <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM</option>
+                                <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
+                                <option value="06:00 PM - 07:00 PM">06:00 PM - 07:00 PM</option>
+                                <option value="07:00 PM - 08:00 PM">07:00 PM - 08:00 PM</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
+                            <i class="bi bi-calendar-check me-2"></i> Update Schedule
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Flow Modal -->
+    <div class="modal fade" id="newFlowModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="background: var(--surface-bg); border-radius: 20px;">
+                <div class="modal-header border-bottom border-light border-opacity-10 p-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-magic me-2 text-primary"></i> Create
+                        Automation Flow</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="create-flow-form">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase"
+                                style="letter-spacing: 1px;">Trigger Keyword</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-dark border-0 text-primary"><i
+                                        class="bi bi-lightning-fill"></i></span>
+                                <input type="text" class="form-control bg-dark border-0 text-white p-3"
+                                    id="flow-trigger" placeholder="e.g. price, hello, help" required>
+                            </div>
+                            <div class="form-text text-muted mt-2">The bot will trigger this flow when a user
+                                sends this exact word.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase"
+                                style="letter-spacing: 1px;">Response Message</label>
+                            <textarea class="form-control bg-dark border-0 text-white p-3 shadow-sm" id="flow-response"
+                                rows="4" placeholder="What should the bot say in return?" required></textarea>
+                        </div>
+                        <div class="p-3 bg-primary bg-opacity-10 rounded-3 mb-4">
+                            <div class="d-flex gap-3">
+                                <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+                                <small class="text-secondary">This is a simple automation. For complex
+                                    multi-step journeys, use the <strong>Flow Builder</strong> tab.</small>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
+                            <i class="bi bi-check-circle-fill me-2"></i> Activate Flow
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flow Settings Modal -->
+    <div class="modal fade" id="flowSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-5"><i class="bi bi-gear-fill me-2"></i>Flow Configuration</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Genera Info -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                            style="font-size: 0.75rem; letter-spacing: 1px;">General</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-transparent border-end-0"><i
+                                    class="bi bi-tag text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="flow-name"
+                                placeholder="Name your flow..." value="New Flow">
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
+                                    class="bi bi-card-text text-muted"></i></span>
+                            <textarea class="form-control border-start-0 ps-0" id="flow-description" rows="2"
+                                placeholder="Description (optional)"></textarea>
+                        </div>
+                    </div>
+                    <!-- Scheduling -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                            style="font-size: 0.75rem; letter-spacing: 1px;">Scheduling</label>
+                        <div class="card bg-body-tertiary border-0">
+                            <div class="card-body p-3">
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted mb-1">Start Time</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-end-0"><i
+                                                class="bi bi-calendar-event text-primary"></i></span>
+                                        <input type="datetime-local" class="form-control border-start-0 ps-0"
+                                            id="flow-schedule-time">
+                                    </div>
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label small text-muted mb-1">Frequency</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="repeatOptions" id="repeat-once"
+                                            value="once" checked onclick="updateRepeatSelect('once')">
+                                        <label class="btn btn-outline-secondary btn-sm" for="repeat-once">Once</label>
+                                        <input type="radio" class="btn-check" name="repeatOptions" id="repeat-daily"
+                                            value="daily" onclick="updateRepeatSelect('daily')">
+                                        <label class="btn btn-outline-secondary btn-sm" for="repeat-daily">Daily</label>
+                                        <input type="radio" class="btn-check" name="repeatOptions" id="repeat-weekly"
+                                            value="weekly" onclick="updateRepeatSelect('weekly')">
+                                        <label class="btn btn-outline-secondary btn-sm"
+                                            for="repeat-weekly">Weekly</label>
+                                        <input type="radio" class="btn-check" name="repeatOptions" id="repeat-monthly"
+                                            value="monthly" onclick="updateRepeatSelect('monthly')">
+                                        <label class="btn btn-outline-secondary btn-sm"
+                                            for="repeat-monthly">Monthly</label>
+                                    </div>
+                                    <select class="form-select d-none" id="flow-schedule-repeat">
+                                        <option value="once">Once</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Audience -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary x-small text-uppercase"
+                            style="font-size: 0.75rem; letter-spacing: 1px;">Target Audience</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 align-items-start pt-2"><i
+                                    class="bi bi-people text-muted"></i></span>
+                            <select class="form-select border-start-0 ps-0" id="flow-recipient-list" multiple size="4">
+                                <option value="all">All Leads (Broadcast)</option>
+                                <!-- Leads populated via JS -->
+                            </select>
+                        </div>
+                        <div class="form-text small text-end mt-1 text-muted"><i class="bi bi-info-circle me-1"></i>Hold
+                            Ctrl/Cmd to select multiple</div>
+                    </div>
+                    <!-- Active Toggle -->
+                    <div class="card border-0 shadow-sm bg-body-tertiary">
+                        <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold text-secondary small"><i
+                                    class="bi bi-toggle-on me-2"></i>Status</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="flow-active" checked>
+                                <label class="form-check-label small" for="flow-active">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-body-tertiary border-top-0">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none"
+                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 rounded-pill shadow-sm"
+                        onclick="applyFlowSettings()">
+                        <i class="bi bi-check-lg me-1"></i> Apply Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div class="modal fade" id="templatesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Message Templates</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3" id="templates-list">
+                        <!-- Templates will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -6481,7 +6481,51 @@
         }
 
 
-        fetchFlows();
+        // High-Intensity Background Particles
+        function initBgParticles() {
+            const container = document.getElementById('bg-particle-container');
+            if (!container) return;
+
+            const particleCount = 45; // Increased for better visibility
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'bg-particle';
+
+                // Random larger sizes for impact
+                const size = Math.random() * 5 + 3;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+
+                const moveX = (Math.random() - 0.5) * 300;
+                const moveY = (Math.random() - 0.5) * 300;
+                const duration = Math.random() * 15 + 10;
+                const delay = Math.random() * -25;
+
+                particle.style.setProperty('--move-x', `${moveX}px`);
+                particle.style.setProperty('--move-y', `${moveY}px`);
+                particle.style.setProperty('--duration', `${duration}s`);
+                particle.style.setProperty('--delay', `${delay}s`);
+
+                // Mix of Emerald Green and Electric Blue
+                if (Math.random() > 0.5) {
+                    particle.style.background = 'rgba(0, 255, 128, 0.8)';
+                    particle.style.boxShadow = '0 0 15px rgba(0, 255, 128, 0.6)';
+                } else {
+                    particle.style.background = 'rgba(0, 168, 255, 0.8)';
+                    particle.style.boxShadow = '0 0 15px rgba(0, 168, 255, 0.6)';
+                }
+
+                container.appendChild(particle);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initBgParticles();
+            fetchFlows();
+        });
     </script>
 </body>
 
