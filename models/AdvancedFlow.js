@@ -41,7 +41,7 @@ const advancedFlowSchema = new mongoose.Schema({
         id: { type: String, required: true },
         type: {
             type: String,
-            enum: ['start', 'message', 'buttons', 'list', 'image', 'video', 'document', 'delay', 'condition', 'cta'],
+            enum: ['start', 'message', 'buttons', 'list', 'image', 'video', 'audio', 'document', 'delay', 'condition', 'cta'],
             required: true
         },
         position: {
@@ -56,9 +56,9 @@ const advancedFlowSchema = new mongoose.Schema({
             buttons: [{
                 id: String,
                 text: String,
-                reply: String, // ✅ Added reply field
+                reply: String,
                 type: { type: String, enum: ['reply', 'url', 'call'] },
-                value: String // URL or phone number
+                value: String
             }],
 
             // For list nodes
@@ -68,12 +68,14 @@ const advancedFlowSchema = new mongoose.Schema({
                 description: String
             }],
 
-            // For media nodes
+            // For media nodes (Unified)
+            url: String,
             mediaUrl: String,
             caption: String,
-            filename: String, // For document nodes
+            filename: String,
 
             // For delay nodes
+            delay: Number,
             delaySeconds: Number,
 
             // For condition nodes
@@ -99,21 +101,13 @@ const advancedFlowSchema = new mongoose.Schema({
                 }]
             }],
 
-            // For Media nodes (unified)
-            caption: String,
-
-            // For delay nodes
-            delay: Number,
-            delaySeconds: Number,
-
             // For start nodes (persistence sync)
             trigger: String,
             triggerType: String,
             scheduleTime: String,
             audienceType: String,
             tags: String,
-            recipientPhone: String,
-            url: String // Support for both url and mediaUrl
+            recipientPhone: String
         }
     }],
 
