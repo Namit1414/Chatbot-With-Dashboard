@@ -96,6 +96,31 @@ export async function saveFlowResponse(response) {
   }
 }
 
+export async function updateFlowResponseStatus(phone, status) {
+  try {
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) return;
+
+    const sheet = await getSheet(1, "Sheet2");
+    const rows = await sheet.getRows();
+    const searchTarget = _normalizeForMatch(phone);
+
+    let updatedCount = 0;
+    for (const row of rows) {
+      if (_normalizeForMatch(row.get('Phone')) === searchTarget) {
+        row.set('Status', status);
+        await row.save();
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`✅ [GoogleSheet] Updated status for ${updatedCount} entries in Sheet2 for ${phone}`);
+    }
+  } catch (error) {
+    console.error(`❌ [GoogleSheet] Failed to update status in Sheet2:`, error.message);
+  }
+}
+
 export async function saveLead(lead) {
   try {
     if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
