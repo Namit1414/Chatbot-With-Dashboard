@@ -18,6 +18,7 @@ import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
+import FlowResponse from "./models/FlowResponse.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
@@ -609,6 +610,42 @@ app.post("/api/advanced-flows/:id/stats", async (req, res) => {
   }
 });
 
+
+// Flow Response APIs
+app.get("/api/flow-responses", async (req, res) => {
+  try {
+    const responses = await FlowResponse.find({}).sort({ timestamp: -1 });
+    res.json(responses);
+  } catch (error) {
+    console.error('Error fetching flow responses:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update lead status tag
+app.put("/api/leads/:phone/status", async (req, res) => {
+  try {
+    const phone = sanitizePhone(req.params.phone);
+    const { status } = req.body;
+
+    const lead = await Lead.findOneAndUpdate(
+      { phone },
+      { $set: { statusTag: status } },
+      { new: true }
+    );
+
+    if (lead) {
+      // Also sync to Google Sheet if needed, but for now just DB and Dashboard
+      io.emit('leadUpdated', lead);
+      res.json(lead);
+    } else {
+      res.status(404).json({ error: 'Lead not found' });
+    }
+  } catch (error) {
+    console.error('Error updating lead status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get("/debug/leads", async (req, res) => {
   const leads = await Lead.find({});
