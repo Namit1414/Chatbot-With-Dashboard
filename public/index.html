@@ -2850,7 +2850,7 @@
 
         .status-tag-not-interested {
             background: rgba(239, 68, 68, 0.15) !important;
-            color: #ef4444 !important;
+            color: #ff0303 !important;
             border-color: rgba(239, 68, 68, 0.3) !important;
         }
 
@@ -6892,7 +6892,7 @@
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-dark shadow">
                                     <li><a class="dropdown-item" href="#" onclick="updateStatusTag('${resp.phone}', 'interested')">Interested</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="updateStatusTag('${resp.phone}', 'future')">Future Interest</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="updateStatusTag('${resp.phone}', 'future_interest')">Future Interest</a></li>
                                     <li><a class="dropdown-item" href="#" onclick="updateStatusTag('${resp.phone}', 'not_interested')">Not Interested</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" onclick="updateStatusTag('${resp.phone}', 'none')">Reset Status</a></li>
@@ -6911,7 +6911,7 @@
         function getStatusLabel(status) {
             switch (status) {
                 case 'interested': return 'Interested';
-                case 'future': return 'Future Interest';
+                case 'future_interest': return 'Future Interest';
                 case 'not_interested': return 'Not Interested';
                 default: return 'No Status';
             }
