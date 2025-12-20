@@ -6821,9 +6821,9 @@
             }
         }
 
-        async function fetchFlowResponses() {
+        async function fetchFlowResponses(isSilent = false) {
             const tbody = document.getElementById('responses-table-body');
-            if (tbody) {
+            if (tbody && !isSilent) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>';
             }
 
@@ -6833,8 +6833,17 @@
                     fetch('/api/leads')
                 ]);
 
-                const responses = await responsesRes.json();
+                let responses = await responsesRes.json();
                 const leads = await leadsRes.json();
+
+                // DEDUPLICATION: Prevent showing identical responses that might have been saved multiple times due to retries
+                const seen = new Set();
+                responses = responses.filter(resp => {
+                    const key = `${resp.phone}-${resp.flowId}-${resp.nodeId}-${resp.answer}-${Math.floor(new Date(resp.timestamp).getTime() / 2000)}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
 
                 // Create a map of phone -> status for easy lookup
                 const leadStatusMap = new Map();
@@ -6908,8 +6917,8 @@
                     } else {
                         alert(`Status updated to ${getStatusLabel(status)}`);
                     }
-                    // Refresh data
-                    fetchFlowResponses();
+                    // Refresh data silently to avoid shaking
+                    fetchFlowResponses(true);
                 } else {
                     if (typeof toast !== 'undefined' && toast.error) {
                         toast.error('Update Failed', 'Could not update lead status');
@@ -6930,6 +6939,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             initBgParticles();
             fetchFlows();
+
+            // Listen for lead updates to keep status tags in sync
+            if (typeof socket !== 'undefined') {
+                socket.on('leadUpdated', (data) => {
+                    if (document.getElementById('flow-responses').style.display !== 'none') {
+                        fetchFlowResponses(true);
+                    }
+                });
+            }
         });
     </script>
 </body>
