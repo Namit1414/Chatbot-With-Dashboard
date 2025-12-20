@@ -28,7 +28,7 @@ const _normalizeForMatch = (p) => {
   return clean.length >= 10 ? clean.slice(-10) : clean;
 };
 
-async function getSheet() {
+async function getSheet(index = 0, title = null) {
   try {
     // Some setups require explicit service account auth
     if (typeof doc.useServiceAccountAuth === "function") {
@@ -43,10 +43,53 @@ async function getSheet() {
     }
 
     await doc.loadInfo(); // loads spreadsheet metadata
-    return doc.sheetsByIndex[0]; // first tab
+
+    if (title) {
+      let sheet = doc.sheetsByTitle[title];
+      if (!sheet) {
+        console.log(`[GoogleSheet] Sheet "${title}" not found. Creating it...`);
+        sheet = await doc.addSheet({ title });
+      }
+      return sheet;
+    }
+
+    return doc.sheetsByIndex[index]; // first tab
   } catch (e) {
     console.error("Error loading Google Sheet:", e);
     throw e;
+  }
+}
+
+export async function saveFlowResponse(response) {
+  try {
+    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
+      console.warn("⚠️ Google Sheets credentials missing. Skipping flow response sync.");
+      return;
+    }
+
+    // Get or create Sheet2 (index 1 is usually Sheet2 if it exists, but we'll use title for safety)
+    const sheet = await getSheet(1, "Sheet2");
+
+    // Ensure headers exist if sheet is new
+    if (sheet.rowCount <= 1) {
+      await sheet.setHeaderRow(['Timestamp', 'Phone', 'Name', 'Flow Name', 'Node Name', 'Question', 'Answer', 'Status']);
+    }
+
+    const rowData = {
+      Timestamp: response.timestamp ? new Date(response.timestamp).toLocaleString() : new Date().toLocaleString(),
+      Phone: _normalizePhone(response.phone),
+      Name: response.name || "N/A",
+      "Flow Name": response.flowName || "N/A",
+      "Node Name": response.nodeName || "N/A",
+      Question: response.question || "N/A",
+      Answer: response.answer || "N/A",
+      Status: response.statusTag || "none"
+    };
+
+    await sheet.addRow(rowData);
+    console.log(`✅ [GoogleSheet] Flow response successfully added to Sheet2 for ${response.phone}`);
+  } catch (error) {
+    console.error(`❌ [GoogleSheet] Failed to save flow response:`, error.message);
   }
 }
 
@@ -71,6 +114,7 @@ export async function saveLead(lead) {
       health_issues: lead.health_issues || "",
       preferred_date: lead.preferred_date || "",
       preferred_time: lead.preferred_time || "",
+      statusTag: lead.statusTag || "none",
       createdAt: lead.createdAt || new Date().toISOString()
     };
 
@@ -206,6 +250,7 @@ export async function syncLeadsFromSheet(LeadModel) {
         health_issues: row.get('health_issues') || "N/A",
         preferred_date: row.get('preferred_date') || "",
         preferred_time: row.get('preferred_time') || "",
+        statusTag: row.get('statusTag') || "none",
         completed: true,
         updatedAt: new Date()
       };
@@ -266,6 +311,7 @@ export async function syncLeadsToSheet(LeadModel) {
         health_issues: lead.health_issues || "",
         preferred_date: lead.preferred_date || "",
         preferred_time: lead.preferred_time || "",
+        statusTag: lead.statusTag || "none",
         createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
       };
 
