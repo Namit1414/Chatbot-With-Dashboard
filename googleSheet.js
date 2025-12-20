@@ -70,8 +70,11 @@ export async function saveFlowResponse(response) {
     // Get or create Sheet2 (index 1 is usually Sheet2 if it exists, but we'll use title for safety)
     const sheet = await getSheet(1, "Sheet2");
 
-    // Ensure headers exist if sheet is new
-    if (sheet.rowCount <= 1) {
+    // Robust header check: Try to load rows to see if headers exist
+    try {
+      await sheet.loadHeaderRow();
+    } catch (e) {
+      console.log(`[GoogleSheet] Title Sheet2 headers missing or empty. Initializing...`);
       await sheet.setHeaderRow(['Timestamp', 'Phone', 'Name', 'Flow Name', 'Node Name', 'Question', 'Answer', 'Status']);
     }
 
