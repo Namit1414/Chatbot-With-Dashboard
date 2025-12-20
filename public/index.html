@@ -2870,7 +2870,21 @@
             background: rgba(31, 41, 55, 0.4);
             border-radius: 16px;
             border: 1px solid rgba(75, 85, 99, 0.2);
-            overflow: hidden;
+            position: relative;
+            /* Container must NOT have overflow:hidden */
+        }
+
+        #flow-responses .table-responsive {
+            overflow: visible !important;
+            padding-bottom: 120px;
+            /* Space for dropdown */
+            margin-bottom: -120px;
+            /* Offsets padding */
+        }
+
+        .dropdown-menu {
+            z-index: 1060 !important;
+            margin-top: 5px !important;
         }
 
         .responses-table {
@@ -6903,8 +6917,9 @@
             }
         }
 
-        async function updateStatusTag(phone, status) {
+        async function updateStatusTag(rawPhone, status) {
             try {
+                const phone = normalizePhone(rawPhone);
                 const res = await fetch(`/api/leads/${phone}/status`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
