@@ -691,6 +691,21 @@ async function recordFlowResponse(phone, flow, node, answer) {
     try {
         console.log(`[FlowEngine] Recording response from ${phone} for flow "${flow.name}", node "${node.id}"`);
 
+        // Deduplication: Check if an identical response was recorded in the last 10 seconds
+        const tenSecondsAgo = new Date(Date.now() - 10000);
+        const existing = await FlowResponse.findOne({
+            phone,
+            flowId: flow._id.toString(),
+            nodeId: node.id,
+            answer,
+            timestamp: { $gte: tenSecondsAgo }
+        });
+
+        if (existing) {
+            console.log(`[FlowEngine] Response from ${phone} already recorded recently. Skipping duplicate.`);
+            return;
+        }
+
         // Fetch Lead Name and Status if available
         let name = "N/A";
         let statusTag = "none";
