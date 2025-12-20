@@ -628,11 +628,29 @@ app.put("/api/leads/:phone/status", async (req, res) => {
     const phone = sanitizePhone(req.params.phone);
     const { status } = req.body;
 
+    console.log(`[API] Updating status for phone: ${phone} to: ${status}`);
     const lead = await Lead.findOneAndUpdate(
       { phone },
       { $set: { statusTag: status } },
       { new: true }
     );
+
+    if (!lead) {
+      console.warn(`[API] Lead not found for phone: ${phone}. Trying suffix match...`);
+      // Fallback: search by last 10 digits
+      const suffix = phone.slice(-10);
+      const leads = await Lead.find({ phone: { $regex: suffix + "$" } });
+      if (leads.length > 0) {
+        const targetLead = leads[0];
+        targetLead.statusTag = status;
+        await targetLead.save();
+        console.log(`[API] Status updated for lead found by suffix: ${targetLead.phone}`);
+
+        saveLead(targetLead.toObject()).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
+        io.emit('leadUpdated', targetLead);
+        return res.json(targetLead);
+      }
+    }
 
     if (lead) {
       // Sync to Google Sheet
