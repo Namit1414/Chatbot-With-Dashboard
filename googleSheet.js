@@ -122,7 +122,25 @@ export async function saveLead(lead) {
     };
 
     // Try to find existing row to update
-    const rows = await sheet.getRows();
+    let rows = [];
+    try {
+      rows = await sheet.getRows();
+    } catch (e) {
+      console.warn("[GoogleSheet] Error fetching rows, might be header issue:", e.message);
+      // If sheet is empty or has no headers, set them up
+      await sheet.setHeaderRow(['phone', 'name', 'age', 'weight', 'height', 'gender', 'place', 'health_issues', 'preferred_date', 'preferred_time', 'statusTag', 'createdAt']);
+    }
+
+    // Ensure statusTag header exists if not present
+    try {
+      await sheet.loadHeaderRow();
+      if (!sheet.headerValues.includes('statusTag')) {
+        console.log("[GoogleSheet] statusTag header missing. Adding it...");
+        await sheet.setHeaderRow([...sheet.headerValues, 'statusTag']);
+      }
+    } catch (e) {
+      // Handled by initialization above or ignore
+    }
 
     const searchTarget = _normalizeForMatch(sanitizedPhone);
     console.log(`[GoogleSheet] Searching for target suffix ${searchTarget} among ${rows.length} rows...`);
@@ -260,11 +278,16 @@ export async function syncLeadsFromSheet(LeadModel) {
 
       const existingLead = await LeadModel.findOne({ phone: phone });
 
-      // Only update Mongo if the Sheet has newer or missing data
-      // For simplicity, we'll check if the Lead exists and if it was updated recently
-      // But usually, if we sync from sheet, we treat sheet as intentional human edit.
-      // However, if the user edited in dashboard recently, we should be careful.
-      // For now, let's keep it simple: always sync IF not recently updated in Mongo via webhook/dashboard (e.g. within last 1 min)
+      // PROTECTION: If lead was updated in MongoDB recently (last 60s), do NOT overwrite from sheet
+      // This prevents race conditions where a dashboard update hasn't reached the sheet yet.
+      if (existingLead && existingLead.updatedAt) {
+        const lastUpdate = new Date(existingLead.updatedAt).getTime();
+        const now = Date.now();
+        if (now - lastUpdate < 60000) { // 60 seconds
+          console.log(`[Sync] Skipping ${phone} - recently updated in MongoDB.`);
+          continue;
+        }
+      }
 
       await LeadModel.findOneAndUpdate(
         { phone: phone },
