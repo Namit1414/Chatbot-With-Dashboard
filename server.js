@@ -635,7 +635,9 @@ app.put("/api/leads/:phone/status", async (req, res) => {
     );
 
     if (lead) {
-      // Also sync to Google Sheet if needed, but for now just DB and Dashboard
+      // Sync to Google Sheet
+      saveLead(lead).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
+
       io.emit('leadUpdated', lead);
       res.json(lead);
     } else {
