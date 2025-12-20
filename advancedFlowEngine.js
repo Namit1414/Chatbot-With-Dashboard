@@ -4,11 +4,62 @@ import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 import Lead from "./models/Lead.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 import { logToFile } from "./debugLogger.js";
+import { saveFlowResponse } from "./googleSheet.js";
+import FlowResponse from "./models/FlowResponse.js";
 
-// Session management for multi-step flows
 // Session management for multi-step flows
 const flowSessions = new Map(); // phoneNumber -> { flowId, currentNodeId, variables }
 const tempFlows = new Map(); // flowId -> flowObject (for testing unsaved flows)
+
+/**
+ * Find the next node in the flow
+ */
+function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
+    if (!flow || !flow.nodes || !flow.connections) return null;
+
+    // Determine connection to follow
+    const connection = flow.connections.find(conn => {
+        // Source must match
+        if (conn.source !== currentNodeId) return false;
+
+        // If it's a conditional connection (labeled)
+        if (conn.label && userMessage) {
+            return evaluateCondition(conn.label, userMessage, session);
+        }
+
+        // Default: no label matches everything (sequential)
+        return !conn.label;
+    });
+
+    if (!connection) return null;
+
+    // Find target node
+    return flow.nodes.find(node => node.id === connection.target);
+}
+
+/**
+ * Evaluate conditional logic
+ */
+function evaluateCondition(condition, userMessage, session) {
+    if (!condition || !userMessage) return false;
+
+    const msgLower = userMessage.toLowerCase().trim();
+    const condLower = condition.toLowerCase().trim();
+
+    // Simple condition matching
+    if (condLower.startsWith('contains:')) {
+        const checkValue = condLower.replace('contains:', '').trim();
+        return msgLower.includes(checkValue);
+    }
+
+    if (condLower.startsWith('equals:')) {
+        const checkValue = condLower.replace('equals:', '').trim();
+        return msgLower === checkValue;
+    }
+
+    // Default: exact match
+    return msgLower === condLower;
+}
 
 /**
  * Helper to find session with fuzzy matching
@@ -277,6 +328,9 @@ async function continueFlow(phone, message) {
         }
 
         if (matchedBranch) {
+            // Record response
+            await recordFlowResponse(phone, flow, currentNode, responseValue);
+
             // Store in session
             session.variables.lastResponse = responseValue;
             await updateFlowStats(flow._id, 'clicked');
@@ -318,7 +372,7 @@ async function continueFlow(phone, message) {
                 endFlowSession(phone);
                 return {
                     type: 'text',
-                    content: personalizeMessage(feedbackText, phone, session)
+                    content: await personalizeMessage(feedbackText, phone, session)
                 };
             }
         } else {
@@ -344,34 +398,8 @@ async function continueFlow(phone, message) {
     return await executeNode(phone, flow, nextNode);
 }
 
-/**
- * Find the next node in the flow
- */
 
 
-/**
- * Evaluate conditional logic
- */
-function evaluateCondition(condition, userMessage, session) {
-    if (!condition || !userMessage) return false;
-
-    const msgLower = userMessage.toLowerCase().trim();
-    const condLower = condition.toLowerCase().trim();
-
-    // Simple condition matching
-    if (condLower.startsWith('contains:')) {
-        const checkValue = condLower.replace('contains:', '').trim();
-        return msgLower.includes(checkValue);
-    }
-
-    if (condLower.startsWith('equals:')) {
-        const checkValue = condLower.replace('equals:', '').trim();
-        return msgLower === checkValue;
-    }
-
-    // Default: exact match
-    return msgLower === condLower;
-}
 
 /**
  * Execute a specific node
@@ -440,11 +468,10 @@ async function executeNode(phone, flow, node, depth = 0) {
     }
 }
 
-/**
- * Execute message node
- */
+// Update callers first
+// executeMessageNode
 async function executeMessageNode(phone, flow, node) {
-    const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
+    const message = await personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
 
     // Check if there's a next node immediately
     const nextNode = findNextNode(flow, node.id);
@@ -459,11 +486,9 @@ async function executeMessageNode(phone, flow, node) {
     return { type: 'text', messageType: 'text', content: message };
 }
 
-/**
- * Execute buttons node (CTA buttons)
- */
+// executeButtonsNode
 async function executeButtonsNode(phone, flow, node) {
-    const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
+    const message = await personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
     const buttons = node.data.buttons || [];
 
     await updateFlowStats(flow._id, 'delivered');
@@ -480,11 +505,9 @@ async function executeButtonsNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute CTA node
- */
+// executeCtaNode
 async function executeCtaNode(phone, flow, node) {
-    const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
+    const message = await personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
 
     await updateFlowStats(flow._id, 'delivered');
 
@@ -499,11 +522,9 @@ async function executeCtaNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute list node
- */
+// executeListNode
 async function executeListNode(phone, flow, node) {
-    const message = personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
+    const message = await personalizeMessage(node.data.text || '', phone, flowSessions.get(phone));
 
     await updateFlowStats(flow._id, 'delivered');
 
@@ -516,11 +537,9 @@ async function executeListNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute image node
- */
+// executeImageNode
 async function executeImageNode(phone, flow, node) {
-    const caption = personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
+    const caption = await personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
 
     await updateFlowStats(flow._id, 'delivered');
 
@@ -532,11 +551,9 @@ async function executeImageNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute video node
- */
+// executeVideoNode
 async function executeVideoNode(phone, flow, node) {
-    const caption = personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
+    const caption = await personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
 
     await updateFlowStats(flow._id, 'delivered');
 
@@ -548,11 +565,9 @@ async function executeVideoNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute document node
- */
+// executeDocumentNode
 async function executeDocumentNode(phone, flow, node) {
-    const caption = personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
+    const caption = await personalizeMessage(node.data.caption || '', phone, flowSessions.get(phone));
     const url = node.data.url || node.data.mediaUrl;
     const filename = node.data.filename || 'document.pdf';
 
@@ -575,184 +590,65 @@ async function executeDocumentNode(phone, flow, node) {
     };
 }
 
-/**
- * Execute audio node
- */
+// executeAudioNode
 async function executeAudioNode(phone, flow, node) {
     await updateFlowStats(flow._id, 'delivered');
-
     return {
         type: 'audio',
         messageType: 'audio',
-        url: node.data.url || node.data.mediaUrl // Support both names
+        url: node.data.url || node.data.mediaUrl
     };
 }
 
-/**
- * Execute delay node
- */
+// executeDelayNode
 async function executeDelayNode(phone, flow, node) {
-    const delayMs = (node.data.delay || node.data.delaySeconds || 2) * 1000; // Support both names
+    const delayMs = (node.data.delay || 1) * 1000;
+    console.log(`[FlowEngine] Delaying for ${delayMs}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
 
-    // Schedule next node execution
-    setTimeout(async () => {
-        const nextNode = findNextNode(flow, node.id);
-        if (nextNode) {
-            const result = await executeNode(phone, flow, nextNode);
-            if (result) {
-                // Send the delayed message (this would need to be handled by the webhook)
-                // Note: For a real app, we need a way to send async messages back to the user
-                // potentially via a callback or event emitter.
-                console.log('Delayed message generated:', result);
-                // For now, we can only log it because the HTTP response is already sent.
-                // To fix this properly, we'd need to call sendWhatsAppMessage here directly.
-                const { sendWhatsAppBusinessMessage } = await import('./whatsappBusinessAPI.js');
-
-                // Map 'type' to 'messageType' if needed
-                let msgToSend = result;
-                if (result.type && !result.messageType) {
-                    msgToSend = { ...result, messageType: result.type };
-                }
-
-                // Helper to send async
-                // We need token and phoneID. Assuming they are in process.env
-                if (process.env.WHATSAPP_TOKEN && process.env.PHONE_NUMBER_ID) {
-                    await sendWhatsAppBusinessMessage(
-                        phone,
-                        msgToSend,
-                        process.env.WHATSAPP_TOKEN,
-                        process.env.PHONE_NUMBER_ID
-                    );
-                }
-            }
-        }
-    }, delayMs);
-
-    return { type: 'no_reply' }; // Handled, but no immediate response
-}
-
-
-/**
- * Helper to check if a condition node evaluates to true
- */
-function isConditionMet(node, session) {
-    if (!node || node.type !== 'condition') return false;
-
-    const variable = node.data.variable || 'lastResponse';
-    const conditionType = node.data.condition || 'equals';
-    const targetValue = (node.data.value || '').toLowerCase().trim();
-
-    // Get actual value from session variables
-    const actualValue = (session?.variables[variable] || '').toLowerCase().trim();
-
-    console.log(`[ConditionCheck] ${variable} ("${actualValue}") ${conditionType} "${targetValue}"`);
-
-    switch (conditionType) {
-        case 'equals':
-            return actualValue === targetValue;
-        case 'contains':
-            return actualValue.includes(targetValue);
-        case 'regex':
-            try {
-                const regex = new RegExp(targetValue, 'i');
-                return regex.test(actualValue);
-            } catch (e) {
-                console.error('Invalid Regex:', e);
-                return false;
-            }
-        default:
-            return actualValue === targetValue;
+    const nextNode = findNextNode(flow, node.id);
+    if (nextNode) {
+        return await executeNode(phone, flow, nextNode);
     }
+    return null;
 }
 
-/**
- * Execute condition node
- */
+// executeConditionNode
 async function executeConditionNode(phone, flow, node, depth = 0) {
-    console.log(`Executing Condition Node ${node.id} (Depth: ${depth})`);
-
-    // Check condition
+    console.log(`[FlowEngine] Evaluating condition node: ${node.id}`);
     const session = flowSessions.get(phone);
-    const passed = isConditionMet(node, session);
+    const lastResponse = session?.variables?.lastResponse || '';
 
-    if (!passed) {
-        console.log('Condition Failed. Stopping flow path.');
-        return { type: 'no_reply' };
-    }
-
-    console.log('Condition Passed. Proceeding.');
-
-    // Find next node (pass null/empty session to avoid recursive condition check if not needed, 
-    // but here we just want the linear next node after the condition)
-    const nextNode = findNextNode(flow, node.id, null, session);
+    // Condition nodes usually have two branches: "True" and "False" (or similar)
+    // The conditional logic is defined in the connection labels
+    const nextNode = findNextNode(flow, node.id, lastResponse, session);
 
     if (nextNode) {
-        return await executeNode(phone, flow, nextNode, depth + 1);
+        return await executeNode(phone, flow, nextNode, depth);
     }
-
-    return { type: 'no_reply' };
-}
-
-/**
- * Find the next node in the flow
- */
-function findNextNode(flow, currentNodeId, userMessage = null, session = null) {
-    // Find connections from current node
-    const connections = flow.connections?.filter(c => c.source === currentNodeId) || [];
-
-    if (connections.length === 0) {
-        return null; // A node without connections is an exit node
-    }
-
-    // 1. Check for labeled connections (Explicit branching)
-    for (const connection of connections) {
-        if (connection.label && userMessage) {
-            // Check if label matches message
-            // Evaluate condition connection.label vs userMessage if needed
-            // Reuse evaluateCondition helper for connection labels
-            if (evaluateCondition(connection.label, userMessage, session)) {
-                return flow.nodes.find(n => n.id === connection.target);
-            }
-        }
-    }
-
-    // 2. Check for connections to Condition Nodes (Implicit branching by Condition)
-    // AND detection of condition mode to prevent fallback
-    let hasConditionConnections = false;
-
-    for (const connection of connections) {
-        const targetNode = flow.nodes.find(n => n.id === connection.target);
-        if (targetNode && targetNode.type === 'condition') {
-            hasConditionConnections = true;
-            // We need the session to evaluate
-            if (session && isConditionMet(targetNode, session)) {
-                console.log(`[SmartRoute] Route found via Condition Node: ${targetNode.id}`);
-                return targetNode;
-            }
-        }
-    }
-
-    // If we checked condition nodes and none matched, we should STOP here.
-    // Do NOT fallback to the first connection, as that would execute the wrong branch.
-    if (hasConditionConnections) {
-        console.log('[SmartRoute] Condition nodes present but none matched. Stopping.');
-        return null;
-    }
-
-    // 3. Fallback: Take first connection (default path, e.g. "always continue")
-    // Use this only if no specific condition check was involved (e.g. linear flow)
-    const firstConnection = connections[0];
-    return flow.nodes.find(n => n.id === firstConnection.target);
+    return null;
 }
 
 /**
  * Personalize message with variables
  */
-function personalizeMessage(text, phone, session) {
+async function personalizeMessage(text, phone, session) {
     let result = text;
 
     // Replace {phone}
     result = result.replace(/{phone}/g, phone);
+
+    // Fetch Lead Data for {name}
+    try {
+        const lead = await Lead.findOne({ phone: phone });
+        if (lead) {
+            result = result.replace(/{name}/g, lead.name || '');
+            result = result.replace(/{email}/g, lead.email || '');
+            // Add other lead fields if necessary
+        }
+    } catch (e) {
+        console.error('Error fetching lead for personalization:', e);
+    }
 
     // Replace session variables
     // Resolve session if not passed or ensure we have it
@@ -785,6 +681,51 @@ async function updateFlowStats(flowId, metric) {
         }
     } catch (error) {
         console.error('Error updating flow stats:', error);
+    }
+}
+
+/**
+ * Record a user's response to a flow node
+ */
+async function recordFlowResponse(phone, flow, node, answer) {
+    try {
+        console.log(`[FlowEngine] Recording response from ${phone} for flow "${flow.name}", node "${node.id}"`);
+
+        // Fetch Lead Name and Status if available
+        let name = "N/A";
+        let statusTag = "none";
+        try {
+            const lead = await Lead.findOne({ phone: phone });
+            if (lead) {
+                if (lead.name) name = lead.name;
+                if (lead.statusTag) statusTag = lead.statusTag;
+            }
+        } catch (e) { }
+
+        const responseData = {
+            phone,
+            name,
+            statusTag,
+            flowId: flow._id.toString(),
+            flowName: flow.name,
+            nodeId: node.id,
+            nodeName: node.type, // Could be more specific if nodes had names
+            question: node.data?.text || node.data?.caption || "Question",
+            answer: answer,
+            timestamp: new Date()
+        };
+
+        // 1. Save to MongoDB
+        const flowResponse = new FlowResponse(responseData);
+        await flowResponse.save();
+
+        // 2. Save to Google Sheet (Sheet2)
+        saveFlowResponse(responseData).catch(err => {
+            console.error('[FlowEngine] Failed to sync flow response to Google Sheet:', err.message);
+        });
+
+    } catch (error) {
+        console.error('[FlowEngine] Error recording flow response:', error);
     }
 }
 
