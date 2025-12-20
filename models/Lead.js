@@ -13,6 +13,7 @@ const LeadSchema = new mongoose.Schema({
   preferred_time: String,
   completed: { type: Boolean, default: false },
   unreadMessages: { type: Number, default: 0 },
+  statusTag: { type: String, enum: ['interested', 'future', 'not_interested', 'none'], default: 'none' },
 }, { timestamps: true });
 
 export default mongoose.model("Lead", LeadSchema);
