@@ -9,6 +9,7 @@ const flowResponseSchema = new mongoose.Schema({
     nodeName: { type: String },
     question: { type: String },
     answer: { type: String },
+    statusTag: { type: String, default: 'none' },
     timestamp: { type: Date, default: Date.now }
 }, { timestamps: true });
 
