@@ -21,7 +21,7 @@ import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 import FlowResponse from "./models/FlowResponse.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
-import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
+import { saveLead, updateFlowResponseStatus, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -647,14 +647,16 @@ app.put("/api/leads/:phone/status", async (req, res) => {
         console.log(`[API] Status updated for lead found by suffix: ${targetLead.phone}`);
 
         saveLead(targetLead.toObject()).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
+        updateFlowResponseStatus(targetLead.phone, status).catch(err => console.error('[API] Failed to sync status to Sheet2:', err.message));
         io.emit('leadUpdated', targetLead);
         return res.json(targetLead);
       }
     }
 
     if (lead) {
-      // Sync to Google Sheet
+      // Sync to Google Sheet (Both Sheet1 and Sheet2)
       saveLead(lead).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
+      updateFlowResponseStatus(lead.phone, status).catch(err => console.error('[API] Failed to sync status to Sheet2:', err.message));
 
       io.emit('leadUpdated', lead);
       res.json(lead);
