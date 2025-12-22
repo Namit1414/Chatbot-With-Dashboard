@@ -69,6 +69,7 @@ export async function saveLead(lead) {
       gender: lead.gender || "",
       place: lead.place || "",
       health_issues: lead.health_issues || "",
+      remarks: lead.remarks || "",
       preferred_date: lead.preferred_date || "",
       preferred_time: lead.preferred_time || "",
       createdAt: lead.createdAt || new Date().toISOString()
@@ -138,6 +139,7 @@ export async function findLeadByPhone(phone) {
           gender: row.get('gender'),
           place: row.get('place'),
           health_issues: row.get('health_issues'),
+          remarks: row.get('remarks'),
           preferred_date: row.get('preferred_date'),
           preferred_time: row.get('preferred_time'),
           completed: true
@@ -204,6 +206,7 @@ export async function syncLeadsFromSheet(LeadModel) {
         gender: row.get('gender') || "N/A",
         place: row.get('place') || "N/A",
         health_issues: row.get('health_issues') || "N/A",
+        remarks: row.get('remarks') || "",
         preferred_date: row.get('preferred_date') || "",
         preferred_time: row.get('preferred_time') || "",
         completed: true,
@@ -264,6 +267,7 @@ export async function syncLeadsToSheet(LeadModel) {
         gender: lead.gender || "",
         place: lead.place || "",
         health_issues: lead.health_issues || "",
+        remarks: lead.remarks || "",
         preferred_date: lead.preferred_date || "",
         preferred_time: lead.preferred_time || "",
         createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
