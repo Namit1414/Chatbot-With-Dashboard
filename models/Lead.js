@@ -9,6 +9,7 @@ const LeadSchema = new mongoose.Schema({
   gender: String,
   place: String,
   health_issues: String,
+  remarks: String,
   preferred_date: String,
   preferred_time: String,
   completed: { type: Boolean, default: false },
