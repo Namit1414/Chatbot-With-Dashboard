@@ -8,7 +8,7 @@ import {
   startLeadFlow,
   hasExistingLead
 } from "./leadManager.js";
-import { executeAdvancedFlow, getFlowSession } from "./advancedFlowEngine.js";
+import { executeAdvancedFlow, getFlowSession, personalizeMessage } from "./advancedFlowEngine.js";
 
 export async function runFlow(phone, message) {
 
@@ -47,7 +47,7 @@ export async function runFlow(phone, message) {
   const matchedFlow = flows.find(f => msgLower.includes(f.trigger.toLowerCase()));
 
   if (matchedFlow) {
-    return matchedFlow.response;
+    return await personalizeMessage(matchedFlow.response, phone);
   }
 
   const excel = getExcelReply(message);
@@ -58,7 +58,7 @@ export async function runFlow(phone, message) {
       return "👋 Welcome back! How can I help you today?";
     }
 
-    return excel.response;
+    return await personalizeMessage(excel.response, phone);
   }
 
 
