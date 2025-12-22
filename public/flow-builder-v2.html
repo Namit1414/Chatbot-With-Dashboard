@@ -1082,11 +1082,12 @@
             }
 
             if (node.type === 'message') {
-                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea class="form-control-glass" rows="4" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>`;
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea id="prop-text-${node.id}" class="form-control-glass" rows="4" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea><div class="d-flex gap-2 mt-2 flex-wrap"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{phone}')">+ Phone</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{email}')">+ Email</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{preferred_date}')">+ Date</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{preferred_time}')">+ Time</button></div></div>`;
             }
 
             if (node.type === 'buttons') {
-                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div><div class="mb-3"><label class="form-label">Buttons</label><div id="btn-list-${node.id}">${node.data.buttons.map((btn, idx) => `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${btn.text}" oninput="updateButton('${node.id}', ${idx}, 'text', this.value)"><button class="btn-glass" onclick="removeButton('${node.id}', ${idx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`).join('')}</div><button class="btn-glass w-100 mt-2" onclick="addButton('${node.id}')"><i class="bi bi-plus"></i>Add Button </button></div>`;
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea id="prop-text-${node.id}" class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea><div class="d-flex gap-2 mt-2"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button></div></div>
+                <div class="mb-3"><label class="form-label">Buttons</label><div id="btn-list-${node.id}">${node.data.buttons.map((btn, idx) => `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${btn.text}" oninput="updateButton('${node.id}', ${idx}, 'text', this.value)"><button class="btn-glass" onclick="removeButton('${node.id}', ${idx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`).join('')}</div><button class="btn-glass w-100 mt-2" onclick="addButton('${node.id}')"><i class="bi bi-plus"></i>Add Button </button></div>`;
             }
 
             if (node.type === 'condition') {
@@ -1155,7 +1156,8 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Caption (Optional)</label>
-                        <input type="text" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)">
+                        <input type="text" id="prop-caption-${node.id}" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)">
+                         <div class="d-flex gap-2 mt-2"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button></div>
                     </div>`;
 
                 if (node.type === 'document') {
@@ -1647,6 +1649,45 @@
             if (node) {
                 node.data[key] = value;
                 render(); // Re-render canvas (node preview might change)
+            }
+        }
+
+        function insertVariable(nodeId, variable) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            // Determine target property and element ID based on node type
+            let targetKey = 'text';
+            let elementId = `prop-text-${nodeId}`;
+
+            if (['image', 'video', 'document', 'audio'].includes(node.type)) {
+                targetKey = 'caption';
+                elementId = `prop-caption-${nodeId}`;
+            }
+
+            const el = document.getElementById(elementId);
+            if (el) {
+                const start = el.selectionStart || 0;
+                const end = el.selectionEnd || 0;
+                const text = el.value;
+                const before = text.substring(0, start);
+                const after = text.substring(end);
+
+                const newValue = before + variable + after;
+                el.value = newValue; // Update UI
+                node.data[targetKey] = newValue; // Update Model
+
+                // Update cursor
+                const newPos = start + variable.length;
+                el.setSelectionRange(newPos, newPos);
+                el.focus();
+
+                render(); // Update canvas
+            } else {
+                // Fallback
+                node.data[targetKey] = (node.data[targetKey] || '') + variable;
+                showNodeProperties(node);
+                render();
             }
         }
 
