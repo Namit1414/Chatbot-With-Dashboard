@@ -18,10 +18,9 @@ import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
-import FlowResponse from "./models/FlowResponse.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
-import { saveLead, updateFlowResponseStatus, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
+import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
 import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -610,64 +609,6 @@ app.post("/api/advanced-flows/:id/stats", async (req, res) => {
   }
 });
 
-
-// Flow Response APIs
-app.get("/api/flow-responses", async (req, res) => {
-  try {
-    const responses = await FlowResponse.find({}).sort({ timestamp: -1 });
-    res.json(responses);
-  } catch (error) {
-    console.error('Error fetching flow responses:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Update lead status tag
-app.put("/api/leads/:phone/status", async (req, res) => {
-  try {
-    const phone = sanitizePhone(req.params.phone);
-    const { status } = req.body;
-
-    console.log(`[API] Updating status for phone: ${phone} to: ${status}`);
-    const lead = await Lead.findOneAndUpdate(
-      { phone },
-      { $set: { statusTag: status } },
-      { new: true }
-    );
-
-    if (!lead) {
-      console.warn(`[API] Lead not found for phone: ${phone}. Trying suffix match...`);
-      // Fallback: search by last 10 digits
-      const suffix = phone.slice(-10);
-      const leads = await Lead.find({ phone: { $regex: suffix + "$" } });
-      if (leads.length > 0) {
-        const targetLead = leads[0];
-        targetLead.statusTag = status;
-        await targetLead.save();
-        console.log(`[API] Status updated for lead found by suffix: ${targetLead.phone}`);
-
-        saveLead(targetLead.toObject()).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
-        updateFlowResponseStatus(targetLead.phone, status).catch(err => console.error('[API] Failed to sync status to Sheet2:', err.message));
-        io.emit('leadUpdated', targetLead);
-        return res.json(targetLead);
-      }
-    }
-
-    if (lead) {
-      // Sync to Google Sheet (Both Sheet1 and Sheet2)
-      saveLead(lead).catch(err => console.error('[API] Failed to sync status to Sheet:', err.message));
-      updateFlowResponseStatus(lead.phone, status).catch(err => console.error('[API] Failed to sync status to Sheet2:', err.message));
-
-      io.emit('leadUpdated', lead);
-      res.json(lead);
-    } else {
-      res.status(404).json({ error: 'Lead not found' });
-    }
-  } catch (error) {
-    console.error('Error updating lead status:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.get("/debug/leads", async (req, res) => {
   const leads = await Lead.find({});
