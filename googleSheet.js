@@ -28,7 +28,7 @@ const _normalizeForMatch = (p) => {
   return clean.length >= 10 ? clean.slice(-10) : clean;
 };
 
-async function getSheet(index = 0, title = null) {
+async function getSheet() {
   try {
     // Some setups require explicit service account auth
     if (typeof doc.useServiceAccountAuth === "function") {
@@ -43,81 +43,10 @@ async function getSheet(index = 0, title = null) {
     }
 
     await doc.loadInfo(); // loads spreadsheet metadata
-
-    if (title) {
-      let sheet = doc.sheetsByTitle[title];
-      if (!sheet) {
-        console.log(`[GoogleSheet] Sheet "${title}" not found. Creating it...`);
-        sheet = await doc.addSheet({ title });
-      }
-      return sheet;
-    }
-
-    return doc.sheetsByIndex[index]; // first tab
+    return doc.sheetsByIndex[0]; // first tab
   } catch (e) {
     console.error("Error loading Google Sheet:", e);
     throw e;
-  }
-}
-
-export async function saveFlowResponse(response) {
-  try {
-    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) {
-      console.warn("⚠️ Google Sheets credentials missing. Skipping flow response sync.");
-      return;
-    }
-
-    // Get or create Sheet2 (index 1 is usually Sheet2 if it exists, but we'll use title for safety)
-    const sheet = await getSheet(1, "Sheet2");
-
-    // Robust header check: Try to load rows to see if headers exist
-    try {
-      await sheet.loadHeaderRow();
-    } catch (e) {
-      console.log(`[GoogleSheet] Title Sheet2 headers missing or empty. Initializing...`);
-      await sheet.setHeaderRow(['Timestamp', 'Phone', 'Name', 'Flow Name', 'Node Name', 'Question', 'Answer', 'Status']);
-    }
-
-    const rowData = {
-      Timestamp: response.timestamp ? new Date(response.timestamp).toLocaleString() : new Date().toLocaleString(),
-      Phone: _normalizePhone(response.phone),
-      Name: response.name || "N/A",
-      "Flow Name": response.flowName || "N/A",
-      "Node Name": response.nodeName || "N/A",
-      Question: response.question || "N/A",
-      Answer: response.answer || "N/A",
-      Status: response.statusTag || "none"
-    };
-
-    await sheet.addRow(rowData);
-    console.log(`✅ [GoogleSheet] Flow response successfully added to Sheet2 for ${response.phone}`);
-  } catch (error) {
-    console.error(`❌ [GoogleSheet] Failed to save flow response:`, error.message);
-  }
-}
-
-export async function updateFlowResponseStatus(phone, status) {
-  try {
-    if (!process.env.GS_SHEET_ID || !process.env.GS_CLIENT_EMAIL || !process.env.GS_PRIVATE_KEY) return;
-
-    const sheet = await getSheet(1, "Sheet2");
-    const rows = await sheet.getRows();
-    const searchTarget = _normalizeForMatch(phone);
-
-    let updatedCount = 0;
-    for (const row of rows) {
-      if (_normalizeForMatch(row.get('Phone')) === searchTarget) {
-        row.set('Status', status);
-        await row.save();
-        updatedCount++;
-      }
-    }
-
-    if (updatedCount > 0) {
-      console.log(`✅ [GoogleSheet] Updated status for ${updatedCount} entries in Sheet2 for ${phone}`);
-    }
-  } catch (error) {
-    console.error(`❌ [GoogleSheet] Failed to update status in Sheet2:`, error.message);
   }
 }
 
@@ -142,30 +71,11 @@ export async function saveLead(lead) {
       health_issues: lead.health_issues || "",
       preferred_date: lead.preferred_date || "",
       preferred_time: lead.preferred_time || "",
-      statusTag: lead.statusTag || "none",
       createdAt: lead.createdAt || new Date().toISOString()
     };
 
     // Try to find existing row to update
-    let rows = [];
-    try {
-      rows = await sheet.getRows();
-    } catch (e) {
-      console.warn("[GoogleSheet] Error fetching rows, might be header issue:", e.message);
-      // If sheet is empty or has no headers, set them up
-      await sheet.setHeaderRow(['phone', 'name', 'age', 'weight', 'height', 'gender', 'place', 'health_issues', 'preferred_date', 'preferred_time', 'statusTag', 'createdAt']);
-    }
-
-    // Ensure statusTag header exists if not present
-    try {
-      await sheet.loadHeaderRow();
-      if (!sheet.headerValues.includes('statusTag')) {
-        console.log("[GoogleSheet] statusTag header missing. Adding it...");
-        await sheet.setHeaderRow([...sheet.headerValues, 'statusTag']);
-      }
-    } catch (e) {
-      // Handled by initialization above or ignore
-    }
+    const rows = await sheet.getRows();
 
     const searchTarget = _normalizeForMatch(sanitizedPhone);
     console.log(`[GoogleSheet] Searching for target suffix ${searchTarget} among ${rows.length} rows...`);
@@ -296,23 +206,17 @@ export async function syncLeadsFromSheet(LeadModel) {
         health_issues: row.get('health_issues') || "N/A",
         preferred_date: row.get('preferred_date') || "",
         preferred_time: row.get('preferred_time') || "",
-        statusTag: row.get('statusTag') || "none",
         completed: true,
         updatedAt: new Date()
       };
 
       const existingLead = await LeadModel.findOne({ phone: phone });
 
-      // PROTECTION: If lead was updated in MongoDB recently (last 60s), do NOT overwrite from sheet
-      // This prevents race conditions where a dashboard update hasn't reached the sheet yet.
-      if (existingLead && existingLead.updatedAt) {
-        const lastUpdate = new Date(existingLead.updatedAt).getTime();
-        const now = Date.now();
-        if (now - lastUpdate < 60000) { // 60 seconds
-          console.log(`[Sync] Skipping ${phone} - recently updated in MongoDB.`);
-          continue;
-        }
-      }
+      // Only update Mongo if the Sheet has newer or missing data
+      // For simplicity, we'll check if the Lead exists and if it was updated recently
+      // But usually, if we sync from sheet, we treat sheet as intentional human edit.
+      // However, if the user edited in dashboard recently, we should be careful.
+      // For now, let's keep it simple: always sync IF not recently updated in Mongo via webhook/dashboard (e.g. within last 1 min)
 
       await LeadModel.findOneAndUpdate(
         { phone: phone },
@@ -362,7 +266,6 @@ export async function syncLeadsToSheet(LeadModel) {
         health_issues: lead.health_issues || "",
         preferred_date: lead.preferred_date || "",
         preferred_time: lead.preferred_time || "",
-        statusTag: lead.statusTag || "none",
         createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
       };
 
