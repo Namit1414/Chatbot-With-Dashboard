@@ -3555,9 +3555,13 @@
                                 <label class="form-label">Place/Locality</label>
                                 <input type="text" class="form-control" id="lead-place">
                             </div>
-                            <div class="col-12">
+                            <div class="col-md-6">
                                 <label class="form-label">Health Issues</label>
                                 <textarea class="form-control" id="lead-health" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" id="lead-remarks" rows="2"></textarea>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Preferred Date</label>
@@ -4015,6 +4019,7 @@
                         <div class="col-md-3">
                             <div class="small mb-1"><i class="bi bi-geo-alt text-danger me-2"></i> ${lead.place || 'Location not set'}</div>
                             <div class="small text-truncate" style="max-width: 250px;"><i class="bi bi-heart-pulse text-info me-2"></i> ${lead.health_issues || 'No health issues reported'}</div>
+                            ${lead.remarks ? `<div class="small text-truncate mt-1 text-muted" style="max-width: 250px;" title="${lead.remarks}"><i class="bi bi-journal-text text-warning me-2"></i> ${lead.remarks}</div>` : ''}
                         </div>
                         <div class="col text-end">
                             <div class="mb-2">
@@ -4086,6 +4091,7 @@
             document.getElementById('lead-gender').value = lead.gender || '';
             document.getElementById('lead-place').value = lead.place || '';
             document.getElementById('lead-health').value = lead.health_issues || '';
+            document.getElementById('lead-remarks').value = lead.remarks || '';
             document.getElementById('lead-pref-date').value = lead.preferred_date || '';
             document.getElementById('lead-pref-time').value = lead.preferred_time || '';
 
@@ -4172,6 +4178,7 @@
                 gender: document.getElementById('lead-gender').value,
                 place: document.getElementById('lead-place').value,
                 health_issues: document.getElementById('lead-health').value,
+                remarks: document.getElementById('lead-remarks').value,
                 preferred_date: document.getElementById('lead-pref-date').value,
                 preferred_time: document.getElementById('lead-pref-time').value,
                 completed: true
