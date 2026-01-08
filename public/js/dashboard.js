@@ -3921,6 +3921,38 @@ async function fetchTeam() {
     }
 }
 
+// Helper functions for team list display
+function isOwnerUser(user) {
+    // Check if user is the owner based on currentUser.isOwner or username match
+    if (currentUser && currentUser.isOwner && user.username.toLowerCase() === currentUser.username.toLowerCase()) {
+        return true;
+    }
+    return false;
+}
+
+function getRoleDisplayName(user) {
+    if (isOwnerUser(user)) {
+        return 'OWNER';
+    }
+    if (user.role === 'superadmin') {
+        return 'SUPER ADMIN';
+    }
+    return user.role.toUpperCase();
+}
+
+function getRoleBadgeClass(user) {
+    if (isOwnerUser(user)) {
+        return 'bg-warning text-dark'; // Gold badge for owner
+    }
+    if (user.role === 'superadmin') {
+        return 'bg-danger'; // Red for super admin
+    }
+    if (user.role === 'admin') {
+        return 'bg-primary'; // Blue for admin
+    }
+    return 'bg-secondary'; // Gray for agent
+}
+
 function renderTeamList(users) {
     const list = document.getElementById('team-list');
     if (!list) return;
@@ -3944,8 +3976,8 @@ function renderTeamList(users) {
                 </div>
             </td>
             <td>
-                <span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3">
-                    ${user.role.toUpperCase()}
+                <span class="badge ${getRoleBadgeClass(user)} rounded-pill px-3">
+                    ${getRoleDisplayName(user)}
                 </span>
             </td>
             <td>${date}</td>
