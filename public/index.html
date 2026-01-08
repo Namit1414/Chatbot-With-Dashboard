@@ -4804,7 +4804,22 @@
         // ========================================
 
         let allLeadsForBulk = [];
+        let currentBulkLeads = [];
+        let displayedLeadsCount = 20;
         let selectedRecipients = new Set();
+
+        // Performance Optimization: Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
         const messageTemplates = [
             {
@@ -4837,17 +4852,18 @@
             try {
                 const response = await fetch('/api/leads');
                 allLeadsForBulk = await response.json();
-                renderBulkRecipients(allLeadsForBulk);
+                currentBulkLeads = [...allLeadsForBulk];
+                displayedLeadsCount = 20;
+                renderBulkRecipients();
             } catch (error) {
                 console.error('Error loading bulk recipients:', error);
             }
         }
 
-        function renderBulkRecipients(leads) {
+        function renderBulkRecipients() {
             const container = document.getElementById('bulk-recipients-list');
-            container.innerHTML = '';
 
-            if (leads.length === 0) {
+            if (currentBulkLeads.length === 0) {
                 container.innerHTML = `
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-inbox" style="font-size: 3rem;"></i>
@@ -4857,16 +4873,20 @@
                 return;
             }
 
-            leads.forEach(lead => {
+            const leadsToShow = currentBulkLeads.slice(0, displayedLeadsCount);
+            const fragment = document.createDocumentFragment();
+
+            leadsToShow.forEach(lead => {
                 const isSelected = selectedRecipients.has(lead.phone);
                 const item = document.createElement('div');
-                item.className = `p-3 border-bottom hover-bg ${isSelected ? 'bg-primary-subtle text-primary-emphasis' : 'text-body'}`;
+                item.className = `p-3 border-bottom bulk-recipient-item ${isSelected ? 'bg-primary-subtle text-primary-emphasis' : 'text-body'}`;
+                item.dataset.phone = lead.phone;
                 item.style.borderColor = 'var(--border-color)';
                 item.style.cursor = 'pointer';
                 item.style.transition = 'all 0.2s';
                 item.innerHTML = `
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="${lead.phone}" 
+                        <input class="form-check-input recipient-checkbox" type="checkbox" value="${lead.phone}" 
                             id="recipient-${lead.phone}" ${isSelected ? 'checked' : ''}
                             onchange="toggleRecipient('${lead.phone}', '${lead.name || 'Unknown'}')">
                         <label class="form-check-label w-100" for="recipient-${lead.phone}" style="cursor: pointer;">
@@ -4882,52 +4902,81 @@
                         </label>
                     </div>
                 `;
-                container.appendChild(item);
+                fragment.appendChild(item);
             });
 
+            // Load More Button
+            if (displayedLeadsCount < currentBulkLeads.length) {
+                const loadMoreDiv = document.createElement('div');
+                loadMoreDiv.className = 'p-3 text-center border-top bg-body-tertiary';
+                loadMoreDiv.innerHTML = `
+                    <button class="btn btn-sm btn-outline-primary rounded-pill w-100 py-2" onclick="loadMoreBulkLeads()">
+                        <i class="bi bi-plus-circle"></i> Load More (${currentBulkLeads.length - displayedLeadsCount} remaining)
+                    </button>
+                `;
+                fragment.appendChild(loadMoreDiv);
+            }
+
+            container.innerHTML = '';
+            container.appendChild(fragment);
             updateSelectionCount();
         }
 
+        function loadMoreBulkLeads() {
+            displayedLeadsCount += 20;
+            renderBulkRecipients();
+        }
+
         function toggleRecipient(phone, name) {
+            const row = document.querySelector(`.bulk-recipient-item[data-phone="${phone}"]`);
             if (selectedRecipients.has(phone)) {
                 selectedRecipients.delete(phone);
+                if (row) row.classList.remove('bg-primary-subtle', 'text-primary-emphasis', 'text-body');
             } else {
                 selectedRecipients.add(phone);
+                if (row) row.classList.add('bg-primary-subtle', 'text-primary-emphasis');
             }
             updateSelectionCount();
         }
 
         function toggleSelectAll() {
             const checkbox = document.getElementById('select-all-leads');
-            const currentlyDisplayed = Array.from(document.querySelectorAll('#bulk-recipients-list input[type="checkbox"]'));
+            const visibleCheckboxes = document.querySelectorAll('#bulk-recipients-list .recipient-checkbox');
 
+            // 1. Update visible items immediately for UI feedback
+            visibleCheckboxes.forEach(cb => {
+                const phone = cb.value;
+                const row = cb.closest('.bulk-recipient-item');
+                cb.checked = checkbox.checked;
+                if (row) {
+                    if (checkbox.checked) row.classList.add('bg-primary-subtle', 'text-primary-emphasis');
+                    else row.classList.remove('bg-primary-subtle', 'text-primary-emphasis');
+                }
+            });
+
+            // 2. Update selectedRecipients Set for ALL filtered leads (even those not yet visible)
             if (checkbox.checked) {
-                currentlyDisplayed.forEach(cb => {
-                    selectedRecipients.add(cb.value);
-                    cb.checked = true;
-                });
+                currentBulkLeads.forEach(lead => selectedRecipients.add(lead.phone));
             } else {
-                currentlyDisplayed.forEach(cb => {
-                    selectedRecipients.delete(cb.value);
-                    cb.checked = false;
-                });
+                currentBulkLeads.forEach(lead => selectedRecipients.delete(lead.phone));
             }
 
             updateSelectionCount();
-            renderBulkRecipients(allLeadsForBulk.filter(lead => {
-                const filterStatus = document.getElementById('filter-status').value;
-                const searchTerm = document.getElementById('search-leads').value.toLowerCase();
-                return passesFilters(lead, filterStatus, searchTerm);
-            }));
         }
 
         function clearSelection() {
             selectedRecipients.clear();
             document.getElementById('select-all-leads').checked = false;
-            const checkboxes = document.querySelectorAll('#bulk-recipients-list input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = false);
+
+            // Optimization: Update visible checkboxes and classes directly
+            const visibleCheckboxes = document.querySelectorAll('#bulk-recipients-list .recipient-checkbox');
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = false;
+                const row = cb.closest('.bulk-recipient-item');
+                if (row) row.classList.remove('bg-primary-subtle', 'text-primary-emphasis');
+            });
+
             updateSelectionCount();
-            renderBulkRecipients(allLeadsForBulk);
         }
 
         function updateSelectionCount() {
@@ -4954,12 +5003,17 @@
             return true;
         }
 
-        function filterLeads() {
+        const filterLeadsDebounced = debounce(function () {
             const filterStatus = document.getElementById('filter-status').value;
             const searchTerm = document.getElementById('search-leads').value.toLowerCase();
 
-            const filtered = allLeadsForBulk.filter(lead => passesFilters(lead, filterStatus, searchTerm));
-            renderBulkRecipients(filtered);
+            currentBulkLeads = allLeadsForBulk.filter(lead => passesFilters(lead, filterStatus, searchTerm));
+            displayedLeadsCount = 20; // Reset pagination on filter
+            renderBulkRecipients();
+        }, 300);
+
+        function filterLeads() {
+            filterLeadsDebounced();
         }
 
         function updateCharCount() {

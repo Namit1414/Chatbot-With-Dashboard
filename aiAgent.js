@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import "dotenv/config";
 import Lead from "./models/Lead.js";
 import Message from "./models/Message.js";

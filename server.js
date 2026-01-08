@@ -1,7 +1,6 @@
 import express from "express";
 import compression from "compression";
 import bodyParser from "body-parser";
-import fetch from "node-fetch";
 import "dotenv/config";
 import path from "path";
 import { createServer } from "http";
