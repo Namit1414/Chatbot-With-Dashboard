@@ -12,6 +12,14 @@ let lastMessageDate = null;
 let editingFlowId = null;
 let currentUser = null;
 
+// Performance Flags - prevents redundant fetches
+const dataCache = {
+    team: false,
+    flows: false,
+    advancedFlows: false,
+    campaigns: false
+};
+
 async function checkUserSession() {
     try {
         console.log('🔄 Checking session...');
@@ -112,7 +120,10 @@ function normalizePhone(phone) {
 function showContent(contentId) {
     document.querySelectorAll('.page-content, .page-content-fluid').forEach(content => {
         content.style.display = 'none';
+        // Optimization: Pause expensive animations if any
     });
+
+    // Optimistic UI: Immediately show target while data loads
     const selected = document.getElementById(contentId);
     if (selected) {
         selected.style.display = contentId === 'live-chat' ? 'flex' : 'block';
@@ -120,11 +131,24 @@ function showContent(contentId) {
             selected.classList.add('flex-column');
         }
 
-        // Lazily render content if it was skipped during fetchLeads
-        if (contentId === 'leads') renderLeadCards(allLeads);
-        if (contentId === 'flows') fetchFlows();
-        if (contentId === 'flow-builder') loadAdvancedFlows();
-        if (contentId === 'team') fetchTeam();
+        // Conditional Fetching: Only fetch if not already loaded or stale
+        if (contentId === 'leads') {
+            // Leads are dynamic, but we can avoid full re-render if count matches
+            // For now, we keep renderLeadCards but optimized inside that function
+            renderLeadCards(allLeads);
+        }
+
+        if (contentId === 'flows' && !dataCache.flows) {
+            fetchFlows().then(() => dataCache.flows = true);
+        }
+
+        if (contentId === 'flow-builder' && !dataCache.advancedFlows) {
+            loadAdvancedFlows().then(() => dataCache.advancedFlows = true);
+        }
+
+        if (contentId === 'team' && !dataCache.team) {
+            fetchTeam().then(() => dataCache.team = true);
+        }
     }
 
     document.querySelectorAll('#sidebar .nav-link').forEach(link => {
@@ -1193,7 +1217,9 @@ document.getElementById('create-flow-form').addEventListener('submit', async (e)
             const result = await res.json();
             console.log('Simple flow saved successfully:', result);
 
-            fetchFlows();
+            console.log('Simple flow saved successfully:', result);
+
+            fetchFlows().then(() => dataCache.flows = true); // Refresh cache
             const modalEl = document.getElementById('newFlowModal');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
@@ -2031,6 +2057,24 @@ showContent = function (contentId) {
 // CAMPAIGNS FUNCTIONALITY
 // ========================================
 
+async function deleteCampaign(id) {
+    if (!confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) return;
+
+    try {
+        const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            if (typeof toast !== 'undefined') toast.success('Deleted', 'Campaign removed successfully');
+            loadCampaigns(); // Refresh list
+        } else {
+            const err = await res.json();
+            alert('Failed to delete campaign: ' + (err.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error deleting campaign:', error);
+        alert('Error deleting campaign');
+    }
+}
+
 async function loadCampaigns() {
     const listBody = document.getElementById('campaign-list-body');
     const statsOverview = document.getElementById('campaign-stats-overview');
@@ -2117,12 +2161,20 @@ async function loadCampaigns() {
                             <td>${engagement}</td>
                             <td><small>${new Date(c.createdAt).toLocaleDateString()}<br>${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
                             <td>
-                                <button class="btn btn-sm btn-outline-secondary" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#campaignDetailsModal" 
-                                        onclick="viewCampaignDetails('${c._id}')">
-                                    <i class="bi bi-info-circle"></i>
-                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#campaignDetailsModal" 
+                                            onclick="viewCampaignDetails('${c._id}')"
+                                            title="View Details">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteCampaign('${c._id}')"
+                                            title="Delete Campaign">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;

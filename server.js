@@ -179,6 +179,12 @@ app.delete('/api/users/:id', async (req, res) => {
   try {
     const userToDelete = await User.findById(req.params.id);
     if (!userToDelete) return res.status(404).json({ message: 'User not found' });
+
+    // SECURITY: Prevent deletion of the Owner account
+    if (userToDelete.username.toLowerCase() === adminUsername) {
+      return res.status(403).json({ message: '⛔ PERMISSION DENIED: The Owner account cannot be deleted.' });
+    }
+
     if (userToDelete.username === req.session.user) {
       return res.status(400).json({ message: 'You cannot delete yourself' });
     }
@@ -652,6 +658,19 @@ app.patch("/api/campaigns/:id", async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(campaign);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/campaigns/:id", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot delete campaigns' });
+  try {
+    const campaign = await Campaign.findByIdAndDelete(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    res.json({ success: true, message: 'Campaign deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
