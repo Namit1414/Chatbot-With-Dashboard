@@ -10,6 +10,78 @@ function debounce(func, wait) {
 let currentLeadPhone = null;
 let lastMessageDate = null;
 let editingFlowId = null;
+let currentUser = null;
+
+async function checkUserSession() {
+    try {
+        console.log('🔄 Checking session...');
+        const res = await fetch('/api/me');
+        if (res.ok) {
+            currentUser = await res.json();
+            console.log('✅ Logged in as:', currentUser.username, 'Role:', currentUser.role);
+
+            // Hide features for Agents
+            if (currentUser.role === 'agent') {
+                hideNavItemsForAgent();
+            }
+
+            if (currentUser.isOwner || currentUser.role === 'superadmin') {
+                const teamNav = document.getElementById('nav-team');
+                if (teamNav) {
+                    teamNav.classList.add('force-show');
+                    teamNav.style.setProperty('display', 'block', 'important');
+                    console.log('✨ SUCCESS: Team tab enabled.');
+                    if (typeof toast !== 'undefined') toast.success('Admin Verified', 'Team settings unlocked');
+                } else {
+                    console.error('❌ CRITICAL: nav-team element missing from DOM!');
+                    alert('Admin access verified, but Sidebar menu is missing. Please refresh.');
+                }
+            }
+        }
+    } catch (err) {
+        console.error('❌ Session check error:', err);
+    }
+}
+
+// Helper to hide nav items
+function hideNavItemsForAgent() {
+    // Hide: Flows(Automations), Flow Builder, Bulk Messaging, Campaigns
+    // Select selectors by their onclick attribute or text content
+    const restrictedSelectors = [
+        `a[onclick="showContent('flows')"]`,
+        `a[onclick="showContent('flow-builder')"]`,
+        `a[onclick="showContent('bulk-messaging')"]`,
+        `a[onclick="showContent('campaigns')"]`
+    ];
+
+    restrictedSelectors.forEach(selector => {
+        const link = document.querySelector(selector);
+        if (link && link.parentElement) {
+            link.parentElement.style.display = 'none';
+        }
+    });
+
+    // Also hide 'Sync Sheets' button as it might be advanced
+    const syncBtn = document.querySelector('button[title="Sync from Google Sheet"]');
+    if (syncBtn) syncBtn.style.display = 'none';
+}
+
+// Global fallback: reveal if admin
+window.addEventListener('click', () => {
+    if (currentUser?.isOwner || currentUser?.role === 'superadmin') {
+        const teamNav = document.getElementById('nav-team');
+        if (teamNav && teamNav.style.display === 'none') {
+            teamNav.style.setProperty('display', 'block', 'important');
+        }
+    }
+}, { once: true });
+
+// Run immediately if DOM is already ready
+if (document.readyState !== 'loading') {
+    checkUserSession();
+} else {
+    document.addEventListener('DOMContentLoaded', checkUserSession);
+}
 
 function getFormattedDate(date) {
     const now = new Date();
@@ -52,6 +124,7 @@ function showContent(contentId) {
         if (contentId === 'leads') renderLeadCards(allLeads);
         if (contentId === 'flows') fetchFlows();
         if (contentId === 'flow-builder') loadAdvancedFlows();
+        if (contentId === 'team') fetchTeam();
     }
 
     document.querySelectorAll('#sidebar .nav-link').forEach(link => {
@@ -3784,3 +3857,102 @@ document.addEventListener('DOMContentLoaded', () => {
     initBgParticles();
     fetchFlows();
 });
+
+async function fetchTeam() {
+    try {
+        const response = await fetch('/api/users');
+        if (!response.ok) throw new Error('Failed to fetch team');
+        const users = await response.json();
+        renderTeamList(users);
+    } catch (error) {
+        console.error('Error fetching team:', error);
+    }
+}
+
+function renderTeamList(users) {
+    const list = document.getElementById('team-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    users.forEach(user => {
+        const tr = document.createElement('tr');
+        const initials = user.username.substring(0, 2).toUpperCase();
+        const date = new Date(user.createdAt).toLocaleDateString();
+
+        tr.innerHTML = `
+            <td class="ps-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                        ${initials}
+                    </div>
+                    <div>
+                        <div class="fw-bold text-main">${user.username}</div>
+                        <div class="x-small text-secondary">Joined ${date}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="badge ${user.role === 'admin' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3">
+                    ${user.role.toUpperCase()}
+                </span>
+            </td>
+            <td>${date}</td>
+            <td class="text-end pe-4">
+                <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="deleteUser('${user._id}')" 
+                    ${user.username === currentUser.username ? 'disabled' : ''} title="Remove User">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        list.appendChild(tr);
+    });
+}
+
+async function deleteUser(id) {
+    if (!confirm('Are you sure you want to remove this team member?')) return;
+    try {
+        const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            toast.success('User removed', 'Team list updated');
+            fetchTeam();
+        } else {
+            const data = await res.json();
+            toast.error('Error', data.message);
+        }
+    } catch (err) {
+        toast.error('Error', 'Failed to delete user');
+    }
+}
+
+// Global scope for onclick
+window.deleteUser = deleteUser;
+
+const createUserForm = document.getElementById('create-user-form');
+if (createUserForm) {
+    createUserForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('user-username').value;
+        const password = document.getElementById('user-password').value;
+        const role = document.getElementById('user-role').value;
+
+        try {
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, role })
+            });
+
+            if (res.ok) {
+                toast.success('Success', 'Team member added');
+                bootstrap.Modal.getInstance(document.getElementById('newUserModal')).hide();
+                createUserForm.reset();
+                fetchTeam();
+            } else {
+                const data = await res.json();
+                toast.error('Error', data.message);
+            }
+        } catch (err) {
+            toast.error('Error', 'Failed to create user');
+        }
+    });
+}

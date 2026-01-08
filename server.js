@@ -19,6 +19,8 @@ import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
 import Campaign from "./models/Campaign.js";
+import User from "./models/User.js";
+import bcrypt from "bcrypt";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
@@ -68,19 +70,47 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-    req.session.user = username;
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ message: 'Invalid credentials' });
+  try {
+    // Find user by username (case-insensitive)
+    const normalizedUsername = (username || "").trim();
+    const user = await User.findOne({ username: { $regex: new RegExp("^" + normalizedUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "$", "i") } });
+
+    if (user && await user.comparePassword(password)) {
+      req.session.user = user.username;
+      // Force admin role if username matches env (case-insensitive)
+      const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+      req.session.role = (user.username.toLowerCase() === adminUsername) ? 'admin' : user.role;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ message: 'Invalid credentials' });
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/login');
+});
+
+app.get('/api/me', (req, res) => {
+  if (req.session.user) {
+    const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim();
+    // Case-insensitive check for owner
+    const isOwner = req.session.user.toLowerCase() === adminUsername.toLowerCase();
+
+    // Self-healing: Ensure admin role if username matches env
+    if (isOwner) {
+      req.session.role = 'admin';
+    }
+    res.json({ username: req.session.user, role: req.session.role, isOwner });
+  } else {
+    res.status(401).json({ message: 'Not logged in' });
+  }
 });
 
 // Authentication Middleware
@@ -104,6 +134,91 @@ app.use((req, res, next) => {
   res.redirect('/login');
 });
 
+// User Management API (Admin only)
+app.get('/api/users', async (req, res) => {
+  const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+  const isOwner = req.session.user?.toLowerCase() === adminUsername;
+
+  if (!isOwner && req.session.role !== 'superadmin') {
+    return res.status(403).json({ message: 'Forbidden: Only Owner or Super Admin can manage users' });
+  }
+
+  try {
+    const users = await User.find({}, '-password').lean();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+  const isOwner = req.session.user?.toLowerCase() === adminUsername;
+
+  if (!isOwner && req.session.role !== 'superadmin') {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+
+  const { username, password, role } = req.body;
+  try {
+    const user = new User({ username, password, role });
+    await user.save();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
+  const isOwner = req.session.user?.toLowerCase() === adminUsername;
+
+  if (!isOwner && req.session.role !== 'superadmin') {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  try {
+    const userToDelete = await User.findById(req.params.id);
+    if (!userToDelete) return res.status(404).json({ message: 'User not found' });
+    if (userToDelete.username === req.session.user) {
+      return res.status(400).json({ message: 'You cannot delete yourself' });
+    }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Bootstrap Admin User
+async function bootstrapAdmin() {
+  try {
+    const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim();
+    const adminPassword = (process.env.ADMIN_PASSWORD || 'password123').trim();
+
+    // Search case-insensitively for the admin
+    let admin = await User.findOne({ username: { $regex: new RegExp(`^${adminUsername}$`, 'i') } });
+
+    if (!admin) {
+      admin = new User({
+        username: adminUsername,
+        password: adminPassword,
+        role: 'admin'
+      });
+      await admin.save();
+      console.log(`✅ Default admin user created: ${adminUsername}`);
+    } else {
+      // Ensure it has the admin role
+      if (admin.role !== 'admin') {
+        admin.role = 'admin';
+        await admin.save();
+        console.log(`⬆️ User ${admin.username} promoted to admin`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error bootstrapping admin:', error);
+  }
+}
+
 // Static files with Cache-Control
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d', // Cache for 1 day
@@ -118,6 +233,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 
 await connectMongo();
+await bootstrapAdmin();
 initScheduler();
 
 // Periodic Two-Way Sync (every 5 minutes)
@@ -314,6 +430,7 @@ app.get("/api/flows", async (req, res) => {
 });
 
 app.post("/api/flows", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     console.log('Creating new simple flow:', req.body);
     const { trigger, response } = req.body;
@@ -328,11 +445,13 @@ app.post("/api/flows", async (req, res) => {
 });
 
 app.delete("/api/flows/:id", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   await Flow.findByIdAndDelete(req.params.id);
   res.json({ success: true });
 });
 
 app.put("/api/flows/:id", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     console.log(`[FlowUpdate] Attempting to update flow with ID: "${req.params.id}"`);
     console.log(`[FlowUpdate] Request body:`, req.body);
@@ -454,6 +573,7 @@ app.post("/api/upload", upload.single('file'), async (req, res) => {
 
 // Bulk Messaging API
 app.post("/api/bulk-send", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot send bulk messages' });
   try {
     const { to, message, templateName, languageCode, components, campaignId } = req.body;
 
@@ -633,6 +753,7 @@ app.get("/api/advanced-flows/:id", async (req, res) => {
 
 // Create new advanced flow
 app.post("/api/advanced-flows", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     console.log('Creating new advanced flow:', req.body.name);
     const flowData = req.body;
@@ -648,6 +769,7 @@ app.post("/api/advanced-flows", async (req, res) => {
 
 // Update advanced flow
 app.put("/api/advanced-flows/:id", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     console.log('Updating advanced flow:', req.params.id, req.body.name);
     const flow = await AdvancedFlow.findByIdAndUpdate(
@@ -669,6 +791,7 @@ app.put("/api/advanced-flows/:id", async (req, res) => {
 
 // Delete advanced flow
 app.delete("/api/advanced-flows/:id", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     const flow = await AdvancedFlow.findByIdAndDelete(req.params.id);
     if (!flow) {
@@ -683,6 +806,7 @@ app.delete("/api/advanced-flows/:id", async (req, res) => {
 
 // Toggle flow active status
 app.patch("/api/advanced-flows/:id/toggle", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot modify flows' });
   try {
     const flow = await AdvancedFlow.findById(req.params.id);
     if (!flow) {
