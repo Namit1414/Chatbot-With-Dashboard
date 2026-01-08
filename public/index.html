@@ -2952,6 +2952,11 @@
                     <i class="bi bi-broadcast"></i> <span>Bulk Messaging</span>
                 </a>
             </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('campaigns')" data-title="Campaigns">
+                    <i class="bi bi-megaphone"></i> <span>Campaigns</span>
+                </a>
+            </li>
 
             <li class="mt-auto">
                 <a href="/logout" class="nav-link text-danger" data-title="Logout">
@@ -3508,6 +3513,54 @@
                         <div id="scheduled-messages-list">
                             <!-- Will be populated dynamically -->
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaigns -->
+        <div id="campaigns" class="page-content" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1><i class="bi bi-megaphone-fill text-warning"></i> Campaigns</h1>
+                    <p class="text-secondary">Track your bulk message performance and analytics.</p>
+                </div>
+                <button class="btn btn-outline-primary" onclick="loadCampaigns()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+
+            <div class="row g-4 mb-4" id="campaign-stats-overview">
+                <!-- Overall stats will be injected here -->
+            </div>
+
+            <div class="card card-table shadow-sm">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0">Recent Campaigns</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-body-tertiary">
+                                <tr>
+                                    <th>Campaign Name</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Engagement</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="campaign-list-body">
+                                <!-- Campaigns will be injected here -->
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status"></div>
+                                        <p class="mt-2 mb-0">Loading campaigns...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -4544,6 +4597,7 @@
             });
         }
 
+
         async function sendMessage(mediaUrl = null, messageType = null, originalName = null, caption = null) {
             // Fix: If called as an event listener, the first argument is a MouseEvent.
             if (mediaUrl instanceof Event || (mediaUrl && typeof mediaUrl === 'object' && mediaUrl.type)) {
@@ -4564,15 +4618,23 @@
                         body.filename = originalName;
                     }
 
-                    await fetch('/api/send', {
+                    const res = await fetch('/api/send', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(body)
                     });
+
+                    if (!res.ok) {
+                        const errData = await res.json();
+                        console.error('Send failed API Error:', errData);
+                        alert(`❌ Message Failed: ${errData.error || 'Unknown Error'}`);
+                    }
+
                 } catch (e) {
-                    console.error("Send failed", e);
+                    console.error("Send failed Network Error", e);
+                    alert(`❌ Network Error: Could not send message.`);
                 }
 
                 if (!mediaUrl) messageInput.value = '';
@@ -4598,12 +4660,26 @@
                 // Actually, let's keep it simple: relying on socket for display is safer for sync.
                 // I will remove the Optimistic UI update in sendMessage to avoid duplicates.
 
-                // WAIT, if I remove optimistic UI, the user feels lag. 
-                // But without IDs, duplicates happen. 
                 // I will UNCOMMENT the optimistic part above but I need to handle duplicates in a real app. 
                 // For this fixing task, I will rely on the Socket to confirm message sent.
                 // So I will REMOVE the optimistic displayMessage(fakeMsg) from sendMessage.
                 displayMessage(message);
+            }
+        });
+
+        socket.on('messageStatus', (data) => {
+            console.log('Message Status Update:', data);
+            if (data.status === 'failed') {
+                const errorMsg = data.errors?.[0]?.title || 'Message Failed';
+                const errorDesc = data.errors?.[0]?.error_data?.details || data.errors?.[0]?.message || 'Unknown reason';
+
+                console.error(`❌ Delivery Failed: ${errorMsg} - ${errorDesc}`);
+
+                if (window.toast && window.toast.error) {
+                    window.toast.error('Delivery Failed', `${errorMsg}: ${errorDesc}`, 8000);
+                } else {
+                    alert(`❌ Delivery Failed: ${errorMsg}\n${errorDesc}`);
+                }
             }
         });
 
@@ -4807,6 +4883,7 @@
         let currentBulkLeads = [];
         let displayedLeadsCount = 20;
         let selectedRecipients = new Set();
+        let selectedTemplate = null; // Store selected Meta template
 
         // Performance Optimization: Debounce function
         function debounce(func, wait) {
@@ -5018,8 +5095,40 @@
 
         function updateCharCount() {
             const text = document.getElementById('bulk-message-text').value;
+            // If manual edit detected and was template, warn or clear?
+            // For now, if user edits, we *could* clear selectedTemplate to fallback to text.
+            // But let's assume if they edit they want to modify the text message (which is only possible if they DON'T use the template API)
+            // OR they are just previewing.
+            // To be safe: If content changes significantly from template text, we should probably nullify selectedTemplate?
+            // But checking exact match is hard if placeholders.
+
+            // Simplification: We add an "oninput" listener to the textarea elsewhere to clear selectedTemplate if user types?
+            // Or we just check logic in sendBulkMessages.
+
+            // Let's add the input listener dynamically or in HTML.
+            // But for now, just update char count.
             document.getElementById('char-count').textContent = `${text.length} characters`;
         }
+
+        // Add listener to clear template selection on manual edit
+        document.getElementById('bulk-message-text').addEventListener('input', function () {
+            if (selectedTemplate) {
+                // Check if user is trying to edit a template
+                // Ideally we should warn "Editing this will switch to standard text message"
+                // For now, let's silently switch to text mode or keep it as template?
+                // If we keep it as template, the EDITS WON'T BE SENT because we send templateName.
+                // So we MUST clear selectedTemplate if they edit.
+
+                selectedTemplate = null;
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+                const badge = document.querySelector('.template-badge');
+                if (badge) {
+                    badge.remove();
+                    if (window.toast) window.toast.info('Switched to Text Mode', 'Custom formatting will be sent as standard text.');
+                }
+            }
+        });
 
         function updatePreview() {
             const text = document.getElementById('bulk-message-text').value;
@@ -5042,41 +5151,112 @@
             previewEl.innerHTML = previewText.replace(/\n/g, '<br>');
         }
 
-        function showBulkTemplates() {
+        async function showBulkTemplates() {
             const container = document.getElementById('templates-list');
-            container.innerHTML = '';
+            container.innerHTML = '<div class="text-center w-100 py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading Meta templates...</p></div>';
 
-            messageTemplates.forEach((template, index) => {
-                const card = document.createElement('div');
-                card.className = 'col-md-6';
-                card.innerHTML = `
-                    <div class="card h-100 border hover-shadow bg-body-tertiary" style="cursor: pointer; transition: all 0.2s;">
-                        <div class="card-body">
-                            <h6 class="card-title text-primary">
-                                <i class="bi bi-file-text"></i> ${template.name}
-                            </h6>
-                            <p class="card-text small text-muted" style="white-space: pre-line;">${template.text}</p>
+            try {
+                const response = await fetch('/api/templates');
+                if (!response.ok) throw new Error('Failed to fetch templates');
+
+                const data = await response.json();
+                const templates = data.data || [];
+
+                container.innerHTML = '';
+
+                if (templates.length === 0) {
+                    container.innerHTML = '<div class="text-center w-100 py-4"><p>No approved templates found in your WhatsApp Business Account.</p></div>';
+                    return;
+                }
+
+                templates.forEach((template, index) => {
+                    const bodyComponent = template.components.find(c => c.type === 'BODY') || {};
+                    const bodyText = bodyComponent.text || 'No text content';
+
+                    const card = document.createElement('div');
+                    card.className = 'col-md-6';
+                    // Escape template data to safe JSON string for the onclick handler
+                    const templateJson = JSON.stringify(template).replace(/'/g, "\\'");
+
+                    card.innerHTML = `
+                        <div class="card h-100 border hover-shadow bg-body-tertiary" style="cursor: pointer; transition: all 0.2s;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title text-primary mb-0">
+                                        <i class="bi bi-whatsapp me-1"></i> ${template.name}
+                                    </h6>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">${template.status}</span>
+                                </div>
+                                <div class="mb-2">
+                                     <small class="text-secondary me-2"><i class="bi bi-translate"></i> ${template.language}</small>
+                                     <small class="text-secondary"><i class="bi bi-grid"></i> ${template.category}</small>
+                                </div>
+                                <p class="card-text small text-muted text-truncate-3" style="white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${bodyText}</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <button class="btn btn-sm btn-outline-primary w-100" onclick='useTemplate(${templateJson})'>
+                                    <i class="bi bi-check-circle me-1"></i> Select Template
+                                </button>
+                            </div>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <button class="btn btn-sm btn-outline-primary w-100" onclick="useTemplate(${index})">
-                                <i class="bi bi-plus-circle"></i> Use Template
-                            </button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error fetching templates:', error);
+                container.innerHTML = `<div class="text-center w-100 py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to load templates: ${error.message}</div>`;
+            }
         }
 
-        function useTemplate(index) {
-            const template = messageTemplates[index];
-            document.getElementById('bulk-message-text').value = template.text;
+        function useTemplate(template) {
+            console.log("Selected template:", template);
+            selectedTemplate = template;
+
+            const bodyComponent = template.components.find(c => c.type === 'BODY') || {};
+            const bodyText = bodyComponent.text || '';
+
+            const textArea = document.getElementById('bulk-message-text');
+            textArea.value = bodyText; // Show for preview/context
+
+            // Visual feedback that a template is active
+            textArea.style.borderColor = '#00a884';
+            textArea.style.backgroundColor = 'rgba(0, 168, 132, 0.05)';
+
+            // Add a badge or indicator
+            const label = document.querySelector('label[for="bulk-message-text"]') || textArea.previousElementSibling;
+            if (label) {
+                const existingBadge = label.querySelector('.template-badge');
+                if (existingBadge) existingBadge.remove();
+
+                label.innerHTML += ` <span class="template-badge badge bg-success ms-2"><i class="bi bi-check-all"></i> Template: ${template.name}</span>`;
+            }
+
             updateCharCount();
             updatePreview();
 
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('templatesModal'));
             modal.hide();
+
+            // Notify user
+            if (window.toast) window.toast.success('Template Selected', `Using template: ${template.name}`);
+        }
+
+        function resetBulkForm() {
+            selectedTemplate = null;
+            document.getElementById('bulk-message-text').value = '';
+            document.getElementById('bulk-message-text').style.borderColor = '';
+            document.getElementById('bulk-message-text').style.backgroundColor = '';
+
+            const label = document.querySelector('label[for="bulk-message-text"]'); // We need a more robust selector if label text changes
+            // Revert label if needed or just remove badge. 
+            // Simpler: find the badge and remove it
+            const badge = document.querySelector('.template-badge');
+            if (badge) badge.remove();
+
+            clearSelection();
+            updateCharCount();
+            updatePreview();
         }
 
         function toggleScheduleTime() {
@@ -5166,6 +5346,30 @@
                 return;
             }
 
+            // Create Campaign record
+            let campaignId = null;
+            try {
+                const campaignName = `${selectedTemplate ? selectedTemplate.name : 'Bulk Text'} - ${new Date().toLocaleString()}`;
+                const camRes = await fetch('/api/campaigns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: campaignName,
+                        type: selectedTemplate ? 'template' : 'text',
+                        content: message,
+                        templateName: selectedTemplate?.name,
+                        totalRecipients: selectedRecipients.size,
+                        status: 'sending'
+                    })
+                });
+                if (camRes.ok) {
+                    const campaignData = await camRes.json();
+                    campaignId = campaignData._id;
+                }
+            } catch (err) {
+                console.error("Failed to create campaign record:", err);
+            }
+
             // Show progress section
             const progressSection = document.getElementById('bulk-progress-section');
             progressSection.style.display = 'block';
@@ -5212,25 +5416,80 @@
                 }
 
                 try {
-                    const response = await fetch('/api/bulk-send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            to: lead.phone,
-                            message: personalizedMessage
-                        })
-                    });
+                    let response;
+
+                    if (selectedTemplate) {
+                        const bodyComponent = selectedTemplate.components.find(c => c.type === 'BODY') || {};
+                        const bodyText = bodyComponent.text || '';
+
+                        const components = [];
+                        const bodyParams = [];
+
+                        // Heuristic: Map {{1}} to Name
+                        if (bodyText.includes('{{1}}')) {
+                            bodyParams.push({
+                                type: "text",
+                                text: lead.name || "Valued Customer"
+                            });
+                        }
+
+                        // Handle additional placeholders simplisticly to avoid errors
+                        const matches = bodyText.match(/{{(\d+)}}/g);
+                        if (matches && matches.length > bodyParams.length) {
+                            const diff = matches.length - bodyParams.length;
+                            for (let i = 0; i < diff; i++) {
+                                // Map {{2}} to preferred_date if available, else dash
+                                if (i === 0 && matches.length >= 2) {
+                                    bodyParams.push({ type: "text", text: lead.preferred_date || "soon" });
+                                } else {
+                                    bodyParams.push({ type: "text", text: "-" });
+                                }
+                            }
+                        }
+
+                        if (bodyParams.length > 0) {
+                            components.push({
+                                type: "body",
+                                parameters: bodyParams
+                            });
+                        }
+
+                        response = await fetch('/api/bulk-send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                to: lead.phone,
+                                templateName: selectedTemplate.name,
+                                languageCode: selectedTemplate.language,
+                                components: components,
+                                campaignId: campaignId
+                            })
+                        });
+
+                    } else {
+                        // Normal Text Message
+                        response = await fetch('/api/bulk-send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                to: lead.phone,
+                                message: personalizedMessage,
+                                campaignId: campaignId
+                            })
+                        });
+                    }
 
                     if (response.ok) {
                         sent++;
-                        addLog('success', `âœ“ Sent to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)})`);
+                        addLog('success', `✓ Sent to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)})`);
                     } else {
+                        const err = await response.json().catch(() => ({}));
                         failed++;
-                        addLog('error', `âœ— Failed to send to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)})`);
+                        addLog('error', `✗ Failed to send to ${lead.name || 'Unknown'} (${formatPhone(lead.phone)}): ${err.error || 'Unknown error'}`);
                     }
                 } catch (error) {
                     failed++;
-                    addLog('error', `âœ— Error sending to ${lead.name || 'Unknown'}: ${error.message}`);
+                    addLog('error', `✗ Error sending to ${lead.name || 'Unknown'}: ${error.message}`);
                 }
 
                 // Update progress
@@ -5250,14 +5509,23 @@
                 }
             }
 
+            // Update Campaign status to completed
+            if (campaignId) {
+                fetch(`/api/campaigns/${campaignId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'completed' })
+                }).catch(err => console.error("Failed to update campaign completion:", err));
+            }
+
             // Re-enable send button
             document.getElementById('send-bulk-btn').disabled = false;
 
             // Final log
-            addLog('info', `ðŸ“Š Bulk send completed: ${sent} sent, ${failed} failed out of ${total} total`);
+            addLog('info', `📊 Bulk send completed: ${sent} sent, ${failed} failed out of ${total} total`);
 
             if (failed === 0) {
-                alert(`Success! All ${sent} messages were sent successfully! ðŸŽ‰`);
+                alert(`Success! All ${sent} messages were sent successfully! 🎉`);
             } else {
                 alert(`Bulk send completed: ${sent} sent, ${failed} failed.`);
             }
@@ -5379,7 +5647,128 @@
             if (contentId === 'flows') {
                 fetchFlows();
             }
+            if (contentId === 'campaigns') {
+                loadCampaigns();
+            }
         };
+
+        // ========================================
+        // CAMPAIGNS FUNCTIONALITY
+        // ========================================
+
+        async function loadCampaigns() {
+            const listBody = document.getElementById('campaign-list-body');
+            const statsOverview = document.getElementById('campaign-stats-overview');
+
+            try {
+                const res = await fetch('/api/campaigns');
+                const campaigns = await res.json();
+
+                if (campaigns.length === 0) {
+                    listBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No campaigns found.</td></tr>';
+                    return;
+                }
+
+                // Overall Stats
+                let totalSent = 0, totalDelivered = 0, totalRead = 0, totalReplied = 0;
+                campaigns.forEach(c => {
+                    totalSent += c.sentCount || 0;
+                    totalDelivered += c.deliveredCount || 0;
+                    totalRead += c.readCount || 0;
+                    totalReplied += c.repliedCount || 0;
+                });
+
+                statsOverview.innerHTML = `
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h6 class="text-secondary small text-uppercase fw-bold mb-1">Delivered</h6>
+                            <h3 class="mb-0 fw-bold text-info">${totalDelivered}</h3>
+                            <small class="text-muted">${totalSent > 0 ? Math.round(totalDelivered / totalSent * 100) : 0}% delivery rate</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h6 class="text-secondary small text-uppercase fw-bold mb-1">Read</h6>
+                            <h3 class="mb-0 fw-bold text-success">${totalRead}</h3>
+                            <small class="text-muted">${totalDelivered > 0 ? Math.round(totalRead / totalDelivered * 100) : 0}% read rate</small>
+                        </div>
+                    </div>
+                     <div class="col-md-3">
+                        <div class="stat-card">
+                            <h6 class="text-secondary small text-uppercase fw-bold mb-1">Replies</h6>
+                            <h3 class="mb-0 fw-bold text-warning">${totalReplied}</h3>
+                            <small class="text-muted">${totalRead > 0 ? Math.round(totalReplied / totalRead * 100) : 0}% response rate</small>
+                        </div>
+                    </div>
+                     <div class="col-md-3">
+                        <div class="stat-card">
+                            <h6 class="text-secondary small text-uppercase fw-bold mb-1">Total Sent</h6>
+                            <h3 class="mb-0 fw-bold">${totalSent}</h3>
+                            <small class="text-muted">Across ${campaigns.length} campaigns</small>
+                        </div>
+                    </div>
+                `;
+
+                listBody.innerHTML = campaigns.map(c => {
+                    const progress = c.totalRecipients > 0 ? Math.round((c.sentCount / c.totalRecipients) * 100) : 0;
+                    const engagement = c.sentCount > 0 ? `
+                        <div class="d-flex gap-2 small">
+                            <span title="Delivered"><i class="bi bi-check2-all text-info"></i> ${c.deliveredCount}</span>
+                            <span title="Read"><i class="bi bi-eye text-success"></i> ${c.readCount}</span>
+                            <span title="Replied"><i class="bi bi-reply text-warning"></i> ${c.repliedCount}</span>
+                        </div>
+                    ` : '-';
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-bold">${c.name}</div>
+                                <div class="small text-muted">${c.type === 'template' ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">${c.templateName}</span>` : 'Text Message'}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-${c.status === 'completed' ? 'success' : 'warning'}-subtle text-${c.status === 'completed' ? 'success' : 'warning'} border border-${c.status === 'completed' ? 'success' : 'warning'}-subtle">
+                                    ${c.status.toUpperCase()}
+                                </span>
+                            </td>
+                            <td style="min-width: 150px;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress-bar" style="width: ${progress}%"></div>
+                                    </div>
+                                    <small>${progress}%</small>
+                                </div>
+                                <div class="x-small text-muted">${c.sentCount} / ${c.totalRecipients} sent</div>
+                            </td>
+                            <td>${engagement}</td>
+                            <td><small>${new Date(c.createdAt).toLocaleDateString()}<br>${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="viewCampaignDetails('${c._id}')">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error("Failed to load campaigns:", err);
+                listBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading campaigns.</td></tr>';
+            }
+        }
+
+        // Listen for campaign updates via socket
+        socket.on('campaignUpdate', (data) => {
+            console.log("Campaign update received:", data);
+            const activeTab = document.querySelector('.page-content:not([style*="display: none"])');
+            if (activeTab && activeTab.id === 'campaigns') {
+                loadCampaigns(); // Refresh list if on campaigns tab
+            }
+        });
+
+        async function viewCampaignDetails(id) {
+            // Future enhancement: Open details modal
+            alert("Campaign details modal coming soon. Real-time stats are already being tracked in the background!");
+        }
 
         // ========================================
         // END BULK MESSAGING FUNCTIONALITY

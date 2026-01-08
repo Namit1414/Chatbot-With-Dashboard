@@ -310,3 +310,34 @@ export async function sendWhatsAppTemplate(to, templateName, languageCode, compo
         throw error;
     }
 }
+
+/**
+ * Get approved templates from WhatsApp Business Account
+ * Requires WABA_ID environment variable to be set
+ */
+export async function getWhatsAppTemplates(token, wabaId) {
+    try {
+        if (!wabaId) {
+            throw new Error('WABA_ID is required. Please set it in your environment variables.');
+        }
+
+        console.log('[WhatsAppAPI] Fetching templates for WABA ID:', wabaId);
+
+        const templatesResponse = await fetch(`https://graph.facebook.com/v19.0/${wabaId}/message_templates?status=APPROVED&limit=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!templatesResponse.ok) {
+            const errData = await templatesResponse.json();
+            console.error('[WhatsAppAPI] Failed to fetch templates:', errData);
+            throw new Error('Failed to fetch templates from Meta');
+        }
+
+        const templatesData = await templatesResponse.json();
+        console.log(`[WhatsAppAPI] Found ${templatesData.data?.length || 0} approved templates`);
+        return templatesData.data || [];
+    } catch (error) {
+        console.error('Error in getWhatsAppTemplates:', error);
+        throw error;
+    }
+}

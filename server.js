@@ -18,10 +18,11 @@ import Message from "./models/Message.js";
 import Flow from "./models/Flow.js";
 import AdvancedFlow from "./models/AdvancedFlow.js";
 import ScheduledBulkMessage from "./models/ScheduledBulkMessage.js";
+import Campaign from "./models/Campaign.js";
 
 import { initScheduler, startFlow, registerTempFlow } from "./advancedFlowEngine.js";
 import { saveLead, findLeadByPhone, deleteLeadByPhone, syncLeadsFromSheet, syncLeadsToSheet } from "./googleSheet.js";
-import { sendWhatsAppBusinessMessage } from "./whatsappBusinessAPI.js";
+import { sendWhatsAppBusinessMessage, getWhatsAppTemplates, sendWhatsAppTemplate } from "./whatsappBusinessAPI.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -361,13 +362,18 @@ app.put("/api/flows/:id", async (req, res) => {
 });
 
 app.post("/api/send", async (req, res) => {
-  const { to, text, mediaUrl, messageType, filename } = req.body;
-  if (mediaUrl) {
-    await sendWhatsAppMessage(to, { messageType, url: mediaUrl, caption: text || '', filename }, 'dashboard');
-  } else {
-    await sendWhatsAppMessage(to, text, 'dashboard');
+  try {
+    const { to, text, mediaUrl, messageType, filename } = req.body;
+    if (mediaUrl) {
+      await sendWhatsAppMessage(to, { messageType, url: mediaUrl, caption: text || '', filename }, 'dashboard');
+    } else {
+      await sendWhatsAppMessage(to, text, 'dashboard');
+    }
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("❌ Error in /api/send:", error);
+    res.status(500).json({ error: error.message });
   }
-  res.sendStatus(200);
 });
 
 // Cloudinary Configuration
@@ -449,20 +455,103 @@ app.post("/api/upload", upload.single('file'), async (req, res) => {
 // Bulk Messaging API
 app.post("/api/bulk-send", async (req, res) => {
   try {
-    const { to, message } = req.body;
+    const { to, message, templateName, languageCode, components, campaignId } = req.body;
 
-    if (!to || !message) {
-      return res.status(400).json({ error: 'Missing required fields: to, message' });
+    if (!to) {
+      return res.status(400).json({ error: 'Missing required field: to' });
     }
 
-    // Send message via WhatsApp
-    await sendWhatsAppMessage(to, message, 'dashboard');
+    let apiResponse;
+    if (templateName) {
+      // Send Template Message
+      if (!languageCode) {
+        return res.status(400).json({ error: 'Missing languageCode for template' });
+      }
+      apiResponse = await sendWhatsAppTemplate(to, templateName, languageCode, components, process.env.WHATSAPP_TOKEN, process.env.PHONE_NUMBER_ID);
+      console.log(`📤 Bulk template "${templateName}" sent to ${to}`);
+    } else if (message) {
+      // Send Standard Message
+      apiResponse = await sendWhatsAppBusinessMessage(to, message, process.env.WHATSAPP_TOKEN, process.env.PHONE_NUMBER_ID);
+      console.log(`📤 Bulk message sent to ${to}`);
+    } else {
+      return res.status(400).json({ error: 'Must provide either message or templateName' });
+    }
 
-    console.log(`📤 Bulk message sent to ${to}`);
-    res.status(200).json({ success: true, message: 'Message sent successfully' });
+    const messageId = apiResponse.messages?.[0]?.id;
+
+    if (campaignId && messageId) {
+      await Campaign.findByIdAndUpdate(campaignId, {
+        $inc: { sentCount: 1 },
+        $push: {
+          messages: {
+            recipient: to,
+            messageId: messageId,
+            status: 'sent'
+          }
+        }
+      });
+    }
+
+    res.status(200).json({ success: true, message: 'Message sent successfully', messageId });
   } catch (error) {
     console.error('Error in bulk send:', error);
     res.status(500).json({ error: 'Failed to send message', details: error.message });
+  }
+});
+
+// Campaign Endpoints
+app.get("/api/campaigns", async (req, res) => {
+  try {
+    const campaigns = await Campaign.find({}).sort({ createdAt: -1 }).limit(50);
+    res.json(campaigns);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/campaigns", async (req, res) => {
+  try {
+    const campaign = new Campaign(req.body);
+    await campaign.save();
+    res.status(201).json(campaign);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/campaigns/:id", async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    res.json(campaign);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch("/api/campaigns/:id", async (req, res) => {
+  try {
+    const campaign = await Campaign.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(campaign);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/templates", async (req, res) => {
+  try {
+    const wabaId = process.env.WABA_ID;
+    if (!wabaId) {
+      return res.status(500).json({
+        error: 'WABA_ID not configured',
+        details: 'Please add WABA_ID to your .env file. Find it in Meta Business Manager > WhatsApp Accounts.'
+      });
+    }
+
+    const templates = await getWhatsAppTemplates(process.env.WHATSAPP_TOKEN, wabaId);
+    res.json({ data: templates });
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ error: 'Failed to fetch templates', details: error.message });
   }
 });
 
@@ -650,7 +739,34 @@ app.get("/webhook", (req, res) => {
 
 app.post("/webhook", async (req, res) => {
   try {
-    const msg = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const changes = req.body.entry?.[0]?.changes?.[0]?.value;
+
+    if (!changes) return res.sendStatus(200);
+
+    // Handle Status Updates (sent, delivered, read, failed)
+    if (changes.statuses && changes.statuses[0]) {
+      const statusUpdate = changes.statuses[0];
+      const status = statusUpdate.status;
+      const id = statusUpdate.id;
+      const recipient = statusUpdate.recipient_id;
+
+      console.log(`[WhatsAppStatus] Msg ${id} to ${recipient}: ${status}`);
+
+      if (status === 'failed') {
+        const errors = statusUpdate.errors;
+        console.error(`❌ [WhatsAppDeliveryFailure] Msg ${id} failed. Errors:`, JSON.stringify(errors, null, 2));
+        // You could emit this to the UI via socket.io if needed
+        io.emit('messageStatus', { id, status, errors });
+      } else {
+        // sent, delivered, read
+        io.emit('messageStatus', { id, status });
+      }
+
+      return res.sendStatus(200);
+    }
+
+    // Handle Incoming Messages
+    const msg = changes.messages?.[0];
     if (!msg) return res.sendStatus(200);
 
     const from = msg.from;
@@ -689,9 +805,59 @@ app.post("/webhook", async (req, res) => {
     }
 
 
+    // 4. Handle Status Updates
+    if (value.statuses && value.statuses.length > 0) {
+      const statusUpdate = value.statuses[0];
+      const messageId = statusUpdate.id;
+      const status = statusUpdate.status; // sent, delivered, read, failed
+
+      console.log(`[Webhook] Status update for ${messageId}: ${status}`);
+
+      // Update Campaign if message belongs to one
+      const campaign = await Campaign.findOne({ "messages.messageId": messageId });
+      if (campaign) {
+        const msgIndex = campaign.messages.findIndex(m => m.messageId === messageId);
+        if (msgIndex !== -1) {
+          const oldStatus = campaign.messages[msgIndex].status;
+          campaign.messages[msgIndex].status = status;
+
+          // Increment counters based on NEW status
+          if (status === 'delivered' && oldStatus !== 'delivered' && oldStatus !== 'read') {
+            campaign.deliveredCount++;
+          } else if (status === 'read' && oldStatus !== 'read') {
+            if (oldStatus !== 'delivered') campaign.deliveredCount++;
+            campaign.readCount++;
+          } else if (status === 'failed' && oldStatus !== 'failed') {
+            campaign.failedCount++;
+          }
+
+          await campaign.save();
+          io.emit('campaignUpdate', { campaignId: campaign._id, status, messageId });
+        }
+      }
+      return res.sendStatus(200);
+    }
+
     // Unified Flow Handler (Handles Leads, Flows, Excel, and AI)
     // IMPORTANT: 'sanitizedPhone' matches DB records. 'from' is for sending replies.
     const reply = await runFlow(sanitizedPhone, text);
+
+    // Track Reply in Campaign
+    const campaign = await Campaign.findOne({
+      "messages.recipient": sanitizedPhone,
+      "createdAt": { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Within last 24h
+    }).sort({ createdAt: -1 });
+
+    if (campaign) {
+      const msgIndex = campaign.messages.findIndex(m => m.recipient === sanitizedPhone && !m.replied);
+      if (msgIndex !== -1) {
+        campaign.messages[msgIndex].replied = true;
+        campaign.repliedCount++;
+        await campaign.save();
+        io.emit('campaignUpdate', { campaignId: campaign._id, type: 'reply', recipient: sanitizedPhone });
+      }
+    }
+
     if (reply) {
       await sendWhatsAppMessage(from, reply, process.env.PHONE_NUMBER_ID);
     }
@@ -768,22 +934,26 @@ async function sendWhatsAppMessage(to, messageData, from) {
     textContent = messageData.content;
   }
 
-  // Save to database
-  const message = new Message({ to, from, text: textContent });
-  await message.save();
-  io.emit('newMessage', message);
-
   // Send to WhatsApp API using Business API helper
   try {
-    await sendWhatsAppBusinessMessage(
+    const apiResponse = await sendWhatsAppBusinessMessage(
       to,
       messageData,
       process.env.WHATSAPP_TOKEN,
       process.env.PHONE_NUMBER_ID
     );
     console.log("✅ WhatsApp message sent successfully");
+
+    // Save to database ONLY if sending succeeded
+    const message = new Message({ to, from, text: textContent });
+    // Optional: store WhatsApp Message ID if available
+    // message.whatsappId = apiResponse.messages?.[0]?.id; 
+    await message.save();
+    io.emit('newMessage', message);
+
   } catch (err) {
     console.error("❌ Error sending to WhatsApp:", err);
+    throw err;
   }
 }
 
