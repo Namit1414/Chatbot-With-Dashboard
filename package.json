@@ -1,0 +1,30 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cloudinary": "^2.8.0",
+    "compression": "^1.8.1",
+    "connect-mongo": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
+    "express-session": "^1.18.2",
+    "google-auth-library": "^9.0.0",
+    "google-spreadsheet": "4.1.1",
+    "mongodb": "^7.0.0",
+    "mongoose": "^8.1.1",
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5"
+  }
+}

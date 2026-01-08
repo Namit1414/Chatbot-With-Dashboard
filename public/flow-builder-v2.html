@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Builder Pro</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Bootstrap grid only for layout helpers -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-dark-secondary: #1e293b;
+            --primary: #6366f1;
+            /* Indigo */
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+
+            --node-width: 280px;
+            --node-width-list: 350px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            /* Canvas handles scroll */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Background Mesh Gradient */
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.15), transparent 25%);
+        }
+
+        /* --- UI OVERLAYS (Glassmorphism) --- */
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            pointer-events: none;
+            /* Pass clicks to canvas */
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "palette canvas properties";
+            grid-template-rows: 70px 1fr;
+            grid-template-columns: 260px 1fr 300px;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            pointer-events: auto;
+            /* Capture clicks */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .top-bar {
+            grid-area: header;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            /* Wider padding */
+            height: 80px;
+            /* Taller header */
+            gap: 20px;
+            /* Gap between children */
+            pointer-events: auto;
+        }
+
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            /* Space between Icon and Text */
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .app-title i {
+            color: var(--primary);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 10px var(--primary-glow));
+        }
+
+        .app-title span span {
+            /* "Pro" text style */
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.7em !important;
+            margin-left: 12px !important;
+            vertical-align: middle;
+            font-weight: 500 !important;
+            opacity: 0.9 !important;
+        }
+
+        .actions {
+            display: flex;
+            gap: 16px;
+            /* Space between buttons */
+            align-items: center;
+        }
+
+        /* ... existing btn-glass ... */
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.05);
+            /* Slightly more transparent */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 20px;
+            /* Larger click area */
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .form-control-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            padding: 10px 14px;
+            width: 100%;
+            margin-bottom: 1px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-control-glass:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .form-control-glass option {
+            background-color: var(--bg-dark-secondary);
+            color: white;
+        }
+
+        /* Dark Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Node Styling */
+        .flow-node {
+            width: var(--node-width);
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            z-index: 10;
+        }
+
+        .flow-node.list {
+            width: var(--node-width-list);
+        }
+
+        .flow-node.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow), 0 20px 40px -5px rgba(0, 0, 0, 0.4);
+            z-index: 20;
+        }
+
+        .node-header {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            color: white;
+            border-radius: 12px 12px 0 0;
+            cursor: grab;
+        }
+
+        .node-header.start {
+            border-bottom-color: #10b981;
+        }
+
+        .node-header.message {
+            border-bottom-color: var(--primary);
+        }
+
+        .node-header.buttons {
+            border-bottom-color: #10b981;
+        }
+
+        .node-header.image {
+            border-bottom-color: #f59e0b;
+        }
+
+        .node-header.video {
+            border-bottom-color: #ef4444;
+        }
+
+        .node-header.audio {
+            border-bottom-color: #ec4899;
+        }
+
+        .node-header.document {
+            border-bottom-color: #3b82f6;
+        }
+
+        .node-header.condition {
+            border-bottom-color: #8b5cf6;
+        }
+
+        .node-body {
+            padding: 16px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        /* Ports */
+        .node-port {
+            width: 14px;
+            height: 14px;
+            background: #0f172a;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            position: absolute;
+            z-index: 100;
+            cursor: crosshair;
+            transition: all 0.2s;
+        }
+
+        .node-port:hover {
+            background: var(--primary);
+            border-color: white;
+            transform: scale(1.3);
+        }
+
+        .port-in {
+            top: -8px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            border-color: #94a3b8;
+        }
+
+        .port-out {
+            bottom: -8px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            background: #334155;
+            border-color: white;
+        }
+
+        /* Larger Hit Area for Ports */
+        .node-port::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            z-index: 10;
+            border-radius: 50%;
+        }
+
+        /* Connecting State Feedback */
+        #canvas-container.dragging-connection .port-in {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+            transform: scale(1.2);
+            background: var(--primary);
+            border-color: white;
+            animation: pulse-port 1.5s infinite;
+        }
+
+        @keyframes pulse-port {
+            0% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+        }
+
+        /* Connections */
+        .connection-path {
+            fill: none;
+            stroke: #64748b;
+            stroke-width: 2px;
+            transition: stroke 0.2s;
+            cursor: pointer;
+        }
+
+        .connection-path:hover {
+            stroke: var(--primary);
+            stroke-width: 3px;
+        }
+
+        .node-palette-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .node-palette-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-mesh"></div>
+
+    <div class="ui-layer">
+        <!-- Header -->
+        <div class="top-bar">
+            <div class="app-title">
+                <i class="bi bi-diagram-3-fill"></i>
+                <span>Flow Builder <span>Pro</span></span>
+            </div>
+            <div class="actions">
+                <button class="btn-glass" onclick="clearFlow()">
+                    <i class="bi bi-trash"></i> Clear
+                </button>
+                <button class="btn-glass" onclick="testFlow()">
+                    <i class="bi bi-play-fill"></i> Test
+                </button>
+                <button class="btn-glass" style="background: var(--primary); border-color: var(--primary);"
+                    onclick="saveFlow()">
+                    <i class="bi bi-save"></i> Save Flow
+                </button>
+            </div>
+        </div>
+
+        <!-- Palette -->
+        <div class="glass-panel" style="grid-area: palette; padding: 20px; overflow-y: auto;">
+            <div
+                style="margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.8em; letter-spacing: 1px;">
+                NODES</div>
+
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'message')">
+                <i class="bi bi-chat-text text-primary"></i> Message
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'buttons')">
+                <i class="bi bi-ui-checks" style="color: #10b981;"></i> Buttons
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'image')">
+                <i class="bi bi-image" style="color: #f59e0b;"></i> Image
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'video')">
+                <i class="bi bi-play-btn" style="color: #ef4444;"></i> Video
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'audio')">
+                <i class="bi bi-mic" style="color: #ec4899;"></i> Audio
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'document')">
+                <i class="bi bi-file-earmark-text" style="color: #3b82f6;"></i> Document
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'condition')">
+                <i class="bi bi-shuffle" style="color: #8b5cf6;"></i> Condition
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'delay')">
+                <i class="bi bi-clock" style="color: #64748b;"></i> Delay
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'cta')">
+                <i class="bi bi-link-45deg" style="color: #06b6d4;"></i> CTA Url
+            </div>
+            <div class="node-palette-item" draggable="true" ondragstart="onDragStart(event, 'list')">
+                <i class="bi bi-list-ul" style="color: #ec4899;"></i> List Message
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div id="canvas-container" class="glass-panel"
+            style="grid-area: canvas; position: relative; overflow: hidden; padding: 0;"
+            onmousedown="handlePanStart(event)" ondrop="handleDrop(event)" ondragover="event.preventDefault()"
+            onwheel="handleZoom(event)">
+
+            <!-- Grid/Background -->
+            <div id="canvas-setup"
+                style="position: absolute; width: 100%; height: 100%; pointer-events: none; opacity: 0.3; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px;">
+            </div>
+
+            <div id="canvas-content" style="position: absolute; width: 100%; height: 100%; transform-origin: 0 0;">
+                <svg id="connections"
+                    style="position: absolute; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0;"></svg>
+                <!-- Nodes inserted here -->
+            </div>
+        </div>
+
+        <!-- Properties -->
+        <div class="glass-panel" style="grid-area: properties; padding: 20px; overflow-y: auto;">
+            <div
+                style="margin-bottom: 20px; font-weight: 600; color: var(--text-secondary); font-size: 0.8em; letter-spacing: 1px;">
+                PROPERTIES</div>
+            <div id="props-content">
+                <!-- Properties injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const canvas = document.getElementById('canvas-content');
+        const svgLineContainer = document.getElementById('connections');
+        const propsPanel = document.getElementById('props-content'); // Might serve as verifying it exists
+
+        let state = {
+            nodes: [],
+            connections: [],
+            scale: 1,
+            pan: { x: 0, y: 0 },
+            selectedNodeId: null,
+            nextNodeId: 1,
+            flowId: null,
+            leads: [] // Store system leads
+        };
+
+        function init() {
+            // Fetch leads for the recipient dropdown
+            fetchLeads();
+
+            // Check for flow ID
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if (id) {
+                // Fetch existing flow
+                fetch('/api/advanced-flows/' + id)
+                    .then(r => r.json())
+                    .then(flow => {
+                        state.flowId = flow._id;
+                        state.nodes = flow.nodes.map(n => {
+                            const node = {
+                                ...n,
+                                x: n.position.x || 0,
+                                y: n.position.y || 0,
+                                data: n.data || {}
+                            };
+
+                            // Sync Start Node with Flow-level Trigger Info (for persistence/legacy)
+                            if (node.type === 'start') {
+                                if (!node.data.trigger && flow.trigger) node.data.trigger = flow.trigger;
+                                if (!node.data.triggerType && flow.triggerType) {
+                                    node.data.triggerType = flow.triggerType === 'keyword' ? 'contains' : flow.triggerType;
+                                }
+
+                                // Schedule Sync
+                                if (flow.schedule?.nextRun && !node.data.scheduleTime) {
+                                    node.data.scheduleTime = flow.schedule.nextRun.substring(0, 16); // format for datetime-local
+                                }
+
+                                // Recipient Sync
+                                if (flow.recipientConfig) {
+                                    if (!node.data.audienceType) node.data.audienceType = flow.recipientConfig.audienceType;
+                                    if (flow.recipientConfig.tags?.length > 0 && !node.data.tags) {
+                                        node.data.tags = flow.recipientConfig.tags.join(', ');
+                                    }
+                                    if (flow.recipientConfig.phones?.length > 0 && !node.data.recipientPhone) {
+                                        node.data.recipientPhone = flow.recipientConfig.phones[0];
+                                    }
+                                }
+                            }
+                            return node;
+                        });
+                        state.connections = flow.connections || [];
+                        render();
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        alert('Failed to load flow');
+                    });
+            } else {
+                // New Flow
+                addNode('start', 150, 150);
+            }
+            render();
+        }
+
+        async function fetchLeads() {
+            try {
+                const res = await fetch('/api/leads');
+                if (res.ok) {
+                    state.leads = await res.json();
+                }
+            } catch (e) {
+                console.error("Failed to fetch leads", e);
+            }
+        }
+
+        function render() {
+            // 1. Transform Canvas
+            canvas.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
+
+            // 2. Render Nodes (Differential)
+            const existingNodeEls = new Set();
+            document.querySelectorAll('.flow-node').forEach(el => existingNodeEls.add(el.dataset.id));
+
+            state.nodes.forEach(node => {
+                let el = document.querySelector(`.flow-node[data-id="${node.id}"]`);
+                const isNew = !el;
+
+                if (isNew) {
+                    el = document.createElement('div');
+                    el.className = 'flow-node';
+                    el.style.position = 'absolute';
+                    el.dataset.id = node.id;
+                    el.onmousedown = (e) => handleNodeDown(e, node);
+                    canvas.appendChild(el);
+                }
+
+                // Update Position & State
+                el.style.left = node.x + 'px';
+                el.style.top = node.y + 'px';
+                el.className = `flow-node ${node.type} ${state.selectedNodeId === node.id ? 'selected' : ''}`;
+
+                // Update Content only if new (simple approach) or if we wanted full sync
+                // For now, let's redraw content to ensure ports etc are correct, 
+                // but we could optimize this further if needed. 
+                // CRITICAL: We only redraw innerHTML if it's new or if we really need to, 
+                // but let's do it for now to keep logic simple, the key is the ELEMENT remains stable.
+                if (isNew) {
+                    renderNodeContent(el, node);
+                } else {
+                    // Just update labels if needed? Actually, let's keep it simple: 
+                    // If not dragging a connection, we can full sync. 
+                    // If dragging, ONLY update position.
+                    if (!isConnecting) {
+                        renderNodeContent(el, node);
+                    }
+                }
+
+                existingNodeEls.delete(node.id);
+            });
+
+            // Remove nodes that are gone
+            existingNodeEls.forEach(id => {
+                const el = document.querySelector(`.flow-node[data-id="${id}"]`);
+                if (el) el.remove();
+            });
+
+            // 3. Clear SVG Lines
+            while (svgLineContainer.firstChild) {
+                svgLineContainer.removeChild(svgLineContainer.firstChild);
+            }
+
+            // New Paths
+            state.connections.forEach(conn => {
+                const srcNode = state.nodes.find(n => n.id === conn.source);
+                const tgtNode = state.nodes.find(n => n.id === conn.target);
+                if (!srcNode || !tgtNode) return;
+
+                // Calculate Coords
+                let x1, y1, x2, y2;
+
+                // Manual DOM lookup for exactness if rendered?
+                const srcPortEl = document.querySelector(`[data-port-id="${conn.source}:${conn.sourceHandle}"]`);
+                const tgtPortEl = document.querySelector(`[data-port-id="${conn.target}:in"]`);
+
+                if (srcPortEl && tgtPortEl) {
+                    x2 = tgtNode.x + tgtPortEl.offsetLeft + 6;
+                    y2 = tgtNode.y + tgtPortEl.offsetTop + 6;
+
+                    x1 = srcNode.x + srcPortEl.offsetLeft + 6;
+                    y1 = srcNode.y + srcPortEl.offsetTop + 6;
+                }
+
+                else {
+                    const nodeWidth = srcNode.type === 'list' ? 350 : 280;
+                    const halfWidth = nodeWidth / 2;
+
+                    x2 = tgtNode.x + (tgtNode.type === 'list' ? 175 : 140);
+                    y2 = tgtNode.y - 6;
+
+                    if (conn.sourceHandle === 'out') {
+                        x1 = srcNode.x + halfWidth;
+                        y1 = srcNode.y + 100;
+                    }
+                    else if (srcNode.type === 'list') {
+                        let allRows = [];
+                        if (srcNode.data.sections) srcNode.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const rowIdx = allRows.findIndex(r => r.id === conn.sourceHandle);
+                        if (rowIdx >= 0) {
+                            const count = allRows.length;
+                            const step = nodeWidth / (count + 1);
+                            x1 = srcNode.x + (step * (rowIdx + 1));
+                            y1 = srcNode.y + 100;
+                        } else {
+                            x1 = srcNode.x + halfWidth;
+                            y1 = srcNode.y + 100;
+                        }
+                    }
+                    else {
+                        const btnIdx = srcNode.data.buttons ? srcNode.data.buttons.findIndex(b => b.id === conn.sourceHandle) : -1;
+                        if (btnIdx >= 0) {
+                            const count = srcNode.data.buttons.length;
+                            const step = nodeWidth / (count + 1);
+                            x1 = srcNode.x + (step * (btnIdx + 1));
+                            y1 = srcNode.y + 100;
+                        }
+                        else {
+                            x1 = srcNode.x + halfWidth;
+                            y1 = srcNode.y + 100;
+                        }
+                    }
+                }
+
+                const d = `M${x1} ${y1} C${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'connection-path');
+
+                path.onclick = (e) => {
+                    e.stopPropagation();
+                    removeConnection(conn.id);
+                };
+                svgLineContainer.appendChild(path);
+            });
+
+            // Drag Line
+            if (isConnecting && startPort) {
+                const srcNode = state.nodes.find(n => n.id === startPort.nodeId);
+
+                if (srcNode) {
+                    let x1,
+                        y1;
+
+                    // Same offset logic as drawn connections
+                    const srcPortEl = document.querySelector(`[data-port-id="${startPort.nodeId}:${startPort.handle}"]`);
+
+                    if (srcPortEl) {
+                        x1 = srcNode.x + srcPortEl.offsetLeft + 6;
+                        y1 = srcNode.y + srcPortEl.offsetTop + 6;
+                    } else {
+                        // Fallback
+                        x1 = srcNode.x + (srcNode.type === 'list' ? 175 : 140);
+                        y1 = srcNode.y + 100;
+                    }
+
+                    const x2 = currentMousePos.x;
+                    const y2 = currentMousePos.y;
+
+                    const d = `M${x1} ${y1} C${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'connection-path');
+                    path.style.strokeDasharray = "5,5"; // Dashed line for temporary
+                    path.style.pointerEvents = "none";
+                    svgLineContainer.appendChild(path);
+                }
+            }
+        }
+
+        function renderNodeContent(el, node) {
+            el.innerHTML = ''; // Clear to redraw internal structure
+
+            // Header
+            const header = document.createElement('div');
+            header.className = `node-header ${node.type}`;
+
+            let iconClass = 'bi-circle-fill';
+            let iconStyle = 'margin-right:8px; font-size: 1rem;';
+
+            if (node.type === 'start') { iconClass = 'bi-play-circle-fill'; iconStyle += 'color: #10b981;'; }
+            else if (node.type === 'message') { iconClass = 'bi-chat-text'; iconStyle += 'color: var(--primary);'; }
+            else if (node.type === 'buttons') { iconClass = 'bi-ui-checks'; iconStyle += 'color: #10b981;'; }
+            else if (node.type === 'image') { iconClass = 'bi-image'; iconStyle += 'color: #f59e0b;'; }
+            else if (node.type === 'video') { iconClass = 'bi-play-btn'; iconStyle += 'color: #ef4444;'; }
+            else if (node.type === 'audio') { iconClass = 'bi-mic'; iconStyle += 'color: #ec4899;'; }
+            else if (node.type === 'document') { iconClass = 'bi-file-earmark-text'; iconStyle += 'color: #3b82f6;'; }
+            else if (node.type === 'condition') { iconClass = 'bi-shuffle'; iconStyle += 'color: #8b5cf6;'; }
+            else if (node.type === 'delay') { iconClass = 'bi-clock'; iconStyle += 'color: #64748b;'; }
+            else if (node.type === 'cta') { iconClass = 'bi-link-45deg'; iconStyle += 'color: #06b6d4;'; }
+            else if (node.type === 'list') { iconClass = 'bi-list-ul'; iconStyle += 'color: #ec4899;'; }
+
+            header.innerHTML = `
+                <i class="bi ${iconClass}" style="${iconStyle}"></i>
+                <span style="flex-grow:1; font-weight:600;">${capitalize(node.type)}</span>
+                ${node.type !== 'start' ? `<i class="bi bi-x delete-btn" style="cursor:pointer;" onclick="removeNode('${node.id}')"></i>` : ''}
+            `;
+            el.appendChild(header);
+
+            // Body
+            const body = document.createElement('div');
+            body.className = 'node-body';
+            if (node.type === 'start') {
+                let triggerText = node.data.trigger || '';
+                if (node.data.triggerType === 'scheduled') {
+                    triggerText = '📅 Scheduled';
+                } else if (node.data.triggerType === 'exact') {
+                    triggerText = '🎯 Exact: ' + (node.data.trigger || '...');
+                } else {
+                    triggerText = '🔍 Keyword: ' + (node.data.trigger || '...');
+                }
+                body.innerHTML = `<div style="opacity:0.8; font-size:0.9em;">${triggerText}</div>`;
+            } else if (node.type === 'message') {
+                body.innerText = node.data.text ? (node.data.text.substring(0, 40) + '...') : '(No text)';
+            } else if (node.type === 'buttons') {
+                body.innerHTML = `
+                    <div style="margin-bottom: 8px; opacity: 0.9;">${node.data.text ? (node.data.text.substring(0, 40) + (node.data.text.length > 40 ? '...' : '')) : '(Question text)'}</div>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        ${(node.data.buttons || []).map(b => `<span style="background:rgba(16, 185, 129, 0.2); color:#10b981; padding:2px 6px; border-radius:4px; font-size:0.75em; border: 1px solid rgba(16, 185, 129, 0.2);">${b.text}</span>`).join('')}
+                    </div>
+                `;
+            } else if (node.type === 'image') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-image"></i> <span>Image</span></div>`;
+            } else if (node.type === 'video') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-play-btn"></i> <span>Video</span></div>`;
+            } else if (node.type === 'audio') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-mic"></i> <span>Audio</span></div>`;
+            } else if (node.type === 'document') {
+                body.innerHTML = `<div style="display:flex; align-items:center; gap:8px;"><i class="bi bi-file-earmark-text"></i> <span>${node.data.filename || 'Document'}</span></div>`;
+            } else if (node.type === 'cta') {
+                body.innerText = `CTA: ${node.data.buttonText || 'Link'}`;
+            } else if (node.type === 'list') {
+                const sections = node.data.sections || [];
+                const rowCount = sections.reduce((acc, s) => acc + s.rows.length, 0);
+                body.innerHTML = `
+                    <div style="font-weight: 500; margin-bottom: 4px; color: #ec4899;">${node.data.buttonText || 'View Menu'}</div>
+                    <div style="opacity: 0.7; font-size: 0.85em;">${rowCount} options in ${sections.length} sections</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top: 8px;">
+                         ${sections.map(s => s.rows.slice(0, 5).map(r => `<span style="background:rgba(236, 72, 153, 0.1); color:#ec4899; padding:2px 8px; border-radius:6px; font-size:0.75em; border: 1px solid rgba(236, 72, 153, 0.2); white-space: nowrap;">${r.title}</span>`).join('')).join('')}
+                         ${rowCount > 5 ? '<span style="opacity:0.5; font-size:0.75em; align-self: flex-end;">+ others</span>' : ''}
+                    </div>
+                `;
+            }
+            el.appendChild(body);
+
+            // Input Port
+            if (node.type !== 'start') {
+                el.appendChild(createPort(node.id, 'input', 'in'));
+            }
+
+            // Output Ports
+            if (node.type === 'buttons' && node.data.buttons) {
+                node.data.buttons.forEach((btn, idx) => {
+                    const count = node.data.buttons.length;
+                    const p = createPort(node.id, 'output', btn.id, idx, count);
+                    const lbl = document.createElement('span');
+                    lbl.innerText = btn.text.length > 10 ? btn.text.substring(0, 8) + '..' : btn.text;
+                    lbl.className = 'port-label';
+                    lbl.style.position = 'absolute';
+                    lbl.style.bottom = '-20px';
+                    lbl.style.left = '50%';
+                    lbl.style.transform = 'translateX(-50%)';
+                    lbl.style.fontSize = '0.7em';
+                    lbl.style.whiteSpace = 'nowrap';
+                    lbl.style.color = '#ccc';
+                    p.appendChild(lbl);
+                    el.appendChild(p);
+                });
+            } else if (node.type === 'list' && node.data.sections) {
+                let allRows = [];
+                node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                allRows.forEach((row, idx) => {
+                    const count = allRows.length;
+                    const p = createPort(node.id, 'output', row.id, idx, count);
+
+                    const lbl = document.createElement('span');
+                    lbl.innerText = row.title.length > 10 ? row.title.substring(0, 8) + '..' : row.title;
+                    lbl.className = 'port-label';
+                    lbl.style.position = 'absolute';
+                    lbl.style.bottom = '-20px';
+                    lbl.style.left = '50%';
+                    lbl.style.transform = 'translateX(-50%)';
+                    lbl.style.fontSize = '0.7em';
+                    lbl.style.whiteSpace = 'nowrap';
+                    lbl.style.color = '#aaa';
+                    lbl.style.pointerEvents = 'none';
+                    p.appendChild(lbl);
+
+                    el.appendChild(p);
+                });
+                if (allRows.length === 0) {
+                    el.appendChild(createPort(node.id, 'output', 'out'));
+                }
+            } else {
+                el.appendChild(createPort(node.id, 'output', 'out'));
+            }
+        }
+
+        function getNodePreview(node) {
+            if (node.type === 'message') return node.data.text;
+
+            if (node.type === 'buttons') return `${node.data.buttons.length} Buttons`;
+
+            if (node.type === 'condition') return `If ${node.data.variable} ${node.data.condition} ${node.data.value}`;
+            if (node.type === 'start') return 'Entry Point';
+            if (node.type === 'cta') return `CTA: ${node.data.buttonText}`;
+            if (node.type === 'list') return `List: ${node.data.text}`;
+            return node.type;
+        }
+
+        function createPort(nodeId, type, handleId, idx = 0, count = 1) {
+            const el = document.createElement('div');
+
+            el.className = `node-port port-${type === 'input' ? 'in' : 'out'}`;
+
+            el.dataset.portId = `${nodeId}:${handleId}`;
+
+            if (type === 'output' && count > 0) {
+
+                // Distribute horizontally
+                // If generic 'out', center.
+                if (handleId === 'out') {
+                    // default center
+                } else {
+                    // Button/List distribution
+                    const step = 100 / (count + 1);
+
+                    el.style.left = `${step * (idx + 1)}%`;
+                    el.style.bottom = '-8px';
+                    el.style.transform = 'translate(-50%, 0)';
+                }
+            }
+
+            el.onmousedown = (e) => startConnection(e, nodeId, handleId, type);
+            // el.onmouseup = (e) => endConnection(e, nodeId, handleId, type); // Removed: Handled globally
+            return el;
+        }
+
+        // --- CONNECTION LOGIC ---
+        let isConnecting = false;
+        let startPort = null; // { nodeId, handle, type }
+
+        let currentMousePos = {
+            x: 0,
+            y: 0
+        };
+
+        function startConnection(e, nodeId, handle, type) {
+            e.stopPropagation();
+            if (type !== 'output') return;
+
+            isConnecting = true;
+            startPort = {
+                nodeId,
+                handle,
+                type
+            };
+
+            // Initial mouse pos using robust container-relative math
+            const rect = container.getBoundingClientRect();
+            currentMousePos = {
+                x: (e.clientX - rect.left - state.pan.x) / state.scale,
+                y: (e.clientY - rect.top - state.pan.y) / state.scale
+            };
+
+            document.addEventListener('mousemove', handleConnectionMove);
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+            container.classList.add('dragging-connection');
+        }
+
+        function handleConnectionMove(e) {
+            // Robust math: Mouse (Screen) -> Container (Screen) -> Remove Pan -> Scale
+            const rect = container.getBoundingClientRect();
+
+            currentMousePos = {
+                x: (e.clientX - rect.left - state.pan.x) / state.scale,
+                y: (e.clientY - rect.top - state.pan.y) / state.scale
+            };
+            render();
+        }
+
+        function handleGlobalMouseUp(e) {
+
+            if (!isConnecting || !startPort) {
+                cleanupDrag();
+                return;
+            }
+
+            let targetNodeId = null;
+            let targetHandle = 'in';
+
+            // 1. Standard DOM Hit Test
+            const portHit = e.target.closest('.node-port');
+            const nodeHit = e.target.closest('.flow-node');
+
+            if (portHit) {
+                const portId = portHit.dataset.portId;
+                const [nId, hId] = portId.split(':');
+                if (portHit.classList.contains('port-in')) {
+                    targetNodeId = nId;
+                    targetHandle = hId;
+                }
+            } else if (nodeHit) {
+                targetNodeId = nodeHit.dataset.id;
+            }
+
+            // 2. Fallback: Manual Geometric Hit Test
+            if (!targetNodeId) {
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+
+                const renderedNodes = document.querySelectorAll('.flow-node');
+                for (const el of renderedNodes) {
+                    const rect = el.getBoundingClientRect();
+                    // Check if mouse is within this node's box
+                    if (mouseX >= rect.left && mouseX <= rect.right &&
+                        mouseY >= rect.top && mouseY <= rect.bottom) {
+
+                        targetNodeId = el.dataset.id;
+                        targetHandle = 'in';
+                        break;
+                    }
+                }
+            }
+
+            // 3. Perform Connection
+            if (targetNodeId) {
+                const targetNode = state.nodes.find(n => n.id === targetNodeId);
+
+                if (targetNodeId !== startPort.nodeId && targetNode && targetNode.type !== 'start') {
+
+                    state.connections.push({
+                        id: `c_${Date.now()}`,
+                        source: startPort.nodeId,
+                        sourceHandle: startPort.handle,
+                        target: targetNodeId,
+                        targetHandle: targetHandle
+                    });
+
+                    cleanupDrag();
+                    render();
+                    return;
+                }
+            }
+
+            // Cancel if nothing valid hit
+            cleanupDrag();
+            render();
+        }
+
+        function cleanupDrag() {
+            isConnecting = false;
+            startPort = null;
+            document.removeEventListener('mousemove', handleConnectionMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+            container.classList.remove('dragging-connection');
+        }
+
+        // Removed endConnection as it is now handled globally
+        function removeConnection(id) {
+            state.connections = state.connections.filter(c => c.id !== id);
+            render();
+        }
+
+        // --- PROPERTIES PANEL ---
+        function showNodeProperties(node) {
+            const panel = document.getElementById('props-content');
+
+            if (!node) {
+                panel.innerHTML = ` <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;"><i class="bi bi-cursor" style="font-size: 2rem; opacity: 0.5;"></i><p style="margin-top: 16px;">Select a node to edit</p></div>`;
+                return;
+            }
+
+            let content = '';
+
+            // Common: ID (Read-only)
+            // Common: ID (Read-only) - HIDDEN as per request
+            // content += ` <div class="mb-3"><label class="form-label">Node ID</label><input type="text" class="form-control-glass" value="${node.id}" disabled style="opacity:0.7"></div>`;
+
+            // Type Specific
+            if (node.type === 'start') {
+                const isScheduled = node.data.triggerType === 'scheduled';
+
+                content += ` <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);"><label class="form-label" style="color: var(--primary); font-weight: 600;">Trigger Settings</label><div class="mb-3"><label class="form-label">Trigger Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'triggerType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="contains"${node.data.triggerType === 'contains' || !node.data.triggerType || node.data.triggerType === 'keyword' ? ' selected' : ''}>Contains Keyword</option><option value="exact"${node.data.triggerType === 'exact' ? ' selected' : ''}>Exact Match</option><option value="scheduled"${isScheduled ? ' selected' : ''}>Scheduled</option></select></div>`;
+
+                if (isScheduled) {
+                    content += ` <div class="mb-3"><label class="form-label">Schedule Time</label><input type="datetime-local" class="form-control-glass" value="${node.data.scheduleTime || ''}" onchange="updateNodeProperty('${node.id}', 'scheduleTime', this.value)"></div><div class="mb-3"><label class="form-label">Recipients</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'audienceType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="all"${node.data.audienceType === 'all' ? ' selected' : ''}>All Leads</option><option value="tags"${node.data.audienceType === 'tags' ? ' selected' : ''}>By Tags</option><option value="individual"${node.data.audienceType === 'individual' ? ' selected' : ''}>Individual (System)</option><option value="manual"${node.data.audienceType === 'manual' ? ' selected' : ''}>Manual Number</option></select></div>`;
+
+                    if (node.data.audienceType === 'tags') {
+                        content += ` <div class="mb-3"><label class="form-label">Tags (comma separated)</label><input type="text" class="form-control-glass" value="${node.data.tags || ''}" placeholder="e.g. vip, new" oninput="updateNodeProperty('${node.id}', 'tags', this.value)"></div>`;
+                    } else if (node.data.audienceType === 'individual') {
+                        content += ` <div class="mb-3"><label class="form-label">Select Lead</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'recipientPhone', this.value)">`;
+                        content += `<option value="">-- Select Person --</option>`;
+                        content += `<option value="all_contacts"${node.data.recipientPhone === 'all_contacts' ? ' selected' : ''}>Select All (System)</option>`;
+                        state.leads.forEach(lead => {
+                            const selected = node.data.recipientPhone === lead.phone ? ' selected' : '';
+                            content += `<option value="${lead.phone}"${selected}>${lead.name || 'Unknown'} (${lead.phone})</option>`;
+                        });
+                        content += `</select></div>`;
+                    } else if (node.data.audienceType === 'manual') {
+                        content += ` <div class="mb-3"><label class="form-label">Phone Number (with Country Code)</label><input type="text" class="form-control-glass" value="${node.data.recipientPhone || ''}" placeholder="e.g. 919876543210" oninput="updateNodeProperty('${node.id}', 'recipientPhone', this.value)"></div>`;
+                    }
+                } else {
+                    content += ` <div class="mb-3"><label class="form-label">Trigger Keyword</label><input type="text" class="form-control-glass" value="${node.data.trigger || ''}" placeholder="e.g. hi, booking, help" oninput="updateNodeProperty('${node.id}', 'trigger', this.value)"><small style="color: var(--text-secondary); font-size: 0.8em;">Users sending this text will start the flow.</small></div>`;
+                }
+
+                content += `</div>`;
+            }
+
+            if (node.type === 'message') {
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea id="prop-text-${node.id}" class="form-control-glass" rows="4" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea><div class="d-flex gap-2 mt-2 flex-wrap"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{phone}')">+ Phone</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{email}')">+ Email</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{preferred_date}')">+ Date</button><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{preferred_time}')">+ Time</button></div></div>`;
+            }
+
+            if (node.type === 'buttons') {
+                content += ` <div class="mb-3"><label class="form-label">Message Text</label><textarea id="prop-text-${node.id}" class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea><div class="d-flex gap-2 mt-2"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button></div></div>
+                <div class="mb-3"><label class="form-label">Buttons</label><div id="btn-list-${node.id}">${node.data.buttons.map((btn, idx) => `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${btn.text}" oninput="updateButton('${node.id}', ${idx}, 'text', this.value)"><button class="btn-glass" onclick="removeButton('${node.id}', ${idx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`).join('')}</div><button class="btn-glass w-100 mt-2" onclick="addButton('${node.id}')"><i class="bi bi-plus"></i>Add Button </button></div>`;
+            }
+
+            if (node.type === 'condition') {
+                content += ` <div class="mb-3"><label class="form-label">Variable</label><input type="text" class="form-control-glass" value="${node.data.variable || 'lastResponse'}" oninput="updateNodeProperty('${node.id}', 'variable', this.value)"></div><div class="mb-3"><label class="form-label">Condition</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'condition', this.value)"><option value="equals"${node.data.condition === 'equals' ? ' selected' : ''}>Equals</option><option value="contains"${node.data.condition === 'contains' ? ' selected' : ''}>Contains</option><option value="regex"${node.data.condition === 'regex' ? ' selected' : ''}>Regex</option><option value="exists"${node.data.condition === 'exists' ? ' selected' : ''}>Exists</option></select></div><div class="mb-3"><label class="form-label">Value</label><input type="text" class="form-control-glass" value="${node.data.value || ''}" oninput="updateNodeProperty('${node.id}', 'value', this.value)"></div>`;
+            }
+
+            // CTA
+            if (node.type === 'cta') {
+                content += `
+                    <div class="mb-3"><label class="form-label">Body Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>
+                    <div class="mb-3"><label class="form-label">Button Text</label><input type="text" class="form-control-glass" value="${node.data.buttonText || ''}" oninput="updateNodeProperty('${node.id}', 'buttonText', this.value)"></div>
+                    <div class="mb-3"><label class="form-label">Action Type</label><select class="form-control-glass" onchange="updateNodeProperty('${node.id}', 'ctaType', this.value); showNodeProperties(state.nodes.find(n => n.id === '${node.id}'))"><option value="url"${node.data.ctaType === 'url' ? ' selected' : ''}>Open URL</option><option value="phone"${node.data.ctaType === 'phone' ? ' selected' : ''}>Call Phone</option></select></div>
+                 `;
+                if (node.data.ctaType === 'url') {
+                    content += `<div class="mb-3"><label class="form-label">URL</label><input type="text" class="form-control-glass" value="${node.data.url || ''}" placeholder="https://..." oninput="updateNodeProperty('${node.id}', 'url', this.value)"></div>`;
+                } else {
+                    content += `<div class="mb-3"><label class="form-label">Phone Number</label><input type="text" class="form-control-glass" value="${node.data.phoneNumber || ''}" placeholder="+1234..." oninput="updateNodeProperty('${node.id}', 'phoneNumber', this.value)"></div>`;
+                }
+                content += `<div class="mb-3"><label class="form-label">Footer (Optional)</label><input type="text" class="form-control-glass" value="${node.data.footer || ''}" oninput="updateNodeProperty('${node.id}', 'footer', this.value)"></div>`;
+            }
+
+            // LIST
+            if (node.type === 'list') {
+                content += `
+                    <div class="mb-3"><label class="form-label">Body Text</label><textarea class="form-control-glass" rows="2" oninput="updateNodeProperty('${node.id}', 'text', this.value)">${node.data.text || ''}</textarea></div>
+                    <div class="mb-3"><label class="form-label">Menu Button Text</label><input type="text" class="form-control-glass" value="${node.data.buttonText || ''}" oninput="updateNodeProperty('${node.id}', 'buttonText', this.value)"></div>
+                    <div class="mb-3"><label class="form-label">Title (Header)</label><input type="text" class="form-control-glass" value="${node.data.header || ''}" placeholder="Optional Header" oninput="updateNodeProperty('${node.id}', 'header', this.value)"></div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                             <label class="form-label mb-0">List Sections</label>
+                             <button class="btn-glass" style="padding: 4px 8px; font-size: 0.8rem;" onclick="addListSection('${node.id}')"><i class="bi bi-plus"></i> Section</button>
+                        </div>
+                 `;
+
+                const sections = node.data.sections || [];
+                sections.forEach((sec, sIdx) => {
+                    content += `<div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;">
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="text" class="form-control-glass form-control-sm mb-0" value="${sec.title}" placeholder="Section Title" oninput="updateListSection('${node.id}', ${sIdx}, 'title', this.value)" style="font-weight: 600;">
+                            ${sections.length > 1 ? `<button class="btn-glass" style="padding: 8px;" onclick="removeListSection('${node.id}', ${sIdx})"><i class="bi bi-trash"></i></button>` : ''}
+                        </div>
+                        <div id="list-rows-${node.id}-${sIdx}">`;
+
+                    sec.rows.forEach((row, rIdx) => {
+                        content += `<div class="d-flex gap-2 mb-2"><input type="text" class="form-control-glass mb-0" value="${row.title}" placeholder="Item Title" oninput="updateListRow('${node.id}', ${sIdx}, ${rIdx}, 'title', this.value)"><button class="btn-glass" onclick="removeListRow('${node.id}', ${sIdx}, ${rIdx})" style="padding: 8px 12px;"><i class="bi bi-trash"></i></button></div>`;
+                    });
+
+                    content += `</div><button class="btn-glass w-100 mt-2" onclick="addListRow('${node.id}', ${sIdx})" style="font-size: 0.85rem; padding: 6px;"><i class="bi bi-plus"></i> Add Item</button></div>`;
+                });
+
+                content += `</div>`; // Close List Sections
+            }
+
+            // Media Types
+            if (['image', 'video', 'document', 'audio'].includes(node.type)) {
+                content += ` 
+                    <div class="mb-3">
+                        <label class="form-label">${capitalize(node.type)} URL</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="node-media-url" class="form-control-glass" value="${node.data.url || ''}" oninput="updateNodeProperty('${node.id}', 'url', this.value)">
+                            <button class="btn-glass" onclick="document.getElementById('node-file-input').click()" style="white-space: nowrap; padding: 10px 14px;">
+                                <i class="bi bi-upload"></i> Upload
+                            </button>
+                            <input type="file" id="node-file-input" style="display: none;" onchange="handleNodeFileUpload('${node.id}', this.files[0])">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Caption (Optional)</label>
+                        <input type="text" id="prop-caption-${node.id}" class="form-control-glass" value="${node.data.caption || ''}" oninput="updateNodeProperty('${node.id}', 'caption', this.value)">
+                         <div class="d-flex gap-2 mt-2"><button class="btn-glass" style="font-size: 0.75em; padding: 4px 10px;" onclick="insertVariable('${node.id}', '{name}')">+ Name</button></div>
+                    </div>`;
+
+                if (node.type === 'document') {
+                    content += `
+                    <div class="mb-3">
+                        <label class="form-label">Display Filename</label>
+                        <input type="text" class="form-control-glass" value="${node.data.filename || ''}" placeholder="e.g. PriceList.pdf" oninput="updateNodeProperty('${node.id}', 'filename', this.value)">
+                    </div>`;
+                }
+            }
+
+            if (node.type === 'delay') {
+                content += ` <div class="mb-3"><label class="form-label">Delay (seconds)</label><input type="number" class="form-control-glass" value="${node.data.delay || 1}" oninput="updateNodeProperty('${node.id}', 'delay', parseInt(this.value))"></div>`;
+            }
+
+            panel.innerHTML = content;
+        }
+
+        // --- ACTIONS ---
+        // --- ACTIONS ---
+        async function saveFlow() {
+
+            // Transform connections to backend format
+            // Backend expects: { source, target, label (optional) }
+            const backendConnections = state.connections.map(c => {
+                const connOffset = {
+                    source: c.source,
+                    target: c.target,
+                    sourceHandle: c.sourceHandle,
+                    targetHandle: c.targetHandle,
+                    id: c.id
+                };
+
+                // Map Handle to Label if it's a button ID
+                if (c.sourceHandle && c.sourceHandle !== 'out') {
+                    // Find the button text corresponding to this handle
+                    const node = state.nodes.find(n => n.id === c.source);
+
+                    if (node && node.data.buttons) {
+                        const btn = node.data.buttons.find(b => b.id === c.sourceHandle);
+
+                        if (btn) {
+                            connOffset.label = btn.text;
+                        }
+                    } else if (node && node.data.sections) {
+                        // Handle List Node branching
+                        let allRows = [];
+                        node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const row = allRows.find(r => r.id === c.sourceHandle);
+                        if (row) {
+                            connOffset.label = row.title;
+                        }
+                    }
+                }
+
+                return connOffset;
+            });
+
+            // Extract Trigger from Start Node
+            const startNode = state.nodes.find(n => n.type === 'start');
+            const trigger = startNode ? (startNode.data.trigger || 'manual_v2') : 'manual_v2';
+            let triggerType = startNode ? (startNode.data.triggerType || 'contains') : 'contains';
+            if (triggerType === 'keyword') triggerType = 'contains';
+
+            let scheduleTime = startNode && startNode.data.scheduleTime ? startNode.data.scheduleTime : null;
+            if (scheduleTime && !scheduleTime.includes('Z') && !scheduleTime.includes('+')) {
+                // It's a local time string from the input, convert it to UTC
+                try {
+                    const localDate = new Date(scheduleTime);
+                    if (!isNaN(localDate.getTime())) {
+                        scheduleTime = localDate.toISOString();
+                    }
+                } catch (e) {
+                    console.error("Date conversion error:", e);
+                }
+            }
+
+            const schedule = startNode && startNode.data.triggerType === 'scheduled' ? {
+                nextRun: scheduleTime
+            } : null;
+
+            // Handle Audience Type
+            let audType = startNode && startNode.data.audienceType ? startNode.data.audienceType : 'all';
+            const recPhone = startNode && startNode.data.recipientPhone ? startNode.data.recipientPhone : null;
+
+            // Map frontend types to backend 'specific' type if needed
+            if (audType === 'individual' || audType === 'manual') {
+                audType = 'specific';
+            }
+
+            // SPECIAL CASE: If Individual + Select All, switch type to 'all'
+            if (audType === 'individual' && recPhone === 'all_contacts') {
+                audType = 'all';
+            }
+
+            const isScheduled = startNode && startNode.data.triggerType === 'scheduled';
+            const recipientConfig = isScheduled ? {
+                audienceType: audType,
+                tags: audType === 'tags' ? (startNode.data.tags || '').split(',').map(t => t.trim()).filter(t => t) : [],
+                phones: audType === 'specific' ? (Array.isArray(recPhone) ? recPhone : (recPhone ? [recPhone] : [])) : []
+            } : null;
+
+            // Map Frontend Nodes (flat x,y) to Backend Nodes (nested position)
+            const backendNodes = state.nodes.map(n => ({
+
+                ...n,
+                position: {
+                    x: n.x,
+                    y: n.y
+                }
+            }));
+
+            const flowData = {
+                nodes: backendNodes,
+                connections: backendConnections,
+                trigger: trigger,
+                triggerType: triggerType,
+                schedule: schedule,
+                recipientConfig: recipientConfig,
+                active: true // Always reactivate on save/update
+            };
+
+            console.log('Saving flow data:', flowData);
+
+            let method = 'POST';
+            let url = '/api/advanced-flows';
+
+            if (state.flowId) {
+                // Update existing
+                method = 'PUT';
+
+                url = `/api/advanced-flows/${state.flowId}`;
+                // Keep existing name if not prompted
+            } else {
+                // Create New
+                const name = prompt("Enter Flow Name:", "New Pro Flow");
+                if (!name) return;
+                flowData.name = name;
+            }
+
+            try {
+                const res = await fetch(url, {
+
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(flowData)
+                });
+
+                if (res.ok) {
+                    const savedFlow = await res.json();
+                    state.flowId = savedFlow._id; // Update state with ID
+
+                    // Update URL without reload if it's a new flow
+                    if (method === 'POST') {
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.set('id', savedFlow._id);
+
+                        window.history.pushState({}, '', newUrl);
+                    }
+
+                    alert('Flow Saved Successfully! 🎉');
+                    console.log('Flow saved:', savedFlow);
+                } else {
+                    const err = await res.json();
+                    console.error('Save failed:', err);
+                    alert('Error saving flow: ' + (err.error || 'Unknown server error'));
+                }
+            } catch (e) {
+                console.error('Fetch error during save:', e);
+                alert('Save failed: Network or connection error.');
+            }
+        }
+
+        async function testFlow() {
+            const phone = prompt("Enter phone number for test:");
+            if (!phone) return;
+
+            // Same map logic as save
+            const backendConnections = state.connections.map(c => {
+                const connOffset = {
+                    source: c.source, target: c.target
+                }
+
+                    ;
+
+                if (c.sourceHandle && c.sourceHandle !== 'out') {
+                    // Find the button or list text corresponding to this handle
+                    const node = state.nodes.find(n => n.id === c.source);
+
+                    if (node && node.data.buttons) {
+                        const btn = node.data.buttons.find(b => b.id === c.sourceHandle);
+                        if (btn) connOffset.label = btn.text;
+                    }
+                    if (node && node.data.sections) {
+                        // List
+                        let allRows = [];
+                        node.data.sections.forEach(s => s.rows.forEach(r => allRows.push(r)));
+                        const row = allRows.find(r => r.id === c.sourceHandle);
+                        if (row) connOffset.label = row.title;
+                    }
+                }
+
+                return connOffset;
+            });
+
+            const flowData = {
+                nodes: state.nodes,
+                connections: backendConnections,
+                trigger: 'test'
+            }
+
+                ;
+
+            try {
+                await fetch('/api/test-flow', {
+
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+
+                    ,
+                    body: JSON.stringify({
+                        phone, flowData
+                    })
+                });
+                alert('Test Initiated!');
+            }
+
+            catch (e) {
+                alert('Test failed');
+            }
+        }
+
+        function clearFlow() {
+            if (confirm('Clear all?')) {
+                state.nodes = [];
+                state.connections = [];
+                state.nextNodeId = 1;
+                addNode('start', 300, 100);
+                render();
+            }
+        }
+
+        // --- INTERACTION HANDLERS ---
+
+        // Zoom
+        // Zoom
+        function handleZoom(e) {
+            e.preventDefault();
+            const zoomSensitivity = 0.001;
+            const delta = -e.deltaY * zoomSensitivity;
+            const oldScale = state.scale;
+            const newScale = Math.min(Math.max(0.1, state.scale + delta), 5);
+
+            // Calculate mouse position relative to canvas (unscaled)
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Calculate point on canvas under mouse
+            const canvasX = (mouseX - state.pan.x) / oldScale;
+            const canvasY = (mouseY - state.pan.y) / oldScale;
+
+            // Calculate new pan to keep that point under mouse
+            state.pan.x = mouseX - canvasX * newScale;
+            state.pan.y = mouseY - canvasY * newScale;
+            state.scale = newScale;
+
+            render();
+        }
+
+        // Panning
+        let isPanning = false;
+
+        let panStart = {
+            x: 0, y: 0
+        }
+
+            ;
+
+        function handlePanStart(e) {
+            if (e.target !== container && e.target !== canvas && e.target.id !== 'canvas-setup') return;
+            // Allow panning if clicking on background
+            isPanning = true;
+
+            panStart = {
+                x: e.clientX - state.pan.x, y: e.clientY - state.pan.y
+            }
+
+                ;
+            canvas.classList.add('panning');
+            document.addEventListener('mousemove', handlePanMove);
+            document.addEventListener('mouseup', handlePanEnd);
+        }
+
+        function handlePanMove(e) {
+            if (!isPanning) return;
+            state.pan.x = e.clientX - panStart.x;
+            state.pan.y = e.clientY - panStart.y;
+            render();
+        }
+
+        function handlePanEnd() {
+            isPanning = false;
+            canvas.classList.remove('panning');
+            document.removeEventListener('mousemove', handlePanMove);
+            document.removeEventListener('mouseup', handlePanEnd);
+        }
+
+        // Drag & Drop (Palette)
+        function onDragStart(e, type) {
+            e.dataTransfer.setData('nodeType', type);
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('nodeType');
+            if (!type) return;
+
+            // Calculate drop position relative to canvas
+            // Account for pan and scale
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / state.scale;
+            const y = (e.clientY - rect.top) / state.scale;
+
+            const node = addNode(type, x, y);
+
+            // Auto-select
+            state.selectedNodeId = node.id;
+            showNodeProperties(node);
+            render();
+        }
+
+        function addNode(type, x, y) {
+            const id = 'node_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const node = {
+                id: id,
+                type: type,
+                x: x,
+                y: y,
+                data: {}
+            };
+
+            if (type === 'start') {
+                node.data = { trigger: 'hello', triggerType: 'contains' };
+            } else if (type === 'message') {
+                node.data = { text: 'Hello, how can I help?' };
+            } else if (type === 'buttons') {
+                node.data = {
+                    text: 'Please choose an option:',
+                    buttons: [
+                        { id: 'btn_' + Date.now() + '_1', text: 'Yes', type: 'reply' },
+                        { id: 'btn_' + Date.now() + '_2', text: 'No', type: 'reply' }
+                    ]
+                };
+            } else if (type === 'condition') {
+                node.data = { variable: 'lastResponse', condition: 'equals', value: 'yes' };
+            } else if (type === 'image' || type === 'video' || type === 'audio') {
+                node.data = { url: '', caption: '' };
+            } else if (type === 'document') {
+                node.data = { url: '', caption: '', filename: '' };
+            } else if (type === 'delay') {
+                node.data = { delay: 3 };
+            } else if (type === 'cta') {
+                node.data = {
+                    text: 'Visit our website for more info.',
+                    ctaType: 'url',
+                    url: 'https://example.com',
+                    buttonText: 'Visit Now',
+                    footer: ''
+                };
+            } else if (type === 'list') {
+                node.data = {
+                    text: 'Please select an option from the menu.',
+                    buttonText: 'Show Menu',
+                    header: 'Menu',
+                    sections: [
+                        {
+                            title: 'Main Section',
+                            rows: [
+                                { id: 'row_' + Date.now() + '_1', title: 'Option 1', description: '' },
+                                { id: 'row_' + Date.now() + '_2', title: 'Option 2', description: '' }
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            state.nodes.push(node);
+            render();
+            return node;
+        }
+
+        // Node Dragging
+        let isDraggingNode = false;
+        let dragNodeId = null;
+
+        let dragOffset = {
+            x: 0, y: 0
+        }
+
+            ;
+
+        function handleNodeDown(e, node) {
+            if (e.target.closest('.node-port') || e.target.closest('.bi-x')) return; // Don't drag if clicking port or close
+
+            e.stopPropagation();
+            state.selectedNodeId = node.id;
+
+            // Show Properties
+            showNodeProperties(node);
+
+            isDraggingNode = true;
+            dragNodeId = node.id;
+
+            // Calculate offset from node top-left
+            // node.x is transformed pos. e.clientX is screen.
+            // We need to work in transformed space.
+            // BUT, since we update node.x directly, we can just track delta or relative pos.
+            // Let's rely on standard drag logic:
+
+            // get mouse pos in canvas space
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / state.scale;
+            const mouseY = (e.clientY - rect.top) / state.scale;
+
+            dragOffset = {
+                x: mouseX - node.x,
+                y: mouseY - node.y
+            }
+
+                ;
+
+            document.addEventListener('mousemove', handleNodeMove);
+            document.addEventListener('mouseup', handleNodeUp);
+            render(); // Update selection
+        }
+
+        function handleNodeMove(e) {
+            if (!isDraggingNode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / state.scale;
+            const mouseY = (e.clientY - rect.top) / state.scale;
+
+            const node = state.nodes.find(n => n.id === dragNodeId);
+
+            if (node) {
+                node.x = mouseX - dragOffset.x;
+                node.y = mouseY - dragOffset.y;
+                render();
+            }
+        }
+
+        function handleNodeUp() {
+            isDraggingNode = false;
+            dragNodeId = null;
+            document.removeEventListener('mousemove', handleNodeMove);
+            document.removeEventListener('mouseup', handleNodeUp);
+        }
+
+        // --- HELPERS (Restored) ---
+        function capitalize(s) {
+            if (!s) return '';
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function removeNode(id) {
+            state.nodes = state.nodes.filter(n => n.id !== id);
+            // Also remove connections
+            state.connections = state.connections.filter(c => c.source !== id && c.target !== id);
+
+            if (state.selectedNodeId === id) {
+                state.selectedNodeId = null;
+                showNodeProperties(null);
+            }
+
+            render();
+        }
+
+
+
+        function updateNodeProperty(id, key, value) {
+            const node = state.nodes.find(n => n.id === id);
+
+            if (node) {
+                node.data[key] = value;
+                render(); // Re-render canvas (node preview might change)
+            }
+        }
+
+        function insertVariable(nodeId, variable) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            // Determine target property and element ID based on node type
+            let targetKey = 'text';
+            let elementId = `prop-text-${nodeId}`;
+
+            if (['image', 'video', 'document', 'audio'].includes(node.type)) {
+                targetKey = 'caption';
+                elementId = `prop-caption-${nodeId}`;
+            }
+
+            const el = document.getElementById(elementId);
+            if (el) {
+                const start = el.selectionStart || 0;
+                const end = el.selectionEnd || 0;
+                const text = el.value;
+                const before = text.substring(0, start);
+                const after = text.substring(end);
+
+                const newValue = before + variable + after;
+                el.value = newValue; // Update UI
+                node.data[targetKey] = newValue; // Update Model
+
+                // Update cursor
+                const newPos = start + variable.length;
+                el.setSelectionRange(newPos, newPos);
+                el.focus();
+
+                render(); // Update canvas
+            } else {
+                // Fallback
+                node.data[targetKey] = (node.data[targetKey] || '') + variable;
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        async function handleNodeFileUpload(nodeId, file) {
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                        const node = state.nodes.find(n => n.id === nodeId);
+                        if (node) {
+                            node.data.url = data.url;
+                            // Auto-detect type based on mimetype
+                            if (data.mimetype.startsWith('video/')) {
+                                node.type = 'video';
+                            } else if (data.mimetype.startsWith('image/')) {
+                                node.type = 'image';
+                            } else if (data.mimetype.startsWith('audio/')) {
+                                node.type = 'audio';
+                            } else {
+                                node.type = 'document';
+                                node.data.filename = data.filename;
+                            }
+
+                            // Re-render to reflect changes
+                            render();
+                            showNodeProperties(node);
+                            alert('File uploaded successfully! 🎉');
+                        }
+                    }
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            } catch (e) {
+                console.error("Upload error:", e);
+                alert('An error occurred during upload.');
+            }
+        }
+
+        function updateButton(nodeId, idx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node && node.data.buttons[idx]) {
+                node.data.buttons[idx][key] = value;
+                render(); // Update canvas ports/labels
+            }
+        }
+
+        function addButton(nodeId) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node) {
+                const newId = `btn_${Date.now()}`;
+
+                node.data.buttons.push({
+                    id: newId, text: 'Option', type: 'reply'
+                });
+                showNodeProperties(node); // Update panel
+                render(); // Update canvas
+            }
+        }
+
+        function removeButton(nodeId, idx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+
+            if (node) {
+                const btnId = node.data.buttons[idx].id;
+                node.data.buttons.splice(idx, 1);
+
+                // Remove associated connections
+                state.connections = state.connections.filter(c => c.sourceHandle !== btnId);
+
+                showNodeProperties(node); // Update panel
+                render(); // Update canvas
+            }
+        }
+
+        function updateListSection(nodeId, sIdx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                node.data.sections[sIdx][key] = value;
+                render();
+            }
+        }
+
+        function addListSection(nodeId) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node) {
+                if (!node.data.sections) node.data.sections = [];
+                node.data.sections.push({
+                    title: 'New Section',
+                    rows: [{ id: 'row_' + Date.now(), title: 'New Option', description: '' }]
+                });
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        function removeListSection(nodeId, sIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections) {
+                // Remove connections for all rows in this section
+                const rows = node.data.sections[sIdx].rows;
+                rows.forEach(r => {
+                    state.connections = state.connections.filter(c => c.sourceHandle !== r.id);
+                });
+
+                node.data.sections.splice(sIdx, 1);
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        function updateListRow(nodeId, sIdx, rIdx, key, value) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx] && node.data.sections[sIdx].rows[rIdx]) {
+                node.data.sections[sIdx].rows[rIdx][key] = value;
+                render(); // Update canvas (ports might move if we add/remove - but this corresponds to text)
+            }
+        }
+
+        function addListRow(nodeId, sIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                node.data.sections[sIdx].rows.push({
+                    id: 'row_' + Date.now(),
+                    title: 'New Option',
+                    description: ''
+                });
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        function removeListRow(nodeId, sIdx, rIdx) {
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (node && node.data.sections[sIdx]) {
+                const rowId = node.data.sections[sIdx].rows[rIdx].id;
+                node.data.sections[sIdx].rows.splice(rIdx, 1);
+
+                // Remove connections
+                state.connections = state.connections.filter(c => c.sourceHandle !== rowId);
+
+                showNodeProperties(node);
+                render();
+            }
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedNodeId) {
+                if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+                removeNode(state.selectedNodeId);
+            }
+            if (e.key === 'Escape') {
+                if (isConnecting) {
+                    isConnecting = false;
+                    startPort = null;
+                    render(); // clear drag line
+                } else if (state.selectedNodeId) {
+                    state.selectedNodeId = null;
+                    showNodeProperties(null);
+                    render();
+                }
+            }
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>

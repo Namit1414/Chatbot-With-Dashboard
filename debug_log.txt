@@ -1,0 +1,13 @@
+Logger Initialized - Waiting for button click...
+[2025-12-17T12:25:12.174Z] [Resume] Found session for 1234567890 (Input: 1234567890)
+[2025-12-17T12:25:12.176Z] [Continue] Phone: 1234567890, Msg: Button 2
+[2025-12-17T12:27:34.577Z] [Resume] Found session for 1234567890 (Input: 1234567890)
+[2025-12-17T12:27:34.580Z] [Continue] Phone: 1234567890, Msg: Button 2
+[2025-12-17T12:46:08.188Z] [Resume] Found session for 9998887777 (Input: 9998887777)
+[2025-12-17T12:46:08.191Z] [Continue] Phone: 9998887777, Msg: where
+[2025-12-17T12:47:06.046Z] [Resume] Found session for 9998887777 (Input: 9998887777)
+[2025-12-17T12:47:06.049Z] [Continue] Phone: 9998887777, Msg: where
+[2025-12-17T13:08:14.486Z] [Resume] Found session for 9998887777 (Input: 9998887777)
+[2025-12-17T13:08:14.489Z] [Continue] Phone: 9998887777, Msg: where
+[2025-12-17T13:23:31.088Z] [Resume] Found session for 9998887777 (Input: 9998887777)
+[2025-12-17T13:23:31.091Z] [Continue] Phone: 9998887777, Msg: Where

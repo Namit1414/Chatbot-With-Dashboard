@@ -1,0 +1,10 @@
+{
+  "918909409022@s.whatsapp.net": {
+    "step": "greeting",
+    "vars": {}
+  },
+  "55976946364499@lid": {
+    "step": "order",
+    "vars": {}
+  }
+}
