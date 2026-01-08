@@ -104,7 +104,18 @@ app.use((req, res, next) => {
   res.redirect('/login');
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files with Cache-Control
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d', // Cache for 1 day
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0'); // Don't cache HTML files
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache JS/CSS/Images
+    }
+  }
+}));
+
 
 await connectMongo();
 initScheduler();
@@ -134,40 +145,27 @@ function sanitizePhone(phone) {
 
 app.get("/api/leads", async (req, res) => {
   try {
+    const limit = parseInt(req.query.limit) || 1000; // Default to 1000 if not specified
+    const skip = parseInt(req.query.skip) || 0;
+
     console.time("fetchLeads");
-    // Syncing is now handled periodically or manually via /api/sync
-    // to prevent page load delays.
 
-    const leads = await Lead.find({}).sort({ updatedAt: -1 }).lean();
+    // Use .lean() for better performance as we don't need mongoose documents
+    const leads = await Lead.find({})
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit)
+      .select('phone name age weight height gender place completed unreadMessages updatedAt createdAt remarks health_issues preferred_date preferred_time')
+      .lean();
 
-    // Merge duplicates in-memory for the UI if they exist (e.g. 91890... vs 890...)
-    const mergedMap = new Map();
-    leads.forEach(lead => {
-      const s = sanitizePhone(lead.phone);
-      if (!mergedMap.has(s)) {
-        mergedMap.set(s, lead);
-      } else {
-        const existing = mergedMap.get(s);
-        // Combine unread counts
-        existing.unreadMessages = (existing.unreadMessages || 0) + (lead.unreadMessages || 0);
-        // Prefer the version with more complete data or more recent update
-        if (new Date(lead.updatedAt) > new Date(existing.updatedAt)) {
-          Object.assign(existing, lead, {
-            unreadMessages: existing.unreadMessages,
-            phone: s // Use normalized phone
-          });
-        }
-      }
-    });
-
-    const result = Array.from(mergedMap.values());
     console.timeEnd("fetchLeads");
-    res.json(result);
+    res.json(leads);
   } catch (error) {
     console.error("❌ Error in GET /api/leads:", error);
     res.status(500).json({ error: "Failed to fetch leads", message: error.message });
   }
 });
+
 
 app.post("/api/sync", async (req, res) => {
   try {
@@ -276,36 +274,38 @@ app.delete("/api/leads/id/:id", async (req, res) => {
 
 app.get("/api/messages/:phone", async (req, res) => {
   const phone = sanitizePhone(req.params.phone);
-  const suffix = phone.slice(-10);
-  const limit = parseInt(req.query.limit) || 0;
+  const limit = parseInt(req.query.limit) || 50;
+  const before = req.query.before;
 
-  // Fetch messages that match the full phone or the last 10 digits (fallback for inconsistently saved numbers)
-  let query = Message.find({
+  let queryFilter = {
     $or: [
       { from: phone },
-      { to: phone },
-      { from: { $regex: suffix + "$" } },
-      { to: { $regex: suffix + "$" } }
+      { to: phone }
     ]
-  });
+  };
 
-  if (limit > 0) {
-    // Get latest messages and reverse them to display in chronological order
-    const latestMessages = await Message.find({
-      $or: [
-        { from: phone },
-        { to: phone },
-        { from: { $regex: suffix + "$" } },
-        { to: { $regex: suffix + "$" } }
-      ]
-    }).sort({ timestamp: -1 }).limit(limit);
-
-    return res.json(latestMessages.reverse());
+  if (before && before !== 'undefined' && before !== 'null') {
+    const beforeDate = new Date(before);
+    if (!isNaN(beforeDate.getTime())) {
+      queryFilter.timestamp = { $lt: beforeDate };
+    }
   }
 
-  const messages = await query.sort({ timestamp: 1 });
-  res.json(messages);
+
+  try {
+    const messages = await Message.find(queryFilter)
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+
+    res.json(messages.reverse());
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
+
+
 
 // Flow APIs
 app.get("/api/flows", async (req, res) => {

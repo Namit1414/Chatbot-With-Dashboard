@@ -212,7 +212,12 @@ export async function syncLeadsFromSheet(LeadModel) {
     const rows = await sheet.getRows();
     console.log(`[GoogleSheet] Syncing ${rows.length} rows to MongoDB...`);
 
+    // Fetch all existing leads in one go to check for changes if needed
+    // However, for simplicity and ensuring sheet is source of truth, we upsert.
+    // To optimize, we can use bulkWrite
+    const bulkOps = [];
     let syncCount = 0;
+
     for (const row of rows) {
       let phone = _normalizePhone(row.get('phone'));
       if (!phone) continue;
@@ -233,20 +238,18 @@ export async function syncLeadsFromSheet(LeadModel) {
         updatedAt: new Date()
       };
 
-      const existingLead = await LeadModel.findOne({ phone: phone });
-
-      // Only update Mongo if the Sheet has newer or missing data
-      // For simplicity, we'll check if the Lead exists and if it was updated recently
-      // But usually, if we sync from sheet, we treat sheet as intentional human edit.
-      // However, if the user edited in dashboard recently, we should be careful.
-      // For now, let's keep it simple: always sync IF not recently updated in Mongo via webhook/dashboard (e.g. within last 1 min)
-
-      await LeadModel.findOneAndUpdate(
-        { phone: phone },
-        { $set: leadData },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      bulkOps.push({
+        updateOne: {
+          filter: { phone: phone },
+          update: { $set: leadData },
+          upsert: true
+        }
+      });
       syncCount++;
+    }
+
+    if (bulkOps.length > 0) {
+      await LeadModel.bulkWrite(bulkOps);
     }
 
     console.log(`✅ [GoogleSheet] Successfully synced ${syncCount} leads to MongoDB`);
@@ -256,6 +259,7 @@ export async function syncLeadsFromSheet(LeadModel) {
     throw error;
   }
 }
+
 
 export async function syncLeadsToSheet(LeadModel) {
   try {
@@ -277,6 +281,13 @@ export async function syncLeadsToSheet(LeadModel) {
 
     const sheet = await getSheet();
     const rows = await sheet.getRows();
+
+    // Optimization: Pre-map rows by normalized phone for O(1) lookup
+    const rowMap = new Map();
+    rows.forEach(row => {
+      const p = _normalizeForMatch(row.get('phone'));
+      if (p) rowMap.set(p, row);
+    });
 
     let updateCount = 0;
     let addCount = 0;
@@ -303,9 +314,10 @@ export async function syncLeadsToSheet(LeadModel) {
         createdAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : new Date().toISOString()
       };
 
-      let existingRow = rows.find(row => _normalizeForMatch(row.get('phone')) === searchTarget);
+      let existingRow = rowMap.get(searchTarget);
 
       if (existingRow) {
+
         // Dirty check: Compare values before saving
         let hasChanges = false;
         for (const [key, value] of Object.entries(rowData)) {
