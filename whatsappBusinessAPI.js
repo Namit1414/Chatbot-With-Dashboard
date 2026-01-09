@@ -323,7 +323,7 @@ export async function getWhatsAppTemplates(token, wabaId) {
 
         console.log('[WhatsAppAPI] Fetching templates for WABA ID:', wabaId);
 
-        const templatesResponse = await fetch(`https://graph.facebook.com/v19.0/${wabaId}/message_templates?status=APPROVED&limit=100`, {
+        const templatesResponse = await fetch(`https://graph.facebook.com/v19.0/${wabaId}/message_templates?limit=100`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 

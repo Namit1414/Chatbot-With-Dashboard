@@ -76,6 +76,11 @@
                     <i class="bi bi-megaphone"></i> <span>Campaigns</span>
                 </a>
             </li>
+            <li>
+                <a href="#" class="nav-link" onclick="showContent('templates')" data-title="Templates">
+                    <i class="bi bi-file-earmark-text"></i> <span>Templates</span>
+                </a>
+            </li>
 
             <li class="mt-auto">
                 <a href="/logout" class="nav-link text-danger" data-title="Logout">
@@ -508,6 +513,21 @@
                                 </div>
                             </div>
 
+                            <!-- Template Variables Section (Hidden by default) -->
+                            <div class="mb-4" id="template-variables-container" style="display: none;">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <div class="bg-primary bg-opacity-10 p-1 rounded">
+                                        <i class="bi bi-braces text-primary"></i>
+                                    </div>
+                                    <label class="form-label fw-bold mb-0">Personalize Variables</label>
+                                </div>
+                                <div id="template-variables-list"
+                                    class="p-3 rounded-4 bg-dark bg-opacity-25 border border-primary border-opacity-10">
+                                    <p class="text-secondary small mb-0">Selected template has no dynamic variables.</p>
+                                </div>
+                            </div>
+
+
                             <!-- Message Preview -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Preview</label>
@@ -638,6 +658,7 @@
             </div>
         </div>
 
+
         <!-- Campaigns -->
         <div id="campaigns" class="page-content" style="display: none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -720,7 +741,48 @@
             </div>
         </div>
 
+        <!-- Templates Section -->
+        <div id="templates" class="page-content-fluid" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-2">WhatsApp Templates</h2>
+                    <p class="text-secondary mb-0">Create and manage message templates for Meta approval</p>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4 shadow" data-bs-toggle="modal"
+                    data-bs-target="#createTemplateModal">
+                    <i class="bi bi-plus-lg me-2"></i>Create Template
+                </button>
+            </div>
+
+            <div class="card card-table shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+                <div class="card-header bg-transparent border-bottom p-4">
+                    <h5 class="mb-0 fw-bold">Your Templates</h5>
+                    <p class="text-secondary small mb-0">Templates submitted to Meta for approval</p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-body-tertiary">
+                                <tr>
+                                    <th class="ps-4">Template Name</th>
+                                    <th>Category</th>
+                                    <th>Language</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="templates-list">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
+
 
     <!-- Modals moved to body root for proper stacking context -->
 
@@ -1069,23 +1131,6 @@
         </div>
     </div>
 
-    <!-- Templates Modal -->
-    <div class="modal fade" id="templatesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Message Templates</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3" id="templates-list">
-                        <!-- Templates will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
 
     <!-- New User Modal -->
     <div class="modal fade" id="newUserModal" tabindex="-1">
@@ -1125,9 +1170,201 @@
         </div>
     </div>
 
+    <!-- Create Template Modal -->
+    <div class="modal fade" id="createTemplateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="background: var(--surface-bg); border-radius: 20px;">
+                <div class="modal-header border-bottom border-light border-opacity-10 p-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-plus me-2 text-primary"></i> Create
+                        WhatsApp Template
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="create-template-form">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Template Name</label>
+                            <input type="text" class="form-control bg-dark border-0 text-white p-3" id="template-name"
+                                placeholder="e.g., welcome_message" pattern="[a-z0-9_]+" required>
+                            <small class="text-muted">Only lowercase letters, numbers, and underscores</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Category</label>
+                            <select class="form-select bg-dark border-0 text-white p-3" id="template-category" required>
+                                <option value="">Select category...</option>
+                                <option value="MARKETING">Marketing</option>
+                                <option value="UTILITY">Utility</option>
+                                <option value="AUTHENTICATION">Authentication</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Language</label>
+                            <select class="form-select bg-dark border-0 text-white p-3" id="template-language" required>
+                                <option value="en">English</option>
+                                <option value="en_US">English (US)</option>
+                                <option value="hi">Hindi</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Header
+                                (Optional)</label>
+                            <select class="form-select bg-dark border-0 text-white p-3 mb-2" id="template-header-type">
+                                <option value="NONE">No Header</option>
+                                <option value="TEXT">Text Header</option>
+                            </select>
+                            <input type="text" class="form-control bg-dark border-0 text-white p-3"
+                                id="template-header-text" placeholder="Header text" style="display: none;">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Body Text</label>
+                            <textarea class="form-control bg-dark border-0 text-white p-3" id="template-body" rows="4"
+                                placeholder="Hello {{1}}, your appointment is on {{2}}..." required></textarea>
+                            <small class="text-muted">Use {{1}}, {{2}}, etc. for dynamic variables</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Footer
+                                (Optional)</label>
+                            <input type="text" class="form-control bg-dark border-0 text-white p-3" id="template-footer"
+                                placeholder="e.g., Reply STOP to unsubscribe">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Buttons
+                                (Optional)</label>
+                            <div id="template-buttons-container">
+                                <!-- Buttons will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2"
+                                onclick="addTemplateButton()">
+                                <i class="bi bi-plus-lg me-1"></i> Add Button
+                            </button>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill shadow">
+                            <i class="bi bi-send-fill me-2"></i> Submit to Meta for Review
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Modal for Bulk Messaging (Premium Redesign) -->
+    <div class="modal fade" id="templatesModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"
+        style="z-index: 1060;">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg overflow-hidden">
+                <!-- Modal Header with Search -->
+                <div class="modal-header border-bottom border-light border-opacity-10 p-4 d-block">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 p-2 rounded-3">
+                                <i class="bi bi-whatsapp text-primary fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-bold mb-0">Select WhatsApp Template</h5>
+                                <p class="text-secondary small mb-0">Browse and search your approved Meta templates</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="search-box-container position-relative">
+                        <i
+                            class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                        <input type="text" id="template-search-input"
+                            class="form-control bg-dark bg-opacity-50 border-0 text-white ps-5 py-3 rounded-4 shadow-none"
+                            placeholder="Search templates by name or content..." oninput="filterTemplatesInModal()">
+                        <div class="template-stats-mini position-absolute top-50 end-0 translate-middle-y me-3">
+                            <span class="badge bg-primary rounded-pill px-3" id="template-count-badge">0
+                                Templates</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Body with Grid -->
+                <div class="modal-body p-4 bg-black bg-opacity-20">
+                    <div class="row g-4" id="bulk-templates-list">
+                        <!-- Templates will be loaded here dynamically -->
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-top border-light border-opacity-10 p-3 bg-dark bg-opacity-30">
+                    <div class="w-100 d-flex justify-content-between align-items-center">
+                        <small class="text-secondary"><i class="bi bi-info-circle me-1"></i> Only <b>APPROVED</b>
+                            templates can be selected for messaging.</small>
+                        <button type="button" class="btn btn-secondary px-4 rounded-pill"
+                            data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Template Details Modal -->
+    <div class="modal fade" id="viewTemplateModal" tabindex="-1" style="z-index: 1070;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom border-light border-opacity-10 p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded-3">
+                            <i class="bi bi-eye text-primary fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="view-template-name">Template Preview</h5>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle mt-1"
+                                id="view-template-status" style="font-size: 0.65rem;">APPROVED</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small text-uppercase fw-bold">Language &
+                            Category</label>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-dark border border-light border-opacity-10 px-3 py-2"
+                                id="view-template-lang">English</span>
+                            <span class="badge bg-dark border border-light border-opacity-10 px-3 py-2"
+                                id="view-template-cat">Marketing</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small text-uppercase fw-bold">Message Content</label>
+                        <div class="p-3 rounded-4 bg-dark bg-opacity-50 border border-light border-opacity-10"
+                            style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: rgba(255,255,255,0.9);"
+                            id="view-template-body">
+                            <!-- Template body here -->
+                        </div>
+                    </div>
+
+                    <div id="view-template-footer-container" class="mb-4" style="display: none;">
+                        <label class="form-label text-secondary small text-uppercase fw-bold">Footer</label>
+                        <p class="text-secondary small mb-0 ps-1" id="view-template-footer"></p>
+                    </div>
+
+                    <div id="view-template-buttons-container" style="display: none;">
+                        <label class="form-label text-secondary small text-uppercase fw-bold mb-2">Buttons</label>
+                        <div class="d-flex flex-wrap gap-2" id="view-template-buttons-list">
+                            <!-- Buttons here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-light border-opacity-10 p-3">
+                    <button type="button" class="btn btn-secondary w-100 rounded-pill" data-bs-dismiss="modal">Close
+                        Preview</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/dashboard.js?v=2.0"></script>
+    <script src="/js/templates.js"></script>
 </body>
 
 </html>

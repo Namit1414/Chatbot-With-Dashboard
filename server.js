@@ -694,6 +694,95 @@ app.get("/api/templates", async (req, res) => {
   }
 });
 
+// Create new template and submit to Meta
+app.post("/api/templates", async (req, res) => {
+  if (req.session.role === 'agent') return res.status(403).json({ error: 'Agents cannot create templates' });
+
+  try {
+    const { name, category, language, header, body, footer, buttons } = req.body;
+    const wabaId = process.env.WABA_ID;
+    const token = process.env.WHATSAPP_TOKEN;
+
+    if (!wabaId || !token) {
+      return res.status(500).json({ error: 'WABA_ID or WHATSAPP_TOKEN not configured' });
+    }
+
+    // Build components array
+    const components = [];
+
+    // Add header if provided
+    if (header && header.type === 'TEXT' && header.text) {
+      components.push({
+        type: 'HEADER',
+        format: 'TEXT',
+        text: header.text
+      });
+    }
+
+    // Add body (required)
+    components.push({
+      type: 'BODY',
+      text: body
+    });
+
+    // Add footer if provided
+    if (footer) {
+      components.push({
+        type: 'FOOTER',
+        text: footer
+      });
+    }
+
+    // Add buttons if provided
+    if (buttons && buttons.length > 0) {
+      components.push({
+        type: 'BUTTONS',
+        buttons: buttons.map(btn => ({
+          type: btn.type || 'QUICK_REPLY',
+          text: btn.text
+        }))
+      });
+    }
+
+    // Submit to Meta
+    const url = `https://graph.facebook.com/v21.0/${wabaId}/message_templates`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: name,
+        category: category,
+        language: language,
+        components: components
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Meta API Error:', data);
+      return res.status(response.status).json({
+        error: 'Failed to create template',
+        details: data.error?.message || 'Unknown error from Meta API'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Template submitted to Meta for review',
+      templateId: data.id,
+      status: data.status || 'PENDING'
+    });
+
+  } catch (error) {
+    console.error('Error creating template:', error);
+    res.status(500).json({ error: 'Failed to create template', details: error.message });
+  }
+});
+
 // Schedule bulk message
 app.post("/api/bulk-messages/schedule", async (req, res) => {
   try {

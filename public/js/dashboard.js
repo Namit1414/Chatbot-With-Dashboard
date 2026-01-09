@@ -17,7 +17,8 @@ const dataCache = {
     team: false,
     flows: false,
     advancedFlows: false,
-    campaigns: false
+    campaigns: false,
+    templates: false
 };
 
 async function checkUserSession() {
@@ -148,6 +149,12 @@ function showContent(contentId) {
 
         if (contentId === 'team' && !dataCache.team) {
             fetchTeam().then(() => dataCache.team = true);
+        }
+
+        if (contentId === 'templates' && !dataCache.templates) {
+            if (typeof loadTemplates === 'function') {
+                loadTemplates().then(() => dataCache.templates = true);
+            }
         }
     }
 
@@ -1529,7 +1536,66 @@ document.getElementById('bulk-message-text').addEventListener('input', function 
             if (window.toast) window.toast.info('Switched to Text Mode', 'Custom formatting will be sent as standard text.');
         }
     }
+    detectTemplateVariables(this.value);
 });
+
+function detectTemplateVariables(text) {
+    const varsContainer = document.getElementById('template-variables-container');
+    const varsList = document.getElementById('template-variables-list');
+
+    if (!varsContainer || !varsList) return;
+
+    const matches = text.match(/{{(\d+)}}/g) || [];
+    const uniqueMatches = [...new Set(matches)].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+
+    if (uniqueMatches.length > 0) {
+        // If we opened this container for the first time or the matches changed
+        const currentInputs = varsList.querySelectorAll('.template-var-input');
+        const currentNums = Array.from(currentInputs).map(i => `{{${i.getAttribute('data-var-num')}}}`);
+
+        if (JSON.stringify(uniqueMatches) !== JSON.stringify(currentNums)) {
+            varsContainer.style.display = 'block';
+            varsList.innerHTML = '';
+
+            uniqueMatches.forEach(match => {
+                const num = match.replace(/\D/g, '');
+                const div = document.createElement('div');
+                div.className = 'mb-4 pb-4 border-bottom border-light border-opacity-10';
+
+                let labelText = `Variable {{${num}}}`;
+                let defaultValue = (num === '1') ? '{name}' : '';
+
+                div.innerHTML = `
+                    <div class="d-flex flex-column gap-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label small fw-bold text-secondary mb-0">${labelText}</label>
+                            <span class="text-primary" style="font-size: 0.6rem;">Click tags to insert:</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{name}')" title="Lead Name">+{name}</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{phone}')" title="Phone Number">+{phone}</button>
+                            <button type="button" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{preferred_date}')" title="Appt Date">+{date}</button>
+                            <button type="button" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{preferred_time}')" title="Appt Time">+{time}</button>
+                            <button type="button" class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{place}')" title="Location">+{branch}</button>
+                            <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{weight}')" title="Weight">+{weight}</button>
+                            <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{height}')" title="Height">+{height}</button>
+                            <button type="button" class="btn btn-xs btn-outline-dark py-0 px-2" style="font-size: 0.6rem;" onclick="insertTagIntoVar(${num}, '{age}')" title="Age">+{age}</button>
+                        </div>
+                    </div>
+                    <input type="text" class="form-control form-control-sm bg-dark bg-opacity-25 border-light border-opacity-10 text-white template-var-input shadow-none" 
+                           id="var-input-${num}" data-var-num="${num}" value="${defaultValue}" placeholder="Value for ${match}" oninput="updatePreview()">
+                `;
+                varsList.appendChild(div);
+            });
+        }
+    } else if (!selectedTemplate) {
+        varsContainer.style.display = 'none';
+        varsList.innerHTML = '<p class="text-secondary small mb-0">Selected template has no dynamic variables.</p>';
+    }
+
+    // Always trigger a preview refresh after detection logic
+    updatePreview();
+}
 
 function updatePreview() {
     const text = document.getElementById('bulk-message-text').value;
@@ -1542,72 +1608,193 @@ function updatePreview() {
     }
 
     let previewText = text;
-    if (personalize) {
-        previewText = text
+
+    // Helper: Replace personalization tags with sample data
+    function applyPersonalization(rawText) {
+        return rawText
             .replace(/{name}/g, '<strong style="color: #00a884;">Atika</strong>')
+            .replace(/{phone}/g, '<strong style="color: #3b82f6;">+91 98765 43210</strong>')
             .replace(/{preferred_date}/g, '<strong style="color: #00a884;">Tomorrow</strong>')
-            .replace(/{preferred_time}/g, '<strong style="color: #00a884;">10:00 AM - 12:00 PM</strong>');
+            .replace(/{preferred_time}/g, '<strong style="color: #00a884;">10:00 AM - 12:00 PM</strong>')
+            .replace(/{place}/g, '<strong style="color: #ef4444;">Mumbai Office</strong>')
+            .replace(/{weight}/g, '<strong>75</strong>')
+            .replace(/{height}/g, '<strong>170</strong>')
+            .replace(/{age}/g, '<strong>28</strong>');
     }
+
+    // Apply personalization tags to the overall message first
+    if (personalize) {
+        previewText = applyPersonalization(previewText);
+    }
+
+    // Apply dynamic variables {{1}}, {{2}} from inputs
+    const varInputs = document.querySelectorAll('.template-var-input');
+    varInputs.forEach(input => {
+        const num = input.getAttribute('data-var-num');
+        let val = input.value || `<span class="text-secondary">({{${num}}})</span>`;
+
+        // Ensure any tags (like {name} or {preferred_date}) inside the variable box are also resolved
+        if (personalize) {
+            val = applyPersonalization(val);
+        }
+
+        const regex = new RegExp(`\\{\\{${num}\\}\\}`, 'g');
+        previewText = previewText.replace(regex, `<strong class="text-primary">${val}</strong>`);
+    });
 
     previewEl.innerHTML = previewText.replace(/\n/g, '<br>');
 }
 
+function insertTagIntoVar(num, tag) {
+    const input = document.getElementById(`var-input-${num}`);
+    if (input) {
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const text = input.value;
+        input.value = text.substring(0, start) + tag + text.substring(end);
+        input.focus();
+        input.setSelectionRange(start + tag.length, start + tag.length);
+        updatePreview();
+    }
+}
+
+// Make globally accessible
+window.insertTagIntoVar = insertTagIntoVar;
+
+let allTemplates = []; // Store templates globally for filtering
+
 async function showBulkTemplates() {
-    const container = document.getElementById('templates-list');
-    container.innerHTML = '<div class="text-center w-100 py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading Meta templates...</p></div>';
+    const container = document.getElementById('bulk-templates-list');
+    const badge = document.getElementById('template-count-badge');
+    const searchInput = document.getElementById('template-search-input');
+
+    // Clear search
+    if (searchInput) searchInput.value = '';
+
+    container.innerHTML = `
+        <div class="text-center w-100 py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-3 text-secondary">Fetching premium templates from Meta...</p>
+        </div>
+    `;
 
     try {
         const response = await fetch('/api/templates');
         if (!response.ok) throw new Error('Failed to fetch templates');
 
         const data = await response.json();
-        const templates = data.data || [];
+        allTemplates = data.data || [];
 
-        container.innerHTML = '';
+        if (badge) badge.innerText = `${allTemplates.length} Templates`;
 
-        if (templates.length === 0) {
-            container.innerHTML = '<div class="text-center w-100 py-4"><p>No approved templates found in your WhatsApp Business Account.</p></div>';
-            return;
-        }
-
-        templates.forEach((template, index) => {
-            const bodyComponent = template.components.find(c => c.type === 'BODY') || {};
-            const bodyText = bodyComponent.text || 'No text content';
-
-            const card = document.createElement('div');
-            card.className = 'col-md-6';
-            // Escape template data to safe JSON string for the onclick handler
-            const templateJson = JSON.stringify(template).replace(/'/g, "\\'");
-
-            card.innerHTML = `
-                        <div class="card h-100 border hover-shadow bg-body-tertiary" style="cursor: pointer; transition: all 0.2s;">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="card-title text-primary mb-0">
-                                        <i class="bi bi-whatsapp me-1"></i> ${template.name}
-                                    </h6>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">${template.status}</span>
-                                </div>
-                                <div class="mb-2">
-                                     <small class="text-secondary me-2"><i class="bi bi-translate"></i> ${template.language}</small>
-                                     <small class="text-secondary"><i class="bi bi-grid"></i> ${template.category}</small>
-                                </div>
-                                <p class="card-text small text-muted text-truncate-3" style="white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${bodyText}</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <button class="btn btn-sm btn-outline-primary w-100" onclick='useTemplate(${templateJson})'>
-                                    <i class="bi bi-check-circle me-1"></i> Select Template
-                                </button>
-                            </div>
-                        </div>
-                    `;
-            container.appendChild(card);
-        });
+        renderTemplatesInModal(allTemplates);
     } catch (error) {
         console.error('Error fetching templates:', error);
-        container.innerHTML = `<div class="text-center w-100 py-4 text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to load templates: ${error.message}</div>`;
+        container.innerHTML = `
+            <div class="text-center w-100 py-5 text-danger">
+                <i class="bi bi-exclamation-triangle fs-1"></i>
+                <h5 class="mt-3">Failed to load templates</h5>
+                <p class="small text-secondary">${error.message}</p>
+                <button class="btn btn-outline-danger btn-sm mt-3" onclick="showBulkTemplates()">Try Again</button>
+            </div>
+        `;
     }
 }
+
+function renderTemplatesInModal(templates) {
+    const container = document.getElementById('bulk-templates-list');
+    container.innerHTML = '';
+
+    if (templates.length === 0) {
+        container.innerHTML = `
+            <div class="text-center w-100 py-5">
+                <i class="bi bi-search fs-1 text-secondary opacity-25"></i>
+                <p class="mt-3 text-secondary">No templates found matching your search.</p>
+            </div>
+        `;
+        return;
+    }
+
+    templates.forEach((template, index) => {
+        const bodyComponent = template.components.find(c => c.type === 'BODY') || {};
+        const bodyText = bodyComponent.text || 'No text content';
+        const status = (template.status || '').toUpperCase();
+        const isApproved = status === 'APPROVED';
+
+        // Determine badge color and icon
+        let statusBadgeClass = 'bg-success-subtle text-success border-success-subtle';
+        let statusIcon = 'bi-check-circle-fill';
+
+        if (['PENDING', 'IN_REVIEW', 'PENDING_APPROVAL'].includes(status)) {
+            statusBadgeClass = 'bg-warning-subtle text-warning border-warning-subtle';
+            statusIcon = 'bi-hourglass-split';
+        } else if (['REJECTED', 'DISABLED', 'PAUSED'].includes(status)) {
+            statusBadgeClass = 'bg-danger-subtle text-danger border-danger-subtle';
+            statusIcon = 'bi-x-circle-fill';
+        }
+
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4 animate-fade-in';
+        col.style.animationDelay = `${index * 0.05}s`;
+
+        col.innerHTML = `
+            <div class="template-card-modern h-100">
+                <div class="card-body">
+                    <div class="template-header-row">
+                        <div class="template-icon-header">
+                            <i class="bi bi-whatsapp"></i>
+                        </div>
+                        <span class="badge ${statusBadgeClass} border rounded-pill px-2 py-1" style="font-size: 0.65rem;">
+                            <i class="bi ${statusIcon} me-1"></i> ${template.status}
+                        </span>
+                    </div>
+
+                    <h6 class="template-name-title" title="${template.name}">${template.name}</h6>
+                    
+                    <div class="template-meta-info">
+                        <span><i class="bi bi-translate"></i> ${template.language}</span>
+                        <span><i class="bi bi-tag"></i> ${template.category}</span>
+                    </div>
+
+                    <div class="template-content-preview">
+                        ${bodyText}
+                    </div>
+                </div>
+
+                <div class="template-footer-actions">
+                    <button class="btn w-100 select-template-btn-modern ${isApproved ? '' : 'disabled'}" 
+                            ${isApproved ? '' : 'disabled'}>
+                        ${isApproved ? '<i class="bi bi-check2-circle"></i> Use Template' : '<i class="bi bi-lock-fill"></i> Locked'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        if (isApproved) {
+            const btn = col.querySelector('.select-template-btn-modern');
+            btn.addEventListener('click', () => {
+                useTemplate(template);
+                bootstrap.Modal.getInstance(document.getElementById('templatesModal')).hide();
+            });
+        }
+
+        container.appendChild(col);
+    });
+}
+
+function filterTemplatesInModal() {
+    const query = document.getElementById('template-search-input').value.toLowerCase();
+    const filtered = allTemplates.filter(t => {
+        const body = t.components.find(c => c.type === 'BODY')?.text || '';
+        return t.name.toLowerCase().includes(query) || body.toLowerCase().includes(query);
+    });
+
+    const badge = document.getElementById('template-count-badge');
+    if (badge) badge.innerText = `${filtered.length} Templates`;
+
+    renderTemplatesInModal(filtered);
+}
+
 
 function useTemplate(template) {
     console.log("Selected template:", template);
@@ -1635,9 +1822,76 @@ function useTemplate(template) {
     updateCharCount();
     updatePreview();
 
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('templatesModal'));
-    modal.hide();
+    // Close modal with error handling
+    try {
+        const modalElement = document.getElementById('templatesModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
+    } catch (error) {
+        console.error('Error closing modal:', error);
+    }
+
+    // --- Dynamic Variables Logic ---
+    const varsContainer = document.getElementById('template-variables-container');
+    const varsList = document.getElementById('template-variables-list');
+
+    if (varsContainer && varsList) {
+        // Regex to find all {{n}} placeholders
+        const matches = bodyText.match(/{{(\d+)}}/g) || [];
+        // Deduplicate placeholders (e.g. if {{1}} appears twice)
+        const uniqueMatches = [...new Set(matches)];
+
+        console.log(`[TemplatePicker] Found ${uniqueMatches.length} unique variables in: "${bodyText.substring(0, 30)}..."`);
+
+        if (uniqueMatches.length > 0) {
+            varsContainer.style.display = 'block';
+            varsList.innerHTML = '';
+
+            // Sort them numerically for consistent UI
+            uniqueMatches.sort((a, b) => {
+                const numA = parseInt(a.replace(/\D/g, ''));
+                const numB = parseInt(b.replace(/\D/g, ''));
+                return numA - numB;
+            });
+
+            uniqueMatches.forEach(match => {
+                const num = match.replace(/\D/g, '');
+                const div = document.createElement('div');
+                div.className = 'mb-3 pb-3 border-bottom border-light border-opacity-10';
+
+                let labelText = `Variable {{${num}}}`;
+                let placeholder = `Enter value for {{${num}}}`;
+                let defaultValue = '';
+                let hint = '';
+
+                if (num === '1') {
+                    labelText = `Variable {{1}} (Primary)`;
+                    placeholder = 'e.g. Lead Name';
+                    defaultValue = '{name}';
+                    hint = 'Using <b>{name}</b> pulls the lead\'s name automatically.';
+                } else if (num === '2') {
+                    labelText = `Variable {{2}} (Secondary)`;
+                    placeholder = 'e.g. Appointment date/time';
+                }
+
+                div.innerHTML = `
+                    <label class="form-label small fw-bold text-secondary d-flex justify-content-between align-items-center">
+                        <span>${labelText}</span>
+                        ${hint ? `<span class="badge bg-primary bg-opacity-10 text-primary fw-normal" style="font-size: 0.65rem;">${hint}</span>` : ''}
+                    </label>
+                    <input type="text" class="form-control form-control-sm bg-dark bg-opacity-25 border-light border-opacity-10 text-white template-var-input" 
+                           data-var-num="${num}" value="${defaultValue}" placeholder="${placeholder}">
+                `;
+                varsList.appendChild(div);
+            });
+
+            // Auto-scroll to variables section for better visibility
+            varsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            console.log('[TemplatePicker] No variables found in this template.');
+            varsContainer.style.display = 'none';
+        }
+    }
 
     // Notify user
     if (window.toast) window.toast.success('Template Selected', `Using template: ${template.name}`);
@@ -1648,6 +1902,9 @@ function resetBulkForm() {
     document.getElementById('bulk-message-text').value = '';
     document.getElementById('bulk-message-text').style.borderColor = '';
     document.getElementById('bulk-message-text').style.backgroundColor = '';
+
+    const varsContainer = document.getElementById('template-variables-container');
+    if (varsContainer) varsContainer.style.display = 'none';
 
     const label = document.querySelector('label[for="bulk-message-text"]'); // We need a more robust selector if label text changes
     // Revert label if needed or just remove badge. 
@@ -1826,27 +2083,30 @@ async function sendBulkMessages() {
                 const components = [];
                 const bodyParams = [];
 
-                // Heuristic: Map {{1}} to Name
-                if (bodyText.includes('{{1}}')) {
+                // Get manual variables from UI
+                const varInputs = document.querySelectorAll('.template-var-input');
+                const manualVars = {};
+                varInputs.forEach(input => {
+                    manualVars[input.getAttribute('data-var-num')] = input.value;
+                });
+
+                // Get all placeholders {{1}}, {{2}}, etc.
+                const matches = bodyText.match(/{{(\d+)}}/g) || [];
+
+                matches.forEach(match => {
+                    const num = match.replace(/[{}]/g, '');
+                    let val = manualVars[num] || "-";
+
+                    // Replace personalization tags in the variable value itself
+                    if (val.includes('{name}')) val = val.replace(/{name}/g, lead.name || "Customer");
+                    if (val.includes('{preferred_date}')) val = val.replace(/{preferred_date}/g, lead.preferred_date || "soon");
+                    if (val.includes('{preferred_time}')) val = val.replace(/{preferred_time}/g, lead.preferred_time || "your requested time");
+
                     bodyParams.push({
                         type: "text",
-                        text: lead.name || "Valued Customer"
+                        text: val
                     });
-                }
-
-                // Handle additional placeholders simplisticly to avoid errors
-                const matches = bodyText.match(/{{(\d+)}}/g);
-                if (matches && matches.length > bodyParams.length) {
-                    const diff = matches.length - bodyParams.length;
-                    for (let i = 0; i < diff; i++) {
-                        // Map {{2}} to preferred_date if available, else dash
-                        if (i === 0 && matches.length >= 2) {
-                            bodyParams.push({ type: "text", text: lead.preferred_date || "soon" });
-                        } else {
-                            bodyParams.push({ type: "text", text: "-" });
-                        }
-                    }
-                }
+                });
 
                 if (bodyParams.length > 0) {
                     components.push({
