@@ -971,34 +971,56 @@ app.get("/webhook", (req, res) => {
 
 app.post("/webhook", async (req, res) => {
   try {
-    const changes = req.body.entry?.[0]?.changes?.[0]?.value;
+    const value = req.body.entry?.[0]?.changes?.[0]?.value;
 
-    if (!changes) return res.sendStatus(200);
+    if (!value) return res.sendStatus(200);
 
-    // Handle Status Updates (sent, delivered, read, failed)
-    if (changes.statuses && changes.statuses[0]) {
-      const statusUpdate = changes.statuses[0];
+    // 1. Handle Status Updates (sent, delivered, read, failed)
+    if (value.statuses && value.statuses[0]) {
+      const statusUpdate = value.statuses[0];
+      const messageId = statusUpdate.id;
       const status = statusUpdate.status;
-      const id = statusUpdate.id;
       const recipient = statusUpdate.recipient_id;
 
-      console.log(`[WhatsAppStatus] Msg ${id} to ${recipient}: ${status}`);
+      console.log(`[WhatsAppStatus] Msg ${messageId} to ${recipient}: ${status}`);
 
+      // Emit to UI
       if (status === 'failed') {
         const errors = statusUpdate.errors;
-        console.error(`❌ [WhatsAppDeliveryFailure] Msg ${id} failed. Errors:`, JSON.stringify(errors, null, 2));
-        // You could emit this to the UI via socket.io if needed
-        io.emit('messageStatus', { id, status, errors });
+        console.error(`❌ [WhatsAppDeliveryFailure] Msg ${messageId} failed. Errors:`, JSON.stringify(errors, null, 2));
+        io.emit('messageStatus', { id: messageId, status, errors });
       } else {
-        // sent, delivered, read
-        io.emit('messageStatus', { id, status });
+        io.emit('messageStatus', { id: messageId, status });
+      }
+
+      // Update Campaign if message belongs to one
+      const campaign = await Campaign.findOne({ "messages.messageId": messageId });
+      if (campaign) {
+        const msgIndex = campaign.messages.findIndex(m => m.messageId === messageId);
+        if (msgIndex !== -1) {
+          const oldStatus = campaign.messages[msgIndex].status;
+          campaign.messages[msgIndex].status = status;
+
+          // Increment counters based on NEW status
+          if (status === 'delivered' && oldStatus !== 'delivered' && oldStatus !== 'read') {
+            campaign.deliveredCount++;
+          } else if (status === 'read' && oldStatus !== 'read') {
+            if (oldStatus !== 'delivered') campaign.deliveredCount++;
+            campaign.readCount++;
+          } else if (status === 'failed' && oldStatus !== 'failed') {
+            campaign.failedCount++;
+          }
+
+          await campaign.save();
+          io.emit('campaignUpdate', { campaignId: campaign._id, status, messageId });
+        }
       }
 
       return res.sendStatus(200);
     }
 
-    // Handle Incoming Messages
-    const msg = changes.messages?.[0];
+    // 2. Handle Incoming Messages
+    const msg = value.messages?.[0];
     if (!msg) return res.sendStatus(200);
 
     const from = msg.from;
@@ -1037,38 +1059,6 @@ app.post("/webhook", async (req, res) => {
     }
 
 
-    // 4. Handle Status Updates
-    if (value.statuses && value.statuses.length > 0) {
-      const statusUpdate = value.statuses[0];
-      const messageId = statusUpdate.id;
-      const status = statusUpdate.status; // sent, delivered, read, failed
-
-      console.log(`[Webhook] Status update for ${messageId}: ${status}`);
-
-      // Update Campaign if message belongs to one
-      const campaign = await Campaign.findOne({ "messages.messageId": messageId });
-      if (campaign) {
-        const msgIndex = campaign.messages.findIndex(m => m.messageId === messageId);
-        if (msgIndex !== -1) {
-          const oldStatus = campaign.messages[msgIndex].status;
-          campaign.messages[msgIndex].status = status;
-
-          // Increment counters based on NEW status
-          if (status === 'delivered' && oldStatus !== 'delivered' && oldStatus !== 'read') {
-            campaign.deliveredCount++;
-          } else if (status === 'read' && oldStatus !== 'read') {
-            if (oldStatus !== 'delivered') campaign.deliveredCount++;
-            campaign.readCount++;
-          } else if (status === 'failed' && oldStatus !== 'failed') {
-            campaign.failedCount++;
-          }
-
-          await campaign.save();
-          io.emit('campaignUpdate', { campaignId: campaign._id, status, messageId });
-        }
-      }
-      return res.sendStatus(200);
-    }
 
     // Unified Flow Handler (Handles Leads, Flows, Excel, and AI)
     // IMPORTANT: 'sanitizedPhone' matches DB records. 'from' is for sending replies.
